@@ -92,7 +92,11 @@ body {
 @media (orientation: landscape) {
   .screen {
     width: auto;
-    height: 100%;
+    /* Nicht mehr bildschirmfüllend: darunter bleibt Platz für Steuerkreuz,
+       Logo/Tagline/Power-Anzeige und A/B in einer Reihe, wie auf der
+       Vorlage. Der genaue Wert steckt in --querformat-luecke weiter unten,
+       damit Bildschirm-Unterkante und Bedienreihe exakt zusammenpassen. */
+    height: var(--querformat-hoehe);
   }
 }
 
@@ -252,15 +256,16 @@ body {
    Ende des Abschnitts die ganze Gruppe dort aus.
    --------------------------------------------------------------------------- */
 
+/* Gemeinsame Optik von Logo, Tagline-Box und Betriebsanzeige – Position und
+   Größe unterscheiden sich zwischen Hoch- und Querformat (weiter unten),
+   weil die Bedienreihe dort unterschiedlich viel Platz hat: im Hochformat
+   die ganze Breite unterhalb des Bildschirms, im Querformat nur die
+   schmalere Spalte zwischen Steuerkreuz und A/B. */
 .shell__logo {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 1.6vh);
   left: 50%;
   transform: translateX(-50%);
   line-height: 0.92;
-  /* Breitenbasiert begrenzt, damit die elf Zeichen auf schmalen Geräten nicht
-     über den Rand laufen – die Höhe (vh) allein hätte das nicht verhindert. */
-  font-size: clamp(15px, 8.6vw, 44px);
   font-weight: 800;
   letter-spacing: 0.01em;
   color: #e8e2f8;
@@ -271,34 +276,24 @@ body {
 
 .shell__strap {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 8.4vh);
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.5vh 1.6vw;
   border: 1px solid rgba(224, 212, 255, 0.3);
-  font-size: max(8px, 1.4vh);
   font-weight: 700;
   letter-spacing: 0.12em;
   color: rgba(224, 212, 255, 0.55);
   white-space: nowrap;
 }
 
-/* Rotes Kreuz mit "POWER ON"-Beschriftung, wie eine Betriebsanzeige. */
+/* Rotes Kreuz mit "POWER"-Beschriftung, wie eine Betriebsanzeige. */
 .shell__power {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 7.6vh);
-  right: calc(env(safe-area-inset-right) + 5vw);
-  width: 3.6vh;
   text-align: center;
 }
 
 .shell__power::before {
   content: "";
   display: block;
-  width: 2.2vh;
-  height: 2.2vh;
-  min-width: 11px;
-  min-height: 11px;
   margin: 0 auto 0.4vh;
   background:
     linear-gradient(var(--gehaeuse-rot), var(--gehaeuse-rot)) center / 100% 32% no-repeat,
@@ -310,7 +305,6 @@ body {
 .shell__power::after {
   content: "POWER";
   display: block;
-  font-size: max(6px, 0.95vh);
   font-weight: 700;
   letter-spacing: 0.1em;
   color: rgba(224, 212, 255, 0.5);
@@ -333,15 +327,78 @@ body {
   }
 }
 
-@media (orientation: landscape) {
-  /* Im Querformat füllt der Bildschirm die volle Höhe – für die Lücke
-     gebaute Elemente hätten dort keinen sinnvollen Platz und blieben ohnehin
-     unsichtbar hinter dem Bildschirm. Tag, Eckakzente, Gitter und die
-     Seitentexte bleiben – sie brauchen nur die schmalen Ränder. */
-  .shell__logo,
-  .shell__strap,
+/* Hochformat: volle Breite unterhalb des Bildschirms zur Verfügung, Logo
+   entsprechend groß. Basiert auf derselben Bildschirm-Unterkante wie
+   .pad{top:...} weiter unten (Bildschirmbreite bestimmt die Höhe: 66.67vw). */
+@media (orientation: portrait) {
+  .shell__logo {
+    top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 1.6vh);
+    /* Breitenbasiert begrenzt, damit die elf Zeichen auf schmalen Geräten
+       nicht über den Rand laufen – die Höhe (vh) allein verhindert das nicht. */
+    font-size: clamp(15px, 8.6vw, 44px);
+  }
+
+  .shell__strap {
+    top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 8.4vh);
+    padding: 0.5vh 1.6vw;
+    font-size: max(8px, 1.4vh);
+  }
+
   .shell__power {
-    display: none;
+    top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 7.6vh);
+    right: calc(env(safe-area-inset-right) + 5vw);
+    width: 3.6vh;
+  }
+
+  .shell__power::before {
+    width: 2.2vh;
+    height: 2.2vh;
+    min-width: 11px;
+    min-height: 11px;
+  }
+
+  .shell__power::after {
+    font-size: max(6px, 0.95vh);
+  }
+}
+
+/* Querformat: schmalere Mittelspalte zwischen Steuerkreuz und A/B (siehe
+   Vorlage) – Logo, Tagline und Betriebsanzeige stehen deshalb übereinander
+   statt nebeneinander und fallen insgesamt kleiner aus. Basiert auf
+   --querformat-luecke (Bildschirm-Unterkante, definiert bei --dpad weiter
+   unten), damit sie exakt an den verkleinerten Bildschirm anschließen. */
+@media (orientation: landscape) {
+  /* Größere Abstände von der Bildschirm-Unterkante als im Hochformat: die
+     Bedienreihe ist hier kürzer und die Gruppe soll auf gleicher Höhe wie
+     das (mittig zentrierte) Steuerkreuz und A/B stehen statt oben zu kleben. */
+  .shell__logo {
+    top: calc(var(--querformat-luecke) + 14vh);
+    font-size: clamp(10px, 3vw, 22px);
+  }
+
+  .shell__strap {
+    top: calc(var(--querformat-luecke) + 18vh);
+    padding: 0.3vh 1vw;
+    font-size: max(6px, 1vh);
+  }
+
+  .shell__power {
+    top: calc(var(--querformat-luecke) + 21vh);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 3vh;
+  }
+
+  .shell__power::before {
+    width: 1.5vh;
+    height: 1.5vh;
+    min-width: 9px;
+    min-height: 9px;
+  }
+
+  .shell__power::after {
+    font-size: max(5px, 0.8vh);
   }
 }
 
@@ -550,9 +607,25 @@ body {
 
 @media (orientation: landscape) {
   :root {
-    --dpad: 26vmin;
-    --face: 11.5vmin;
-    --pad-rand: 3vmin;
+    --dpad: 24vmin;
+    --face: 10.5vmin;
+    --pad-rand: 2.6vmin;
+
+    /* Höhe des Bildschirms und die daraus folgende Unterkante ("Lücke"),
+       ab der die Bedienreihe beginnt – analog zur Hochformat-Formel weiter
+       oben, nur höhen- statt breitenbasiert (im Querformat ist die Breite
+       die reichliche, die Höhe die knappe Dimension). */
+    --querformat-hoehe: 58vh;
+    --querformat-luecke: calc(env(safe-area-inset-top) + 2.2vh + var(--querformat-hoehe));
+  }
+
+  .viewport {
+    align-items: start;
+    padding-top: calc(env(safe-area-inset-top) + 2.2vh);
+  }
+
+  .pad {
+    top: var(--querformat-luecke);
   }
 
   .pad__dpad {
@@ -566,7 +639,7 @@ body {
   }
 
   .pad__system {
-    bottom: 1.5vmin;
+    bottom: 1.2vh;
   }
 }
 
