@@ -12,18 +12,22 @@
   --gehaeuse: #08070b;
   --rahmen: #1b1420;
 
-  /* Steuerkreuz, SELECT/START und die Kopfschalter: mattschwarzes,
-     abgenutztes Plastik statt Glasoptik – siehe Vorlage. */
-  --taste: linear-gradient(160deg, #26212f 0%, #120f18 55%, #0a080d 100%);
-  --taste-rand: rgba(155, 108, 255, 0.4);
-  --taste-aktiv: rgba(155, 108, 255, 0.65);
-  --taste-schrift: rgba(224, 212, 255, 0.78);
+  /* Steuerkreuz, SELECT/START und die Kopfschalter: durchscheinendes
+     Plastik statt deckender Fläche – die Füllung ist bewusst schwach, damit
+     das Spielbild dahinter sichtbar bleibt. Rand, Leuchteffekt und
+     Textschatten (siehe .btn weiter unten) halten die Tasten trotzdem klar
+     erkennbar. */
+  --taste: linear-gradient(160deg, rgba(38, 33, 47, 0.4) 0%, rgba(18, 15, 24, 0.34) 55%, rgba(10, 8, 13, 0.3) 100%);
+  --taste-rand: rgba(178, 140, 255, 0.55);
+  --taste-aktiv: rgba(178, 140, 255, 0.75);
+  --taste-schrift: rgba(232, 224, 255, 0.9);
 
-  /* A/B: eigenständig grün-neon, siehe .btn--face weiter unten. */
-  --taste-face: radial-gradient(circle at 34% 28%, #8bffb6 0%, #2fce74 45%, #0f7a3e 78%, #063d1f 100%);
-  --taste-face-rand: rgba(6, 30, 15, 0.9);
-  --taste-face-schrift: #06210f;
-  --taste-face-glanz: rgba(74, 230, 130, 0.6);
+  /* A/B: eigenständig grün-neon, ebenfalls durchscheinend, siehe .btn--face
+     weiter unten. */
+  --taste-face: radial-gradient(circle at 34% 28%, rgba(150, 255, 190, 0.48) 0%, rgba(56, 214, 124, 0.4) 45%, rgba(18, 130, 66, 0.36) 78%, rgba(8, 65, 33, 0.32) 100%);
+  --taste-face-rand: rgba(30, 90, 50, 0.75);
+  --taste-face-schrift: #072a13;
+  --taste-face-glanz: rgba(90, 240, 140, 0.7);
 
   /* Farben des dekorativen Gehäuses ("HARDTEKKMON"-Handheld) rund um den
      Bildschirm: schwarzes Plastik, violette Leuchtakzente, rote Power-LED. */
@@ -402,7 +406,13 @@ body {
   font: inherit;
   font-weight: 700;
   pointer-events: auto;
-  backdrop-filter: blur(1px);
+  /* Frosted-Glass statt Milchglas: hebt die Taste auch bei sehr
+     durchscheinender Füllung klar vom Spielbild dahinter ab. */
+  backdrop-filter: blur(3px) saturate(1.2);
+  -webkit-backdrop-filter: blur(3px) saturate(1.2);
+  /* Heller Schein plus dunkler Schlagschatten – die Beschriftung bleibt so
+     lesbar, egal ob gerade heller Sand oder dunkler Wald durchscheint. */
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.7), 0 1px 2px rgba(0, 0, 0, 0.7);
   transition: background-color 60ms linear, transform 60ms linear;
 }
 
@@ -485,7 +495,9 @@ body {
 }
 
 .btn--face.is-pressed {
-  background: radial-gradient(circle at 34% 28%, #c8ffe0 0%, #55e491 45%, #1a9750 78%, #0a4d27 100%);
+  /* Beim Drücken deutlich kräftiger als im Ruhezustand – kurzes, klares
+     Feedback, das die Sicht aber nur für den Moment des Antippens einschränkt. */
+  background: radial-gradient(circle at 34% 28%, rgba(200, 255, 224, 0.85) 0%, rgba(85, 228, 145, 0.78) 45%, rgba(26, 151, 80, 0.72) 78%, rgba(10, 77, 39, 0.65) 100%);
   box-shadow: 0 0 10px 3px var(--taste-face-glanz);
 }
 
