@@ -9,19 +9,30 @@
    ============================================================================ */
 
 :root {
-  --gehaeuse: #0b0d12;
-  --rahmen: #1b2030;
-  --taste: rgba(226, 232, 255, 0.16);
-  --taste-rand: rgba(226, 232, 255, 0.34);
-  --taste-aktiv: rgba(255, 92, 138, 0.55);
-  --taste-schrift: rgba(255, 255, 255, 0.62);
+  --gehaeuse: #08070b;
+  --rahmen: #1b1420;
 
-  /* Farben des dekorativen Gehäuses ("Tekkdex RCC-151") rund um den Bildschirm. */
-  --gehaeuse-akzent: #ff5c8a;
-  --gehaeuse-akzent2: #40d0f0;
-  --gehaeuse-platte: #12141d;
-  --gehaeuse-glanz: rgba(255, 255, 255, 0.05);
-  --gehaeuse-schraube: rgba(255, 255, 255, 0.14);
+  /* Steuerkreuz, SELECT/START und die Kopfschalter: mattschwarzes,
+     abgenutztes Plastik statt Glasoptik – siehe Vorlage. */
+  --taste: linear-gradient(160deg, #26212f 0%, #120f18 55%, #0a080d 100%);
+  --taste-rand: rgba(155, 108, 255, 0.4);
+  --taste-aktiv: rgba(155, 108, 255, 0.65);
+  --taste-schrift: rgba(224, 212, 255, 0.78);
+
+  /* A/B: eigenständig grün-neon, siehe .btn--face weiter unten. */
+  --taste-face: radial-gradient(circle at 34% 28%, #8bffb6 0%, #2fce74 45%, #0f7a3e 78%, #063d1f 100%);
+  --taste-face-rand: rgba(6, 30, 15, 0.9);
+  --taste-face-schrift: #06210f;
+  --taste-face-glanz: rgba(74, 230, 130, 0.6);
+
+  /* Farben des dekorativen Gehäuses ("HARDTEKKMON"-Handheld) rund um den
+     Bildschirm: schwarzes Plastik, violette Leuchtakzente, rote Power-LED. */
+  --gehaeuse-akzent: #9b5cff;
+  --gehaeuse-akzent2: #5c3aa0;
+  --gehaeuse-rot: #e0304a;
+  --gehaeuse-platte: #0c0a10;
+  --gehaeuse-glanz: rgba(255, 255, 255, 0.04);
+  --gehaeuse-schraube: rgba(255, 255, 255, 0.12);
 
   /* Größe der Bedienelemente: im Querformat etwas kompakter, damit vom
      Spielbild möglichst wenig verdeckt wird. */
@@ -86,15 +97,17 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
-   Gehäuse ("Tekkdex RCC-151")
+   Gehäuse ("HARDTEKKMON"-Handheld)
    ----------------------------------------------------------------------------
-   Rein dekorative Ebene rund um den Bildschirm: Lautsprechergitter, Schriftzug,
-   Kontroll-LED und Eckschrauben, wie bei einem echten Handheld. Sie liegt per
-   z-index hinter dem Canvas – im Querformat verdeckt der Bildschirm sie fast
-   vollständig (nur die schmalen Ränder links/rechts bleiben sichtbar), im
-   Hochformat füllt sie genau den Bereich unterhalb des Bildschirms, der sonst
-   schwarz bliebe. Sie nimmt keine Eingaben entgegen und ist für Screenreader
-   unsichtbar (aria-hidden am Wurzelelement in index.html).
+   Rein dekorative Ebene rund um den Bildschirm: schwarzes, abgenutztes
+   Plastik mit violetten Leuchtakzenten, großem Logo, Tagline-Box, roter
+   Betriebsanzeige und seitlichen Vertikaltexten – angelehnt an ein fiktives
+   Hardtekk-Handheld. Sie liegt per z-index hinter dem Canvas – im Querformat
+   verdeckt der Bildschirm sie fast vollständig (nur die schmalen Ränder
+   links/rechts bleiben sichtbar), im Hochformat füllt sie genau den Bereich
+   unterhalb des Bildschirms, der sonst schwarz bliebe. Sie nimmt keine
+   Eingaben entgegen und ist für Screenreader unsichtbar (aria-hidden am
+   Wurzelelement in index.html).
    --------------------------------------------------------------------------- */
 
 .shell {
@@ -104,9 +117,11 @@ body {
   overflow: hidden;
   pointer-events: none;
   background:
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 7px),
+    /* feine Kratzer/Schrammen in zwei Richtungen, wie abgenutztes Plastik */
+    repeating-linear-gradient(124deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(-58deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 13px),
     radial-gradient(130% 65% at 50% -12%, var(--gehaeuse-glanz), transparent 60%),
-    linear-gradient(180deg, var(--gehaeuse-platte) 0%, #0d0f17 55%, #0a0b11 100%);
+    linear-gradient(180deg, var(--gehaeuse-platte) 0%, #0a0810 55%, #060509 100%);
 }
 
 /* Farbige Zierleiste ganz oben, wie ein Trimstreifen am Gehäuserand. */
@@ -124,103 +139,40 @@ body {
     var(--gehaeuse-akzent) 85%,
     transparent
   );
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
-/* Betriebs-LED, pulsiert sanft. */
-.shell__led {
+/* Kleiner gesprühter Schriftzug oben links, wie ein Aufkleber-Tag. */
+.shell__tag {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 1.5vh);
-  left: calc(env(safe-area-inset-left) + 4vw);
-  width: 1.6vh;
-  height: 1.6vh;
-  min-width: 7px;
-  min-height: 7px;
-  border-radius: 50%;
-  background: var(--gehaeuse-akzent);
-  box-shadow: 0 0 6px 1px var(--gehaeuse-akzent);
-  animation: shell-led-puls 2.6s ease-in-out infinite;
-}
-
-@keyframes shell-led-puls {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .shell__led {
-    animation: none;
-    opacity: 0.85;
-  }
-}
-
-/* Schriftzug, mittig über dem Bildschirm. */
-.shell__wordmark {
-  position: absolute;
-  top: calc(env(safe-area-inset-top) + 1.2vh);
-  left: 50%;
-  transform: translateX(-50%);
-  line-height: 1;
-  font-size: max(9px, 1.6vh);
+  top: calc(env(safe-area-inset-top) + 1vh);
+  left: calc(env(safe-area-inset-left) + 3.6vh);
+  font-size: max(9px, 1.5vh);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  color: rgba(232, 236, 255, 0.38);
+  font-style: italic;
+  letter-spacing: 0.06em;
+  color: var(--gehaeuse-akzent);
+  opacity: 0.65;
+  transform: skewX(-8deg) rotate(-3deg);
+  white-space: nowrap;
+}
+
+/* Kleiner Markenschriftzug oben rechts, spiegelbildlich zum Tag. */
+.shell__brandcorner {
+  position: absolute;
+  /* Unter den Kopfschaltern (Vollbild/Ton), die denselben Eckbereich
+     beanspruchen – 8vmin entsprechen ungefähr deren Höhe plus Abstand. */
+  top: calc(env(safe-area-inset-top) + 1vh + 8vmin);
+  right: calc(env(safe-area-inset-right) + 1.5vmin);
+  font-size: max(8px, 1.3vh);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: rgba(224, 212, 255, 0.4);
   text-transform: uppercase;
   white-space: nowrap;
 }
 
-/* Lautsprechergitter unterhalb des Bildschirms – im Hochformat der gesamte
-   Bedienbereich, im Querformat nur die unteren Ecken der Seitenränder. */
-.shell__grille {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 48vh;
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.09) 1.1px, transparent 1.3px);
-  background-size: 7px 7px;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 16%);
-  mask-image: linear-gradient(180deg, transparent, #000 16%);
-}
-
-/* Rundes Emblem in der Lücke zwischen Bildschirm und Steuerkreuz – zwei
-   dünne Ringe mit Mittelpunkt, angelehnt an eine Lautsprecherblende. */
-.shell__badge {
-  position: absolute;
-  left: 50%;
-  top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 3vh);
-  width: min(52vw, 30vh);
-  height: min(52vw, 30vh);
-  transform: translateX(-50%);
-  border-radius: 50%;
-  /* "closest-side" verankert die Prozentangaben an der halben Kantenlänge –
-     damit landen beide Ringe zuverlässig innerhalb der kreisrunden Blende,
-     statt am äußeren Rand zu verschwinden (Kreisradius wäre sonst die
-     Bilddiagonale). */
-  background:
-    radial-gradient(circle closest-side at 50% 50%, var(--gehaeuse-akzent) 0%, transparent 3%),
-    radial-gradient(circle closest-side, transparent 72%, rgba(255, 255, 255, 0.08) 73%, rgba(255, 255, 255, 0.08) 74%, transparent 75%),
-    radial-gradient(circle closest-side, transparent 93%, rgba(255, 255, 255, 0.05) 94%, rgba(255, 255, 255, 0.05) 95%, transparent 96%);
-}
-
-@media (orientation: landscape) {
-  /* Im Querformat gibt es keine Lücke unter dem Bildschirm – das Emblem
-     wandert stattdessen dezent in die untere Bildschirmmitte, wo es vom
-     Bildschirmrand größtenteils verdeckt wird. */
-  .shell__badge {
-    top: auto;
-    bottom: 1vh;
-    width: min(40vh, 30vw);
-    height: min(40vh, 30vw);
-  }
-}
-
-/* Vier Eckschrauben. */
+/* Vier Kreise mit Metallschimmer als Eckschrauben. */
 .shell__screw {
   position: absolute;
   width: 1.4vh;
@@ -250,6 +202,183 @@ body {
 .shell__screw--br {
   bottom: calc(env(safe-area-inset-bottom) + 1vh);
   right: calc(env(safe-area-inset-right) + 1.2vh);
+}
+
+/* Kleine L-förmige Platinen-Akzente an allen vier Gehäuseecken. */
+.shell__corner {
+  position: absolute;
+  width: 2.6vh;
+  height: 2.6vh;
+  min-width: 14px;
+  min-height: 14px;
+  border: 1px solid var(--gehaeuse-akzent2);
+  opacity: 0.55;
+}
+
+.shell__corner--tl {
+  top: calc(env(safe-area-inset-top) + 0.5vh);
+  left: calc(env(safe-area-inset-left) + 0.5vh);
+  border-right: none;
+  border-bottom: none;
+}
+
+.shell__corner--tr {
+  top: calc(env(safe-area-inset-top) + 0.5vh);
+  right: calc(env(safe-area-inset-right) + 0.5vh);
+  border-left: none;
+  border-bottom: none;
+}
+
+.shell__corner--bl {
+  bottom: calc(env(safe-area-inset-bottom) + 0.5vh);
+  left: calc(env(safe-area-inset-left) + 0.5vh);
+  border-right: none;
+  border-top: none;
+}
+
+.shell__corner--br {
+  bottom: calc(env(safe-area-inset-bottom) + 0.5vh);
+  right: calc(env(safe-area-inset-right) + 0.5vh);
+  border-left: none;
+  border-top: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Mittelzone zwischen Bildschirm und Steuerkreuz: großes Logo, Tagline-Box
+   und rote Betriebsanzeige. Die Position setzt exakt dort an, wo der
+   Bildschirm im Hochformat endet ("Bildschirm-Unterkante" – dieselbe Formel
+   wie bei .pad weiter unten). Im Querformat gibt es diese Lücke nicht (der
+   Bildschirm füllt dort die volle Höhe), deshalb blendet die Media-Query am
+   Ende des Abschnitts die ganze Gruppe dort aus.
+   --------------------------------------------------------------------------- */
+
+.shell__logo {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 1.6vh);
+  left: 50%;
+  transform: translateX(-50%);
+  line-height: 0.92;
+  /* Breitenbasiert begrenzt, damit die elf Zeichen auf schmalen Geräten nicht
+     über den Rand laufen – die Höhe (vh) allein hätte das nicht verhindert. */
+  font-size: clamp(15px, 8.6vw, 44px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #e8e2f8;
+  text-transform: uppercase;
+  text-shadow: 0 2px 0 #000, 0 0 18px rgba(155, 92, 255, 0.35);
+  white-space: nowrap;
+}
+
+.shell__strap {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 8.4vh);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.5vh 1.6vw;
+  border: 1px solid rgba(224, 212, 255, 0.3);
+  font-size: max(8px, 1.4vh);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(224, 212, 255, 0.55);
+  white-space: nowrap;
+}
+
+/* Rotes Kreuz mit "POWER ON"-Beschriftung, wie eine Betriebsanzeige. */
+.shell__power {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 7.6vh);
+  right: calc(env(safe-area-inset-right) + 5vw);
+  width: 3.6vh;
+  text-align: center;
+}
+
+.shell__power::before {
+  content: "";
+  display: block;
+  width: 2.2vh;
+  height: 2.2vh;
+  min-width: 11px;
+  min-height: 11px;
+  margin: 0 auto 0.4vh;
+  background:
+    linear-gradient(var(--gehaeuse-rot), var(--gehaeuse-rot)) center / 100% 32% no-repeat,
+    linear-gradient(var(--gehaeuse-rot), var(--gehaeuse-rot)) center / 32% 100% no-repeat;
+  box-shadow: 0 0 5px 1px rgba(224, 48, 74, 0.55);
+  animation: shell-power-puls 2.6s ease-in-out infinite;
+}
+
+.shell__power::after {
+  content: "POWER";
+  display: block;
+  font-size: max(6px, 0.95vh);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(224, 212, 255, 0.5);
+}
+
+@keyframes shell-power-puls {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell__power::before {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
+@media (orientation: landscape) {
+  /* Im Querformat füllt der Bildschirm die volle Höhe – für die Lücke
+     gebaute Elemente hätten dort keinen sinnvollen Platz und blieben ohnehin
+     unsichtbar hinter dem Bildschirm. Tag, Eckakzente, Gitter und die
+     Seitentexte bleiben – sie brauchen nur die schmalen Ränder. */
+  .shell__logo,
+  .shell__strap,
+  .shell__power {
+    display: none;
+  }
+}
+
+/* Lautsprechergitter unterhalb des Bildschirms – im Hochformat der gesamte
+   Bedienbereich, im Querformat nur die unteren Ecken der Seitenränder. */
+.shell__grille {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48vh;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1.1px, transparent 1.3px);
+  background-size: 7px 7px;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 16%);
+  mask-image: linear-gradient(180deg, transparent, #000 16%);
+}
+
+/* Vertikale Beschriftung an beiden Rändern des Bedienbereichs, wie auf der
+   Vorlage – benennt zwei Attacken aus dem Spiel selbst. */
+.shell__side {
+  position: absolute;
+  top: 62%;
+  writing-mode: vertical-rl;
+  font-size: max(8px, 1.3vh);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(224, 212, 255, 0.28);
+  text-transform: uppercase;
+}
+
+.shell__side--left {
+  left: calc(env(safe-area-inset-left) + 1vh);
+  transform: rotate(180deg);
+}
+
+.shell__side--right {
+  right: calc(env(safe-area-inset-right) + 1vh);
 }
 
 /* ---------------------------------------------------------------------------
@@ -348,6 +477,16 @@ body {
   border-radius: 50%;
   font-size: calc(var(--face) * 0.34);
   line-height: 1;
+  /* A/B heben sich als grün-neon Tasten vom schwarzen Steuerkreuz ab. */
+  background: var(--taste-face);
+  border-color: var(--taste-face-rand);
+  color: var(--taste-face-schrift);
+  box-shadow: 0 0 6px 1px var(--taste-face-glanz);
+}
+
+.btn--face.is-pressed {
+  background: radial-gradient(circle at 34% 28%, #c8ffe0 0%, #55e491 45%, #1a9750 78%, #0a4d27 100%);
+  box-shadow: 0 0 10px 3px var(--taste-face-glanz);
 }
 
 .btn--a {
