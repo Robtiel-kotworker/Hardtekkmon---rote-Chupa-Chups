@@ -38,7 +38,10 @@ import {
 import { starteKampf } from '../battle/kampf.js';
 import { schiebe } from './stapel.js';
 
-const LAUF_TEMPO = 2;
+// 16 Pixel je Kachel: 1.6 ergibt genau 10 Bilder pro Schritt (statt zuvor 8) –
+// spürbar ruhiger, ohne dass Laufanimation und Bewegung auseinanderlaufen
+// (beide hängen am selben Tempowert, siehe bewegeFigur in spielfigur.js).
+const LAUF_TEMPO = 1.6;
 const RENN_TEMPO = 4;
 const DREHZEIT = 5;
 const BEGEGNUNGSCHANCE = 0.12;
