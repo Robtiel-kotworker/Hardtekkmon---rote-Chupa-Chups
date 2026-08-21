@@ -1,0 +1,205 @@
+name: iOS Build
+
+# Baut die eigenständige iOS-App (Capacitor) auf einem von GitHub gehosteten
+# macOS-Runner in der Cloud. Läuft ohne lokalen Mac: auslösbar per Push, PR
+# oder manuell über "Run workflow" (auch vom iPhone-Browser aus, über die
+# GitHub-Weboberfläche bzw. die GitHub-App).
+#
+# Zwei Stufen, je nachdem was an Secrets hinterlegt ist:
+#   1. Ohne Apple-Signing-Secrets: kompiliert unsigniert nur zur Kontrolle,
+#      dass das iOS-Projekt baubar bleibt. Kein Artefakt zum Installieren.
+#   2. Mit Apple-Signing-Secrets: erzeugt eine signierte .ipa als
+#      Workflow-Artefakt. Sind zusätzlich die App-Store-Connect-API-Secrets
+#      gesetzt, wird die .ipa danach automatisch zu TestFlight hochgeladen –
+#      von dort lässt sie sich direkt über die TestFlight-App aufs iPhone
+#      laden, ganz ohne Mac.
+#
+# Voraussetzungen und benötigte Secrets: siehe README.md, Abschnitt "iOS App".
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "public/**"
+      - "ios/**"
+      - "capacitor.config.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ios-build.yml"
+  pull_request:
+    paths:
+      - "public/**"
+      - "ios/**"
+      - "capacitor.config.json"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/ios-build.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: iOS-Build (macOS-Runner)
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      HAS_SIGNING: ${{ secrets.APPLE_BUILD_CERTIFICATE_BASE64 != '' && secrets.APPLE_PROVISIONING_PROFILE_BASE64 != '' && secrets.APPLE_TEAM_ID != '' }}
+      HAS_TESTFLIGHT: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 != '' && secrets.APP_STORE_CONNECT_KEY_ID != '' && secrets.APP_STORE_CONNECT_ISSUER_ID != '' }}
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: npm-Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Prüfwerkzeuge laufen lassen (Karten, Kämpfe, Quellen)
+        run: npm run build
+
+      - name: Capacitor mit dem iOS-Projekt synchronisieren
+        run: npx cap sync ios
+
+      - name: Swift-Package-Abhängigkeiten auflösen
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project ios/App/App.xcodeproj \
+            -scheme App
+
+      # --- Ohne Apple-Signing-Secrets: nur Kompilierfähigkeit prüfen --------
+      - name: Unsigniert bauen (Kontroll-Build, keine Apple-Secrets hinterlegt)
+        if: env.HAS_SIGNING != 'true'
+        run: |
+          xcodebuild build \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Hinweis ohne Apple-Signing
+        if: env.HAS_SIGNING != 'true'
+        run: |
+          echo "::notice::Keine Apple-Signing-Secrets hinterlegt – es wurde nur unsigniert kompiliert, kein installierbares Artefakt erzeugt. Siehe README.md, Abschnitt 'iOS App' für die benötigten Secrets."
+
+      # --- Mit Apple-Signing-Secrets: echtes, signiertes Artefakt bauen ------
+      - name: Temporäre Keychain anlegen
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          KEYCHAIN_PASSWORD="$(openssl rand -base64 32)"
+          echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security list-keychains -d user -s build.keychain $(security list-keychains -d user | sed 's/"//g')
+
+      - name: Signaturzertifikat importieren
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          echo -n "${{ secrets.APPLE_BUILD_CERTIFICATE_BASE64 }}" | base64 --decode -o certificate.p12
+          security import certificate.p12 -k build.keychain \
+            -P "${{ secrets.APPLE_BUILD_CERTIFICATE_PASSWORD }}" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm -f certificate.p12
+
+      - name: Provisioning Profile installieren
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          echo -n "${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode -o profile.mobileprovision
+          PROFILE_UUID=$(security cms -D -i profile.mobileprovision | plutil -extract UUID xml1 -o - - | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
+          cp profile.mobileprovision "$PROFILE_DIR/$PROFILE_UUID.mobileprovision"
+          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
+          rm -f profile.mobileprovision
+
+      - name: Archiv bauen
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -archivePath build/App.xcarchive \
+            -destination "generic/platform=iOS" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE="$PROFILE_UUID"
+
+      - name: exportOptions.plist erzeugen
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          cat > build/exportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>de.robtiel.hardtekkmon</key>
+              <string>$PROFILE_UUID</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+      # Hinweis: "method: app-store-connect" ist der aktuelle Xcode-Bezeichner
+      # für TestFlight/App-Store-Export. Ältere Xcode-Versionen erwarten hier
+      # "app-store" – falls dieser Schritt mit einer Fehlermeldung zum Key
+      # "method" abbricht, das hier entsprechend anpassen (siehe README.md).
+      - name: .ipa exportieren
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/App.xcarchive \
+            -exportPath build/ipa \
+            -exportOptionsPlist build/exportOptions.plist
+
+      - name: Signierte .ipa als Artefakt hochladen
+        if: env.HAS_SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hardtekkmon-iOS-ipa
+          path: build/ipa/*.ipa
+          retention-days: 30
+
+      # --- Optional: automatisch zu TestFlight hochladen ---------------------
+      - name: fastlane installieren
+        if: env.HAS_SIGNING == 'true' && env.HAS_TESTFLIGHT == 'true'
+        run: gem install fastlane -N
+
+      - name: App-Store-Connect-API-Key schreiben
+        if: env.HAS_SIGNING == 'true' && env.HAS_TESTFLIGHT == 'true'
+        run: |
+          echo -n "${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}" | base64 --decode -o AuthKey.p8
+
+      - name: Zu TestFlight hochladen
+        if: env.HAS_SIGNING == 'true' && env.HAS_TESTFLIGHT == 'true'
+        run: |
+          fastlane run upload_to_testflight \
+            api_key:"{\"key_id\":\"${{ secrets.APP_STORE_CONNECT_KEY_ID }}\",\"issuer_id\":\"${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}\",\"key_filepath\":\"AuthKey.p8\"}" \
+            ipa:"build/ipa/App.ipa" \
+            skip_waiting_for_build_processing:true
+          rm -f AuthKey.p8
+
+      # --- Aufräumen (immer, auch bei Fehlern in vorherigen Schritten) -------
+      - name: Temporäre Keychain und Profile entfernen
+        if: always() && env.HAS_SIGNING == 'true'
+        run: |
+          security delete-keychain build.keychain || true
+          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision" || true
