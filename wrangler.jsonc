@@ -1,0 +1,17 @@
+{
+  // Assets-only Worker: Das Spiel ist reines HTML/CSS/JS ohne Build-Schritt,
+  // daher gibt es keinen Worker-Einstiegspunkt ("main" entfällt).
+  //
+  // "name" muss exakt dem Worker im Cloudflare-Dashboard entsprechen –
+  // sonst lädt "wrangler versions upload" in einen anderen Worker hoch.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hardtekkmon-rote-chupa-chups",
+  "compatibility_date": "2026-08-21",
+  "assets": {
+    // Nur der Inhalt von public/ wird veröffentlicht. Alles außerhalb
+    // (README, Werkzeuge, .git) bleibt damit zuverlässig unveröffentlicht.
+    "directory": "./public",
+    // Unbekannte Pfade liefern die App statt eines harten 404.
+    "not_found_handling": "single-page-application"
+  }
+}

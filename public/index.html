@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Hardtekkmon – Rote Chupa Chups</title>
+  <meta name="description" content="Hardtekkmon Rote Chupa Chups – ein Rollenspiel im Stil der klassischen Handheld-Ära. Fange 151 Hardtekkmon, sammle acht Gigs." />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#08070b" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- Spielfläche: Das Canvas rendert intern in 240x160 (Handheld-Auflösung)
+       und wird per CSS seitenverhältnistreu auf den Bildschirm skaliert. -->
+  <div id="viewport" class="viewport">
+    <!-- Reines Dekor: das Gehäuse eines gedachten Hardtekk-Handhelds, das den
+         Bereich rund um den Bildschirm füllt. Liegt hinter Bildschirm und
+         Tasten (z-index), nimmt keine Eingaben entgegen und wird von
+         Screenreadern übersprungen. -->
+    <div class="shell" aria-hidden="true">
+      <span class="shell__stripe"></span>
+      <span class="shell__tag">RAVEY</span>
+      <span class="shell__brandcorner">HARDTEKK&nbsp;✕✕</span>
+      <span class="shell__corner shell__corner--tl"></span>
+      <span class="shell__corner shell__corner--tr"></span>
+      <span class="shell__corner shell__corner--bl"></span>
+      <span class="shell__corner shell__corner--br"></span>
+      <span class="shell__logo">HARDTEKKMON</span>
+      <span class="shell__strap">///&nbsp;KEIN&nbsp;PARDON&nbsp;///</span>
+      <span class="shell__power"></span>
+      <span class="shell__grille"></span>
+      <span class="shell__side shell__side--left">DRUCK</span>
+      <span class="shell__side shell__side--right">VOLLGAS</span>
+      <span class="shell__screw shell__screw--tl"></span>
+      <span class="shell__screw shell__screw--tr"></span>
+      <span class="shell__screw shell__screw--bl"></span>
+      <span class="shell__screw shell__screw--br"></span>
+    </div>
+
+    <canvas id="screen" class="screen" width="240" height="160" aria-label="Spielbildschirm"></canvas>
+
+    <!-- Steuerkreuz und Tasten liegen halbtransparent über dem Bild,
+         angelehnt an die Tastenanordnung eines Handhelds. -->
+    <div id="pad" class="pad" role="group" aria-label="Steuerung">
+      <div class="pad__dpad">
+        <button class="btn btn--dir btn--up"    data-button="UP"    aria-label="Hoch"></button>
+        <button class="btn btn--dir btn--left"  data-button="LEFT"  aria-label="Links"></button>
+        <button class="btn btn--dir btn--right" data-button="RIGHT" aria-label="Rechts"></button>
+        <button class="btn btn--dir btn--down"  data-button="DOWN"  aria-label="Runter"></button>
+        <span class="pad__hub" aria-hidden="true"></span>
+      </div>
+
+      <div class="pad__face">
+        <button class="btn btn--face btn--b" data-button="B" aria-label="B">B</button>
+        <button class="btn btn--face btn--a" data-button="A" aria-label="A">A</button>
+      </div>
+
+      <div class="pad__system">
+        <button class="btn btn--sys" data-button="SELECT" aria-label="Select">SELECT</button>
+        <button class="btn btn--sys" data-button="START"  aria-label="Start">START</button>
+      </div>
+    </div>
+
+    <button id="fullscreen" class="chip chip--fullscreen" aria-label="Vollbild umschalten">⛶</button>
+    <button id="sound" class="chip chip--sound" aria-label="Ton umschalten">♪</button>
+  </div>
+
+  <noscript>
+    <p class="noscript">Für Hardtekkmon – Rote Chupa Chups muss JavaScript aktiviert sein.</p>
+  </noscript>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

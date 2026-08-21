@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Roter Chupa Chups">
+  <rect width="64" height="64" rx="10" fill="#12111c"/>
+  <rect x="30" y="34" width="4" height="24" rx="2" fill="#c8c8d8"/>
+  <circle cx="32" cy="28" r="20" fill="#f0f0f8"/>
+  <path d="M32 28 L52 28 A20 20 0 0 1 42 45 Z" fill="#e04058"/>
+  <path d="M32 28 L42 45 A20 20 0 0 1 22 45 Z" fill="#f0f0f8"/>
+  <path d="M32 28 L22 45 A20 20 0 0 1 12 28 Z" fill="#e04058"/>
+  <path d="M32 28 L12 28 A20 20 0 0 1 22 11 Z" fill="#f0f0f8"/>
+  <path d="M32 28 L22 11 A20 20 0 0 1 42 11 Z" fill="#e04058"/>
+  <path d="M32 28 L42 11 A20 20 0 0 1 52 28 Z" fill="#f0f0f8"/>
+  <circle cx="24" cy="20" r="4" fill="#ffffff" opacity="0.55"/>
+</svg>

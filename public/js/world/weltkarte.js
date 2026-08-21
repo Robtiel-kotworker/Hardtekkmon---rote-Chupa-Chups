@@ -1,0 +1,137 @@
+// ============================================================================
+// Karte zur Laufzeit
+// ----------------------------------------------------------------------------
+// Aus den Kartendaten wird beim Betreten einmal ein fertiges Bild gerendert.
+// Danach kostet das Zeichnen nur noch einen Ausschnitt-Kopiervorgang, egal wie
+// groß die Karte ist. Bewegliches (Wasserglitzern, Figuren) kommt zur Laufzeit
+// obendrauf.
+// ============================================================================
+
+import { neueFlaeche } from '../engine/screen.js';
+import { KACHEL, zeichneKachel, kachelInfo, baueKacheln } from '../gfx/tiles.js';
+import { karte as kartendaten } from '../data/world/karten.js';
+
+/** Streuwert für die Kachelvariante – gleiche Position, gleiche Variante. */
+function variante(x, y) {
+  const wert = Math.imul(x + 1, 0x27d4eb2d) ^ Math.imul(y + 1, 0x165667b1);
+  return (wert >>> 13) & 3;
+}
+
+export class Weltkarte {
+  /** @param {string} id */
+  constructor(id) {
+    const daten = kartendaten(id);
+    if (!daten) throw new Error(`Unbekannte Karte: ${id}`);
+
+    baueKacheln();
+    this.daten = daten;
+    this.id = id;
+    this.breite = daten.breite;
+    this.hoehe = daten.hoehe;
+
+    /** Figuren bekommen eine eigene Laufzeitfassung (Blickrichtung, Schritt). */
+    this.npcs = (daten.npcs ?? []).map((eintrag, index) => ({
+      ...eintrag,
+      index,
+      startRichtung: eintrag.richtung,
+      bild: 0,
+      versatz: 0,
+      laeuft: false,
+      schrittZaehler: 0,
+      wartezeit: 60 + index * 37,
+      entfernt: false,
+    }));
+
+    this.bild = this.rendere();
+    this.wasserfelder = this.sammleWasser();
+  }
+
+  rendere() {
+    const { canvas, ctx } = neueFlaeche(this.breite * KACHEL, this.hoehe * KACHEL);
+    for (let y = 0; y < this.hoehe; y += 1) {
+      for (let x = 0; x < this.breite; x += 1) {
+        zeichneKachel(ctx, this.kachelAn(x, y), x * KACHEL, y * KACHEL, variante(x, y));
+      }
+    }
+    return canvas;
+  }
+
+  sammleWasser() {
+    const felder = [];
+    for (let y = 0; y < this.hoehe; y += 1) {
+      for (let x = 0; x < this.breite; x += 1) {
+        if (kachelInfo(this.kachelAn(x, y)).wasser) felder.push({ x, y });
+      }
+    }
+    return felder;
+  }
+
+  innen(x, y) {
+    return x >= 0 && y >= 0 && x < this.breite && y < this.hoehe;
+  }
+
+  kachelAn(x, y) {
+    return this.innen(x, y) ? this.daten.kacheln[y * this.breite + x] : 'baum';
+  }
+
+  /** Blockiert die Kachel (ohne Figuren)? */
+  istFest(x, y) {
+    if (!this.innen(x, y)) return true;
+    return Boolean(kachelInfo(this.kachelAn(x, y)).fest);
+  }
+
+  /** Begehbar inklusive Figuren und Gegenständen. */
+  istBegehbar(x, y) {
+    if (this.istFest(x, y)) return false;
+    return !this.npcAn(x, y);
+  }
+
+  npcAn(x, y) {
+    return this.npcs.find((npc) => !npc.entfernt && !npc.unsichtbar && npc.x === x && npc.y === y) ?? null;
+  }
+
+  warpAn(x, y) {
+    return (this.daten.warps ?? []).find((w) => w.x === x && w.y === y) ?? null;
+  }
+
+  schildAn(x, y) {
+    return (this.daten.schilder ?? []).find((s) => s.x === x && s.y === y) ?? null;
+  }
+
+  gegenstandAn(x, y) {
+    return (this.daten.gegenstaende ?? []).find((g) => g.x === x && g.y === y) ?? null;
+  }
+
+  /** Begegnungsgruppe der Kachel, sofern die Karte wilde Hardtekkmon kennt. */
+  begegnungsgruppe(x, y) {
+    if (!this.daten.begegnungen) return null;
+    return kachelInfo(this.kachelAn(x, y)).begegnung ?? null;
+  }
+
+  /**
+   * Zeichnet den sichtbaren Ausschnitt.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {{ x: number, y: number }} kamera Pixelposition der linken oberen Ecke
+   * @param {number} bildzaehler
+   */
+  zeichne(ctx, kamera, bildzaehler) {
+    ctx.drawImage(this.bild, -Math.round(kamera.x), -Math.round(kamera.y));
+    this.zeichneWasser(ctx, kamera, bildzaehler);
+  }
+
+  /** Wellenlinien auf allen sichtbaren Wasserkacheln. */
+  zeichneWasser(ctx, kamera, bildzaehler) {
+    if (this.wasserfelder.length === 0) return;
+    const phase = Math.floor(bildzaehler / 24) % 2;
+    ctx.fillStyle = '#b8d8f8';
+
+    for (const feld of this.wasserfelder) {
+      const x = feld.x * KACHEL - kamera.x;
+      const y = feld.y * KACHEL - kamera.y;
+      if (x < -KACHEL || y < -KACHEL || x > 240 || y > 160) continue;
+      const versatz = (feld.x + feld.y + phase) % 2 === 0 ? 3 : 9;
+      ctx.fillRect(Math.round(x + 2), Math.round(y + versatz), 5, 1);
+      ctx.fillRect(Math.round(x + 9), Math.round(y + 14 - versatz), 4, 1);
+    }
+  }
+}

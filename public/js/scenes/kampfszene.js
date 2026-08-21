@@ -1,0 +1,635 @@
+// ============================================================================
+// Kampfszene
+// ----------------------------------------------------------------------------
+// Zeigt an, was der Kampfablauf ausrechnet. Die Ereignisliste einer Runde wird
+// Schritt für Schritt abgespielt: Text erscheint, Balken laufen weich nach,
+// Sprites zucken, Samplepacks wackeln. Gewartet wird nur so lange wie nötig –
+// mit A geht es sofort weiter.
+// ============================================================================
+
+import { BREITE, HOEHE } from '../engine/screen.js';
+import { gedrueckt } from '../engine/input.js';
+import { spieleTrack, effekt, aktuellerTrack } from '../engine/audio.js';
+import { fenster, balken, kpFarbe, blende, gegenstandSymbol, typSchild } from '../gfx/ui.js';
+import { zeichneText, textBreite } from '../gfx/font.js';
+import { UI } from '../gfx/palette.js';
+import { monSprite } from '../gfx/monsprites.js';
+import { Textfenster } from '../ui/textfenster.js';
+import { Auswahl } from '../ui/auswahl.js';
+import { findeAttacke } from '../data/attacken.js';
+import { gegenstandInfo, imKampfNutzbar } from '../data/gegenstaende.js';
+import {
+  anzeigename, artVon, maxKp, erfahrungsAnteil, istUmgekippt, entwickle,
+  entwicklungFaellig, lerneAttacke, MAX_ATTACKEN,
+} from '../game/hardtekkmon.js';
+import {
+  spiel, nimmAuf, nimmGegenstand, aendereGeld, merkeGefangen, hatGegenstand,
+} from '../game/spielstand.js';
+import { fuehreRunde, wechsleEigenes } from '../battle/kampf.js';
+import { poppe } from './stapel.js';
+
+const GEGNER_POS = { x: 152, y: 14 };
+const EIGENE_POS = { x: 26, y: 58 };
+const SPRITE = 56;
+
+/** Wartezeiten in Bildern. */
+const WARTE = { text: 24, treffer: 20, wechsel: 26, wurf: 34, kurz: 12 };
+
+export class Kampfszene {
+  /**
+   * @param {{ kampf: object, beiEnde: (ergebnis: string) => void }} vorgabe
+   */
+  constructor(vorgabe) {
+    this.kampf = vorgabe.kampf;
+    this.beiEnde = vorgabe.beiEnde;
+
+    this.textfenster = new Textfenster();
+    this.zustand = 'start';
+    this.ereignisse = [];
+    this.wartezeit = 0;
+    this.bildzaehler = 0;
+
+    this.anzeige = {
+      eigeneKp: this.kampf.eigene.mon.kp,
+      gegnerKp: this.kampf.gegner.mon.kp,
+      erfahrung: erfahrungsAnteil(this.kampf.eigene.mon),
+      eigenerVersatz: 0,
+      gegnerVersatz: 0,
+      eigenesBlinken: 0,
+      gegnerBlinken: 0,
+      gegnerSichtbar: true,
+      eigenesSichtbar: true,
+      wurf: null,
+    };
+
+    this.befehlsmenue = new Auswahl({ eintraege: ['KAMPF', 'BEUTEL', 'TEAM', 'ABHAUEN'], spalten: 2 });
+    this.attackenmenue = null;
+    this.beutelmenue = null;
+    this.beutelNamen = [];
+    this.teammenue = null;
+    this.rueckkehrTrack = aktuellerTrack();
+    this.blendenwert = 1;
+    this.entwicklungen = [];
+  }
+
+  betreten() {
+    spieleTrack(this.kampf.art === 'trainer' ? 'gig' : 'kampf');
+    const gegner = this.kampf.gegner.mon;
+    const einleitung = this.kampf.art === 'trainer'
+      ? [`${this.kampf.trainer.name} will einen Kampf!`,
+        `${this.kampf.trainer.name} schickt ${anzeigename(gegner)} in den Ring!`]
+      : [`Ein wildes ${anzeigename(gegner)} taucht auf!`];
+
+    this.textfenster.zeige([...einleitung, `Los, ${anzeigename(this.kampf.eigene.mon)}!`]);
+    this.zustand = 'einleitung';
+  }
+
+  // --- Ablauf ----------------------------------------------------------------
+
+  aktualisieren() {
+    this.bildzaehler += 1;
+    this.blendenwert = Math.max(0, this.blendenwert - 0.08);
+    this.animiereAnzeige();
+
+    switch (this.zustand) {
+      case 'einleitung':
+        if (this.textfenster.aktualisieren()) this.zeigeBefehle();
+        break;
+      case 'befehl':
+        this.aktualisiereBefehle();
+        break;
+      case 'attacke':
+        this.aktualisiereAttackenwahl();
+        break;
+      case 'beutel':
+        this.aktualisiereBeutel();
+        break;
+      case 'team':
+        this.aktualisiereTeam();
+        break;
+      case 'verarbeitung':
+        this.verarbeiteEreignisse();
+        break;
+      case 'abschluss':
+        if (this.textfenster.aktualisieren()) this.beende();
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** Balken und Sprites laufen der Wahrheit weich hinterher. */
+  animiereAnzeige() {
+    const a = this.anzeige;
+    const naehere = (wert, ziel, schritt) => (
+      Math.abs(ziel - wert) <= schritt ? ziel : wert + Math.sign(ziel - wert) * schritt
+    );
+
+    a.eigeneKp = naehere(a.eigeneKp, this.kampf.eigene.mon.kp, Math.max(1, maxKp(this.kampf.eigene.mon) / 60));
+    a.gegnerKp = naehere(a.gegnerKp, this.kampf.gegner.mon.kp, Math.max(1, maxKp(this.kampf.gegner.mon) / 60));
+    a.erfahrung = naehere(a.erfahrung, erfahrungsAnteil(this.kampf.eigene.mon), 0.02);
+
+    a.eigenerVersatz = naehere(a.eigenerVersatz, 0, 1.5);
+    a.gegnerVersatz = naehere(a.gegnerVersatz, 0, 1.5);
+    if (a.eigenesBlinken > 0) a.eigenesBlinken -= 1;
+    if (a.gegnerBlinken > 0) a.gegnerBlinken -= 1;
+    if (a.wurf) this.animiereWurf();
+  }
+
+  zeigeBefehle() {
+    this.textfenster.zeige(`Was soll ${anzeigename(this.kampf.eigene.mon)} tun?`);
+    this.textfenster.ueberspringe();
+    this.zustand = 'befehl';
+  }
+
+  aktualisiereBefehle() {
+    const antwort = this.befehlsmenue.aktualisieren();
+    if (antwort !== 'bestaetigt') return;
+
+    switch (this.befehlsmenue.index) {
+      case 0:
+        this.oeffneAttacken();
+        break;
+      case 1:
+        this.oeffneBeutel();
+        break;
+      case 2:
+        this.oeffneTeam(false);
+        break;
+      case 3:
+      default:
+        this.starteRunde({ art: 'flucht' });
+        break;
+    }
+  }
+
+  oeffneAttacken() {
+    const attacken = this.kampf.eigene.mon.attacken;
+    this.attackenmenue = new Auswahl({
+      eintraege: attacken.map((eintrag) => eintrag.name),
+      spalten: 2,
+    });
+    this.zustand = 'attacke';
+  }
+
+  aktualisiereAttackenwahl() {
+    const antwort = this.attackenmenue.aktualisieren();
+    if (antwort === 'abbruch') {
+      this.zeigeBefehle();
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    const eintrag = this.kampf.eigene.mon.attacken[this.attackenmenue.index];
+    if (!eintrag || eintrag.ap <= 0) {
+      this.textfenster.zeige('Da ist nichts mehr drin! Nimm eine andere.');
+      return;
+    }
+    this.starteRunde({ art: 'attacke', index: this.attackenmenue.index });
+  }
+
+  oeffneBeutel() {
+    this.beutelNamen = Object.keys(spiel.beutel).filter(imKampfNutzbar);
+    if (this.beutelNamen.length === 0) {
+      this.textfenster.zeige('Der Beutel ist leer. Peinlich.');
+      this.textfenster.ueberspringe();
+      return;
+    }
+    this.beutelmenue = new Auswahl({
+      eintraege: this.beutelNamen.map((name) => `${name}`),
+      sichtbar: 4,
+    });
+    this.zustand = 'beutel';
+  }
+
+  aktualisiereBeutel() {
+    const antwort = this.beutelmenue.aktualisieren();
+    if (antwort === 'abbruch') {
+      this.zeigeBefehle();
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    const name = this.beutelNamen[this.beutelmenue.index];
+    if (!hatGegenstand(name)) return;
+
+    const daten = gegenstandInfo(name);
+    nimmGegenstand(name, 1);
+
+    if (daten.art === 'heilung' || daten.art === 'status' || daten.art === 'beleben') {
+      this.starteRunde({ art: 'gegenstand', gegenstand: name, zielIndex: this.kampf.eigenesIndex });
+    } else {
+      this.starteRunde({ art: 'gegenstand', gegenstand: name });
+    }
+  }
+
+  oeffneTeam(erzwungen) {
+    this.teammenue = new Auswahl({
+      eintraege: spiel.team.map((mon) => `${anzeigename(mon)}  ${mon.kp}/${maxKp(mon)}`),
+      sichtbar: 6,
+    });
+    this.teamErzwungen = erzwungen;
+    this.zustand = 'team';
+  }
+
+  aktualisiereTeam() {
+    const antwort = this.teammenue.aktualisieren();
+    if (antwort === 'abbruch' && !this.teamErzwungen) {
+      this.zeigeBefehle();
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    const index = this.teammenue.index;
+    const mon = spiel.team[index];
+    if (!mon || istUmgekippt(mon)) {
+      this.textfenster.zeige('Das steht nicht mehr. Nimm ein anderes!');
+      this.textfenster.ueberspringe();
+      return;
+    }
+    if (index === this.kampf.eigenesIndex) {
+      this.textfenster.zeige('Das ist doch schon im Ring!');
+      this.textfenster.ueberspringe();
+      return;
+    }
+
+    if (this.teamErzwungen) {
+      const ereignisse = wechsleEigenes(this.kampf, index);
+      this.setzeAnzeigeNeu();
+      this.spieleEreignisse(ereignisse);
+    } else {
+      this.starteRunde({ art: 'wechsel', index });
+    }
+  }
+
+  starteRunde(aktion) {
+    const ereignisse = fuehreRunde(this.kampf, aktion);
+    this.spieleEreignisse(ereignisse);
+  }
+
+  spieleEreignisse(ereignisse) {
+    this.ereignisse = [...ereignisse];
+    this.wartezeit = 0;
+    this.zustand = 'verarbeitung';
+  }
+
+  setzeAnzeigeNeu() {
+    this.anzeige.eigeneKp = this.kampf.eigene.mon.kp;
+    this.anzeige.gegnerKp = this.kampf.gegner.mon.kp;
+    this.anzeige.erfahrung = erfahrungsAnteil(this.kampf.eigene.mon);
+    this.anzeige.eigenesSichtbar = true;
+    this.anzeige.gegnerSichtbar = true;
+  }
+
+  verarbeiteEreignisse() {
+    if (this.wartezeit > 0) {
+      const warFertig = !this.textfenster.aktiv || this.textfenster.seiteFertig;
+      this.textfenster.schreibeWeiter();
+
+      if (gedrueckt('A') || gedrueckt('B')) {
+        // Erster Druck vervollständigt den Text, der zweite schaltet weiter.
+        if (warFertig) this.wartezeit = 0;
+        else this.textfenster.ueberspringe();
+      } else {
+        this.wartezeit -= 1;
+      }
+      return;
+    }
+
+    // Balken noch am Nachlaufen? Dann kurz warten.
+    if (!this.anzeigeRuhig()) return;
+
+    const ereignis = this.ereignisse.shift();
+    if (!ereignis) {
+      this.nachDenEreignissen();
+      return;
+    }
+    this.fuehreEreignisAus(ereignis);
+  }
+
+  anzeigeRuhig() {
+    const a = this.anzeige;
+    return a.eigeneKp === this.kampf.eigene.mon.kp
+      && a.gegnerKp === this.kampf.gegner.mon.kp
+      && !a.wurf;
+  }
+
+  fuehreEreignisAus(ereignis) {
+    const a = this.anzeige;
+
+    switch (ereignis.typ) {
+      case 'text':
+        // Der Text schreibt sich mit einem Zeichen je Bild – die Wartezeit
+        // deckt das Schreiben ab und lässt danach kurz zum Lesen Zeit.
+        this.textfenster.zeige(ereignis.text);
+        this.wartezeit = WARTE.text + ereignis.text.length;
+        break;
+
+      case 'angriff': {
+        const eigen = ereignis.seite === 'spieler';
+        if (eigen) a.eigenerVersatz = 10;
+        else a.gegnerVersatz = -10;
+        effekt('treffer');
+        this.wartezeit = WARTE.kurz;
+        break;
+      }
+
+      case 'schaden':
+        if (ereignis.seite === 'spieler') a.eigenesBlinken = 20;
+        else a.gegnerBlinken = 20;
+        effekt(ereignis.wirkung >= 2 ? 'starkerTreffer'
+          : ereignis.wirkung !== undefined && ereignis.wirkung < 1 ? 'schwacherTreffer' : 'treffer');
+        this.wartezeit = WARTE.treffer;
+        break;
+
+      case 'heilung':
+        effekt('item');
+        this.wartezeit = WARTE.kurz;
+        break;
+
+      case 'umkippen':
+        if (ereignis.seite === 'spieler') a.eigenesSichtbar = false;
+        else a.gegnerSichtbar = false;
+        effekt('umkippen');
+        this.wartezeit = WARTE.wechsel;
+        break;
+
+      case 'wurf':
+        a.wurf = { schritt: 0, wackler: ereignis.wackler, erfolg: ereignis.erfolg, phase: 'flug' };
+        this.wartezeit = WARTE.wurf;
+        break;
+
+      case 'gegnerWechsel':
+        a.gegnerSichtbar = true;
+        this.setzeAnzeigeNeu();
+        this.wartezeit = WARTE.wechsel;
+        break;
+
+      case 'eigenerWechsel':
+        a.eigenesSichtbar = true;
+        this.setzeAnzeigeNeu();
+        this.wartezeit = WARTE.wechsel;
+        break;
+
+      case 'aufstieg':
+        effekt('aufstieg');
+        this.anzeige.erfahrung = 0;
+        this.wartezeit = WARTE.kurz;
+        break;
+
+      case 'lernen':
+        this.lerneNeueAttacke(ereignis.attacke);
+        break;
+
+      case 'entwicklung':
+        this.entwicklungen.push({ mon: this.kampf.eigene.mon, zielId: ereignis.zielId });
+        break;
+
+      case 'ende':
+        this.ereignisse = [];
+        this.beendeKampf(ereignis.ergebnis);
+        break;
+
+      case 'status':
+      case 'werte':
+      case 'erfahrung':
+      default:
+        this.wartezeit = 4;
+        break;
+    }
+  }
+
+  /**
+   * Neue Attacke einsortieren. Sind schon vier vorhanden, fliegt die erste
+   * raus – das hält den Ablauf im Kampf kurz.
+   */
+  lerneNeueAttacke(name) {
+    const mon = this.kampf.eigene.mon;
+    if (mon.attacken.length < MAX_ATTACKEN) {
+      lerneAttacke(mon, name);
+      this.textfenster.zeige(`${anzeigename(mon)} lernt ${name}!`);
+    } else {
+      const ersetzt = mon.attacken[0].name;
+      lerneAttacke(mon, name, 0);
+      this.textfenster.zeige(`${anzeigename(mon)} vergisst ${ersetzt} und lernt ${name}!`);
+    }
+    effekt('aufstieg');
+    this.wartezeit = WARTE.text;
+  }
+
+  /** Nach dem Abspielen aller Ereignisse: weiter im Kampf oder Ende. */
+  nachDenEreignissen() {
+    if (this.kampf.vorbei) {
+      this.beendeKampf(this.kampf.ergebnis);
+      return;
+    }
+    if (this.kampf.wechselNoetig) {
+      this.textfenster.zeige('Wen schickst du jetzt in den Ring?');
+      this.textfenster.ueberspringe();
+      this.oeffneTeam(true);
+      return;
+    }
+    this.zeigeBefehle();
+  }
+
+  beendeKampf(ergebnis) {
+    this.ergebnis = ergebnis;
+    const meldungen = [];
+
+    if (ergebnis === 'gefangen' && this.kampf.gefangen) {
+      const gefangen = this.kampf.gefangen;
+      merkeGefangen(gefangen.artId);
+      const wohin = nimmAuf(gefangen);
+      meldungen.push(`${anzeigename(gefangen)} wurde ins Samplepack gepackt!`);
+      if (wohin === 'lager') meldungen.push('Das Team ist voll – es wandert in die Kiste.');
+    }
+
+    if (ergebnis === 'sieg' && this.kampf.art === 'trainer') {
+      const geld = this.kampf.trainer.preisgeld ?? 200;
+      aendereGeld(geld);
+      meldungen.push(`${this.kampf.trainer.name} zahlt dir ${geld} Mücken.`);
+    }
+
+    for (const eintrag of this.entwicklungen) {
+      const ziel = entwicklungFaellig(eintrag.mon);
+      if (!ziel) continue;
+      const alterName = anzeigename(eintrag.mon);
+      entwickle(eintrag.mon, ziel);
+      merkeGefangen(ziel.id);
+      meldungen.push(`Was passiert denn da? ${alterName} wird zu ${ziel.name}!`);
+    }
+    this.entwicklungen = [];
+
+    if (meldungen.length > 0) {
+      this.textfenster.zeige(meldungen);
+      this.zustand = 'abschluss';
+    } else {
+      this.beende();
+    }
+  }
+
+  beende() {
+    spieleTrack(this.rueckkehrTrack || 'welt');
+    poppe();
+    this.beiEnde?.(this.ergebnis ?? this.kampf.ergebnis ?? 'sieg');
+  }
+
+  animiereWurf() {
+    const wurf = this.anzeige.wurf;
+    wurf.schritt += 1;
+
+    if (wurf.phase === 'flug' && wurf.schritt > 26) {
+      wurf.phase = 'wackeln';
+      wurf.schritt = 0;
+      this.anzeige.gegnerSichtbar = false;
+      effekt('wackeln');
+    } else if (wurf.phase === 'wackeln') {
+      if (wurf.schritt % 20 === 0 && wurf.schritt / 20 <= wurf.wackler) effekt('wackeln');
+      if (wurf.schritt > 20 * (wurf.wackler + 1)) {
+        if (wurf.erfolg) effekt('gefangen');
+        else this.anzeige.gegnerSichtbar = true;
+        this.anzeige.wurf = null;
+      }
+    }
+  }
+
+  // --- Darstellung ------------------------------------------------------------
+
+  zeichnen(ctx) {
+    this.zeichneHintergrund(ctx);
+
+    const gegner = this.kampf.gegner.mon;
+    const eigenes = this.kampf.eigene.mon;
+
+    if (this.anzeige.gegnerSichtbar && !(this.anzeige.gegnerBlinken > 0 && this.bildzaehler % 6 < 3)) {
+      ctx.drawImage(monSprite(artVon(gegner), 'front'),
+        GEGNER_POS.x + this.anzeige.gegnerVersatz, GEGNER_POS.y);
+    }
+    if (this.anzeige.eigenesSichtbar && !(this.anzeige.eigenesBlinken > 0 && this.bildzaehler % 6 < 3)) {
+      ctx.drawImage(monSprite(artVon(eigenes), 'rueck'),
+        EIGENE_POS.x + this.anzeige.eigenerVersatz, EIGENE_POS.y);
+    }
+
+    if (this.anzeige.wurf) this.zeichneWurf(ctx);
+
+    this.zeichneInfobox(ctx, gegner, 8, 10, false);
+    this.zeichneInfobox(ctx, eigenes, 126, 68, true);
+
+    this.textfenster.zeichnen(ctx);
+    this.zeichneMenues(ctx);
+    blende(ctx, BREITE, HOEHE, this.blendenwert);
+  }
+
+  zeichneHintergrund(ctx) {
+    ctx.fillStyle = '#20243a';
+    ctx.fillRect(0, 0, BREITE, HOEHE);
+    ctx.fillStyle = '#2a3050';
+    ctx.fillRect(0, 0, BREITE, 84);
+
+    // Stroboskop-Streifen im Hintergrund
+    ctx.fillStyle = 'rgba(240, 80, 160, 0.10)';
+    for (let i = 0; i < 6; i += 1) {
+      const x = ((this.bildzaehler * 0.6) + i * 44) % (BREITE + 60) - 30;
+      ctx.fillRect(x, 0, 14, 84);
+    }
+
+    // Bühnenpodeste
+    ctx.fillStyle = '#3a4062';
+    ctx.beginPath();
+    ctx.ellipse(GEGNER_POS.x + SPRITE / 2, GEGNER_POS.y + SPRITE + 2, 40, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(EIGENE_POS.x + SPRITE / 2, EIGENE_POS.y + SPRITE + 2, 46, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#171a2c';
+    ctx.fillRect(0, 84, BREITE, 76);
+  }
+
+  zeichneWurf(ctx) {
+    const wurf = this.anzeige.wurf;
+    const ziel = { x: GEGNER_POS.x + 20, y: GEGNER_POS.y + 20 };
+
+    if (wurf.phase === 'flug') {
+      const t = Math.min(1, wurf.schritt / 26);
+      const x = 40 + (ziel.x - 40) * t;
+      const y = 96 + (ziel.y - 96) * t - Math.sin(t * Math.PI) * 40;
+      gegenstandSymbol(ctx, 'samplepack', x, y);
+      return;
+    }
+
+    const wackelPhase = Math.floor(wurf.schritt / 20);
+    const neigung = wackelPhase <= wurf.wackler && wurf.schritt % 20 < 10
+      ? Math.sin(wurf.schritt * 0.6) * 3
+      : 0;
+    gegenstandSymbol(ctx, 'samplepack', ziel.x + neigung, ziel.y + 14);
+  }
+
+  /**
+   * Anzeige über ein Hardtekkmon.
+   * @param {boolean} eigenes zeigt zusätzlich Kraftpunkte und Erfahrung
+   */
+  zeichneInfobox(ctx, mon, x, y, eigenes) {
+    const breite = eigenes ? 108 : 104;
+    const hoehe = eigenes ? 40 : 30;
+    fenster(ctx, x, y, breite, hoehe);
+
+    const name = anzeigename(mon);
+    zeichneText(ctx, name, x + 5, y + 4, { farbe: UI.text });
+    zeichneText(ctx, `St.${mon.stufe}`, x + breite - 26, y + 4, { farbe: UI.text });
+
+    const grenze = maxKp(mon);
+    const angezeigt = eigenes ? this.anzeige.eigeneKp : this.anzeige.gegnerKp;
+    const anteil = Math.max(0, angezeigt / grenze);
+
+    zeichneText(ctx, 'KP', x + 5, y + 15, { farbe: '#4058a8' });
+    balken(ctx, x + 20, y + 17, breite - 28, anteil, kpFarbe(anteil));
+
+    if (mon.status) {
+      const kurz = mon.status.slice(0, 4).toUpperCase();
+      ctx.fillStyle = '#c03050';
+      ctx.fillRect(x + 5, y + 22, textBreite(kurz) + 4, 8);
+      zeichneText(ctx, kurz, x + 7, y + 23, { farbe: '#f8f8f0' });
+    }
+
+    if (eigenes) {
+      const zahlen = `${Math.round(angezeigt)}/${grenze}`;
+      zeichneText(ctx, zahlen, x + breite - textBreite(zahlen) - 5, y + 22, { farbe: UI.text });
+      zeichneText(ctx, 'EP', x + 5, y + 31, { farbe: '#4058a8' });
+      balken(ctx, x + 20, y + 33, breite - 28, this.anzeige.erfahrung, UI.erfahrung, 2);
+    }
+  }
+
+  zeichneMenues(ctx) {
+    if (this.zustand === 'befehl') {
+      this.befehlsmenue.zeichnen(ctx, BREITE - 108, HOEHE - 46, 104, 42, { zeilenhoehe: 15 });
+      return;
+    }
+
+    if (this.zustand === 'attacke') {
+      const eintrag = this.kampf.eigene.mon.attacken[this.attackenmenue.index];
+      const daten = eintrag ? findeAttacke(eintrag.name) : null;
+
+      this.attackenmenue.zeichnen(ctx, 4, HOEHE - 46, 164, 42, { zeilenhoehe: 15 });
+      fenster(ctx, 170, HOEHE - 46, 66, 42);
+      if (daten && eintrag) {
+        zeichneText(ctx, `AP ${eintrag.ap}/${eintrag.maxAp}`, 175, HOEHE - 41, { farbe: UI.text });
+        typSchild(ctx, daten.typ, 175, HOEHE - 30);
+        zeichneText(ctx, daten.staerke > 0 ? `St ${daten.staerke}` : 'Status', 175, HOEHE - 18, { farbe: UI.text });
+      }
+      return;
+    }
+
+    if (this.zustand === 'beutel') {
+      this.beutelmenue.zeichnen(ctx, 4, HOEHE - 62, 160, 58, {
+        zeilenhoehe: 12,
+        zusatz: (index) => `×${spiel.beutel[this.beutelNamen[index]] ?? 0}`,
+      });
+      return;
+    }
+
+    if (this.zustand === 'team') {
+      this.teammenue.zeichnen(ctx, 4, HOEHE - 86, 176, 82, { zeilenhoehe: 12 });
+    }
+  }
+}
