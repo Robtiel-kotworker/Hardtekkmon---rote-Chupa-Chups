@@ -17,6 +17,8 @@ let ctx = null;
 let summe = null;
 /** @type {GainNode|null} */
 let musikBus = null;
+/** @type {GainNode|null} */
+let kickBus = null;
 let verzerrer = null;
 
 let an = true;
@@ -33,49 +35,67 @@ function hz(halbtoene) {
  * Notennamen wie "a2", "cis3" werden bewusst nicht unterstützt – die Stücke
  * stehen als Halbtonabstände in der Tabelle, das hält den Sequenzer klein.
  * `null` bedeutet Pause.
+ *
+ * Zweite Fassung, näher an klassischen Pokémon-Melodien orientiert: kurze,
+ * wiederkehrende Hooks statt frei springender Läufe, spürbar ruhigeres
+ * Tempo (132-156 statt 150-180) und eine deutlich dünnere Hi-Hat-Spur.
+ * Der harte Verzerrer sitzt jetzt ausschließlich auf der Kick (siehe
+ * kickBus in starteAudio) – Bass und Lead bleiben klar, das nimmt dem
+ * Ganzen die Härte, ohne den Hardtekk-Punch der Kick zu verlieren.
  */
 const TRACKS = {
   titel: {
-    bpm: 150,
+    bpm: 136,
     kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0],
-    bass: [-24, null, null, null, -24, null, -17, null, -22, null, null, null, -22, null, -15, null],
-    lead: [4, null, 7, null, 11, null, 7, null, 9, null, 4, null, 2, null, null, null],
+    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+    bass: [-24, null, null, null, -24, null, -19, null, -22, null, null, null, -22, null, -17, null],
+    // Aufsteigendes Dur-Arpeggio und zurück – die Art kurzer, singbarer
+    // Fanfare, mit der viele Titelmelodien im Genre öffnen.
+    lead: [0, null, 4, null, 7, null, 12, null, 12, null, 7, null, 4, null, null, null],
   },
   welt: {
-    bpm: 160,
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
-    hat: [0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0],
-    bass: [-24, null, -24, null, -19, null, -17, null, -22, null, -22, null, -20, null, -17, null],
-    lead: [0, 4, 7, 4, 9, 7, 4, null, 2, 5, 9, 5, 7, null, 4, null],
+    bpm: 140,
+    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+    hat: [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
+    bass: [-24, null, -24, null, -17, null, -17, null, -22, null, -22, null, -19, null, -19, null],
+    // Ein viertaktiges Frage-Antwort-Motiv, wie man es aus Overworld-Themes
+    // kennt: erst eine kurze Wendung nach oben, dann die Antwort zurück.
+    lead: [0, 4, 7, null, 4, null, 5, null, 0, 4, 7, null, 5, 4, null, null],
   },
   kampf: {
-    bpm: 172,
-    kick: [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0],
-    hat: [0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1],
-    bass: [-24, -24, null, -24, -19, null, -19, null, -22, -22, null, -22, -15, null, -17, null],
-    lead: [12, 11, 7, 4, 7, 11, 12, 14, 11, 9, 7, 4, 2, 4, 7, 9],
+    bpm: 148,
+    kick: [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    bass: [-24, null, -24, null, -19, null, -19, null, -22, null, -22, null, -17, null, -17, null],
+    // Angespannter, aber wiederholter Ritt über eine kleine Molltonleiter –
+    // dringlich statt chaotisch.
+    lead: [12, null, 11, null, 7, null, 11, null, 12, null, 14, null, 11, null, 7, null],
   },
   gig: {
-    bpm: 180,
-    kick: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1],
-    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
-    bass: [-27, null, -27, null, -20, null, -22, null, -27, null, -27, null, -25, null, -24, null],
-    lead: [16, 14, 12, 14, 16, 19, 16, 14, 12, 11, 12, 14, 16, null, 12, null],
+    bpm: 154,
+    kick: [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1],
+    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
+    bass: [-27, null, -27, null, -20, null, -20, null, -22, null, -22, null, -25, null, -25, null],
+    // Der intensivste Track im Spiel, aber immer noch ein klarer,
+    // wiederholter Hook statt eines durchgehenden Sechzehntellaufs.
+    lead: [16, null, 14, null, 12, null, 14, null, 16, 19, 16, 14, 12, null, null, null],
   },
   boxenstopp: {
-    bpm: 128,
+    bpm: 116,
     kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-    bass: [-24, null, null, null, -20, null, null, null, -22, null, null, null, -17, null, null, null],
-    lead: [7, null, 11, null, 12, null, 11, null, 9, null, 7, null, 4, null, null, null],
+    hat: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+    bass: [-24, null, null, null, null, null, -19, null, -22, null, null, null, null, null, -17, null],
+    // Ruhig fallend und wieder aufsteigend, viel Raum zwischen den Tönen –
+    // die Healing-Center-Melodie soll erholen, nicht antreiben.
+    lead: [7, null, null, 11, null, 12, null, null, 9, null, null, 7, null, 4, null, null],
   },
   sieg: {
-    bpm: 168,
+    bpm: 144,
     kick: [1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0],
-    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
+    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
     bass: [-24, null, -24, null, -17, null, -17, null, -19, null, -19, null, -12, null, null, null],
-    lead: [12, 16, 19, 16, 12, 16, 19, 21, 19, 16, 12, 16, 19, null, null, null],
+    // Klare Dreiklangs-Fanfare nach oben – triumphierend statt hektisch.
+    lead: [12, 16, 19, null, 12, 16, 19, null, 21, 19, 16, 12, null, null, null, null],
   },
 };
 
@@ -106,15 +126,22 @@ export function starteAudio() {
   summe = ctx.createGain();
   summe.gain.value = an ? 0.5 : 0;
 
+  // Nur die Kick läuft durch den harten Verzerrer – das gibt ihr den
+  // typischen Hardtekk-Punch. Liefen früher Hi-Hat, Bass und Lead mit durch
+  // denselben Verzerrer, machte das die ganze Musik unangenehm scharf.
   verzerrer = ctx.createWaveShaper();
-  verzerrer.curve = verzerrerKurve(12);
+  verzerrer.curve = verzerrerKurve(7);
   verzerrer.oversample = '2x';
 
-  musikBus = ctx.createGain();
-  musikBus.gain.value = 0.9;
-
-  musikBus.connect(verzerrer);
+  kickBus = ctx.createGain();
+  kickBus.gain.value = 0.85;
+  kickBus.connect(verzerrer);
   verzerrer.connect(summe);
+
+  musikBus = ctx.createGain();
+  musikBus.gain.value = 0.8;
+  musikBus.connect(summe);
+
   summe.connect(ctx.destination);
 
   naechsterSchrittZeit = ctx.currentTime;
@@ -150,7 +177,7 @@ export function aktuellerTrack() {
 
 /** Kick: kurzer Sinus mit fallender Tonhöhe, danach in den Verzerrer. */
 function kick(zeit, staerke = 1) {
-  if (!ctx || !musikBus) return;
+  if (!ctx || !kickBus) return;
   const oszillator = ctx.createOscillator();
   const huellkurve = ctx.createGain();
 
@@ -163,7 +190,7 @@ function kick(zeit, staerke = 1) {
   huellkurve.gain.exponentialRampToValueAtTime(0.0001, zeit + 0.26);
 
   oszillator.connect(huellkurve);
-  huellkurve.connect(musikBus);
+  huellkurve.connect(kickBus);
   oszillator.start(zeit);
   oszillator.stop(zeit + 0.3);
 }
@@ -189,7 +216,7 @@ function hihat(zeit) {
   filter.frequency.value = 7000;
 
   const huellkurve = ctx.createGain();
-  huellkurve.gain.setValueAtTime(0.16, zeit);
+  huellkurve.gain.setValueAtTime(0.11, zeit);
   huellkurve.gain.exponentialRampToValueAtTime(0.0001, zeit + 0.045);
 
   quelle.connect(filter);
@@ -236,7 +263,7 @@ export function audioSchritt() {
     if (track.kick[i]) kick(zeit);
     if (track.hat[i]) hihat(zeit);
     if (track.bass[i] !== null) ton(zeit, track.bass[i], schrittDauer * 1.6, 'square', 0.12);
-    if (track.lead[i] !== null) ton(zeit, track.lead[i], schrittDauer * 0.9, 'sawtooth', 0.055);
+    if (track.lead[i] !== null) ton(zeit, track.lead[i], schrittDauer * 0.9, 'sawtooth', 0.065);
 
     naechsterSchrittZeit += schrittDauer;
     schrittZaehler += 1;

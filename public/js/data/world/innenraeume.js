@@ -319,7 +319,7 @@ export function baueLabor(id, rueck) {
       npcs: [
         person(9, 6, 'professor', 'unten', {
           aktion: { art: 'professor' },
-          text: 'Ah, du bist es! Such dir ein Samplepack aus – da ist jeweils ein Hardtekkmon drin.',
+          text: 'Ah, {name}! Da bist du ja. Such dir ein Samplepack aus – da ist jeweils ein Hardtekkmon drin.',
         }),
         person(3, 9, 'techniker', 'oben', {
           text: 'Der Professor macht seit 30 Jahren dasselbe. Und es funktioniert immer noch nicht richtig.',
