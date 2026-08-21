@@ -113,6 +113,11 @@ baueKarte('route1', {
   bauer.wegY(0, 39, weg);
   bauer.setze(weg - 1, 20, 'zaun');
   bauer.setze(weg + 3, 20, 'zaun');
+  // Südausgang so schmal wie der Nordausgang von Bassdorf.
+  for (const x of [weg, weg + 2]) {
+    bauer.setze(x, 38, 'baum');
+    bauer.setze(x, 39, 'baum');
+  }
   // Standplätze der Trainer freihalten – der gestreute Bewuchs trifft sonst zu.
   for (const [x, y] of [[weg - 1, 30], [weg + 3, 18], [weg + 1, 8], [4, 33]]) {
     bauer.setze(x, y, 'gras');

@@ -10,7 +10,7 @@
 import { BREITE, HOEHE } from '../engine/screen.js';
 import { gedrueckt, gehalten, richtung as eingaberichtung } from '../engine/input.js';
 import { spieleTrack, effekt } from '../engine/audio.js';
-import { KACHEL } from '../gfx/tiles.js';
+import { KACHEL, kachelInfo } from '../gfx/tiles.js';
 import { zeichneMensch } from '../gfx/menschen.js';
 import { monSprite } from '../gfx/monsprites.js';
 import { blende as zeichneBlende, fenster, gegenstandSymbol } from '../gfx/ui.js';
@@ -308,16 +308,12 @@ export class Weltszene {
       return;
     }
 
-    const eingabe = eingaberichtung();
-    if (eingabe.x === 0 && eingabe.y === 0) {
+    const neueRichtung = this.gewuenschteRichtung();
+    if (!neueRichtung) {
       this.drehzeit = 0;
       this.figur.bild = 0;
       return;
     }
-
-    const neueRichtung = eingabe.y < 0 ? 'oben'
-      : eingabe.y > 0 ? 'unten'
-        : eingabe.x < 0 ? 'links' : 'rechts';
 
     if (this.figur.richtung !== neueRichtung) {
       this.figur.richtung = neueRichtung;
@@ -331,6 +327,25 @@ export class Weltszene {
     }
 
     this.versucheSchritt();
+  }
+
+  /**
+   * Gewünschte Laufrichtung. Neben gehaltenen Tasten zählt auch ein kurzes
+   * Antippen – auf dem Touchscreen tippt man häufiger, als man hält, und ohne
+   * das würde ein kurzer Tipper wirkungslos verpuffen.
+   * @returns {string|null}
+   */
+  gewuenschteRichtung() {
+    const eingabe = eingaberichtung();
+    if (eingabe.y < 0) return 'oben';
+    if (eingabe.y > 0) return 'unten';
+    if (eingabe.x < 0) return 'links';
+    if (eingabe.x > 0) return 'rechts';
+
+    for (const [taste, richtung] of [['UP', 'oben'], ['DOWN', 'unten'], ['LEFT', 'links'], ['RIGHT', 'rechts']]) {
+      if (gedrueckt(taste)) return richtung;
+    }
+    return null;
   }
 
   versucheSchritt() {
@@ -366,7 +381,30 @@ export class Weltszene {
       ? (seite === 'norden' ? ziel.hoehe - 2 : 1)
       : Math.max(1, Math.min(ziel.hoehe - 2, this.figur.y + versatz));
 
-    this.starteBlende(() => this.wechsleKarte(zielId, neuX, neuY));
+    const ankunft = this.freieAnkunft(ziel, neuX, neuY, waagerecht);
+    if (!ankunft) return;
+
+    this.starteBlende(() => this.wechsleKarte(zielId, ankunft.x, ankunft.y));
+  }
+
+  /**
+   * Sucht rund um die berechnete Anschlussstelle eine begehbare Kachel. Ohne
+   * diese Absicherung könnte ein enger Kartenrand den Spieler in einer festen
+   * Kachel absetzen.
+   * @returns {{ x: number, y: number }|null}
+   */
+  freieAnkunft(ziel, x, y, waagerecht) {
+    const kachelFest = (pruefX, pruefY) => {
+      if (pruefX < 0 || pruefY < 0 || pruefX >= ziel.breite || pruefY >= ziel.hoehe) return true;
+      return Boolean(kachelInfo(ziel.kacheln[pruefY * ziel.breite + pruefX]).fest);
+    };
+
+    for (const abstand of [0, -1, 1, -2, 2, -3, 3]) {
+      const pruefX = waagerecht ? x + abstand : x;
+      const pruefY = waagerecht ? y : y + abstand;
+      if (!kachelFest(pruefX, pruefY)) return { x: pruefX, y: pruefY };
+    }
+    return null;
   }
 
   /** Läuft nach jedem abgeschlossenen Schritt. */

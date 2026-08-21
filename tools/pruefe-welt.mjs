@@ -78,6 +78,54 @@ for (const k of Object.values(KARTEN)) {
   }
 }
 
+/**
+ * Kartenübergänge am Rand: Die Anschlussposition wird zur Laufzeit aus den
+ * Kartenmitten berechnet (siehe scenes/welt.js). Hier wird für jede begehbare
+ * Randkachel geprüft, dass man auf der Nachbarkarte auch wirklich ankommt.
+ */
+const GEGENSEITE = { norden: 'sueden', sueden: 'norden', westen: 'osten', osten: 'westen' };
+
+for (const k of Object.values(KARTEN)) {
+  for (const [seite, zielId] of Object.entries(k.verbindungen ?? {})) {
+    const ziel = KARTEN[zielId];
+    if (!ziel) continue;
+
+    const waagerecht = seite === 'norden' || seite === 'sueden';
+    const versatz = waagerecht
+      ? Math.floor(ziel.breite / 2) - Math.floor(k.breite / 2)
+      : Math.floor(ziel.hoehe / 2) - Math.floor(k.hoehe / 2);
+
+    const randKacheln = [];
+    if (waagerecht) {
+      const y = seite === 'norden' ? 0 : k.hoehe - 1;
+      for (let x = 0; x < k.breite; x += 1) randKacheln.push({ x, y });
+    } else {
+      const x = seite === 'westen' ? 0 : k.breite - 1;
+      for (let y = 0; y < k.hoehe; y += 1) randKacheln.push({ x, y });
+    }
+
+    const offen = randKacheln.filter((feld) => !fest(kachelAn(k, feld.x, feld.y)));
+    if (offen.length === 0) {
+      melde(`${k.id}: Verbindung nach ${seite} (${zielId}), aber der Rand ist zu`);
+      continue;
+    }
+
+    for (const feld of offen) {
+      const zx = waagerecht
+        ? Math.max(1, Math.min(ziel.breite - 2, feld.x + versatz))
+        : (seite === 'westen' ? ziel.breite - 2 : 1);
+      const zy = waagerecht
+        ? (seite === 'norden' ? ziel.hoehe - 2 : 1)
+        : Math.max(1, Math.min(ziel.hoehe - 2, feld.y + versatz));
+
+      const zielKachel = kachelAn(ziel, zx, zy);
+      if (fest(zielKachel)) {
+        melde(`${k.id} ${seite} bei ${feld.x},${feld.y} -> ${zielId} ${zx},${zy} ist fest (${zielKachel})`);
+      }
+    }
+  }
+}
+
 /** Erreichbarkeit: Flutfüllung vom Startpunkt jeder Karte über begehbare Kacheln. */
 function erreichbar(k, start) {
   const gesehen = new Set();
