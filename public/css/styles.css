@@ -427,6 +427,12 @@ body {
   bottom: var(--pad-rand);
   width: var(--dpad);
   height: var(--dpad);
+  /* .pad selbst ist pointer-events:none (nur die Tasten sollen reagieren) –
+     das Steuerkreuz braucht aber die ganze quadratische Fläche als
+     Trefferbereich (siehe richtungAusPunkt in engine/input.js), nicht nur
+     die schmalen sichtbaren Arme. Ohne dieses Auto würde ein Antippen der
+     Lücke zwischen zwei Armen oder der Mitte gar kein Ereignis auslösen. */
+  pointer-events: auto;
 }
 
 .pad__hub {

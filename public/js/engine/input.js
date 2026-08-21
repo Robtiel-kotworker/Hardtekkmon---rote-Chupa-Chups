@@ -129,16 +129,54 @@ function bindeBildschirmtasten() {
 }
 
 /**
- * Ermittelt anhand einer Zeigerposition, über welcher Richtungstaste der
- * Finger gerade steht, und schaltet die gehaltene Richtung bei Bedarf um.
+ * Ermittelt die Richtung aus einer Zeigerposition – geometrisch über die
+ * gesamte quadratische Fläche des Steuerkreuzes, nicht nur über die schmalen
+ * sichtbaren Arme. Das sichtbare Kreuz (nur ca. ein Drittel der Fläche pro
+ * Arm) war als Trefferfläche zu klein; hier zählt stattdessen die ganze
+ * Fläche, in vier 90°-Sektoren um die Mitte eingeteilt, mit einer kleinen
+ * Ruhezone genau in der Mitte (dem Knauf). Das overlay bleibt optisch
+ * unverändert – nur unsichtbar reagiert jetzt ein größerer Bereich. Da die
+ * Fläche exakt die des bestehenden Steuerkreuz-Containers ist, kann es nie
+ * mit A/B/SELECT/START kollidieren, die an anderer Stelle sitzen.
+ * @param {HTMLElement} dpad
+ * @param {number} x
+ * @param {number} y
+ * @returns {string|null}
+ */
+function richtungAusPunkt(dpad, x, y) {
+  const rechteck = dpad.getBoundingClientRect();
+  if (x < rechteck.left || x > rechteck.right || y < rechteck.top || y > rechteck.bottom) {
+    return null;
+  }
+
+  const halbe = rechteck.width / 2;
+  const dx = (x - (rechteck.left + halbe)) / halbe;
+  const dy = (y - (rechteck.top + halbe)) / halbe;
+
+  // Ruhezone in der Mitte (etwa der Knauf) – dort löst Berühren keine
+  // Richtung aus, sonst würde ein Finger, der einfach nur auflag, sofort
+  // eine Zufallsrichtung auslösen.
+  const TOTZONE = 0.25;
+  if (Math.hypot(dx, dy) < TOTZONE) return null;
+
+  const winkel = Math.atan2(dy, dx);
+  const VIERTEL = Math.PI / 4;
+  if (winkel > -VIERTEL && winkel <= VIERTEL) return 'RIGHT';
+  if (winkel > VIERTEL && winkel <= 3 * VIERTEL) return 'DOWN';
+  if (winkel > 3 * VIERTEL || winkel <= -3 * VIERTEL) return 'LEFT';
+  return 'UP';
+}
+
+/**
+ * Ermittelt anhand einer Zeigerposition, welche Richtung der Finger gerade
+ * anspricht, und schaltet die gehaltene Richtung bei Bedarf um.
+ * @param {HTMLElement} dpad
  * @param {number} pointerId
  * @param {number} x
  * @param {number} y
  */
-function aktualisiereSteuerkreuzZeiger(pointerId, x, y) {
-  const ziel = /** @type {HTMLElement|null} */ (document.elementFromPoint(x, y));
-  const taste = ziel?.dataset.button;
-  const neu = taste && RICHTUNGSTASTEN.has(taste) ? taste : null;
+function aktualisiereSteuerkreuzZeiger(dpad, pointerId, x, y) {
+  const neu = richtungAusPunkt(dpad, x, y);
   const alt = dpadZeiger.get(pointerId) ?? null;
   if (neu === alt) return;
 
@@ -166,7 +204,7 @@ function bindeSteuerkreuzGleiten() {
     const zeiger = /** @type {PointerEvent} */ (ereignis);
     ereignis.preventDefault();
     dpadAktiv.add(zeiger.pointerId);
-    aktualisiereSteuerkreuzZeiger(zeiger.pointerId, zeiger.clientX, zeiger.clientY);
+    aktualisiereSteuerkreuzZeiger(/** @type {HTMLElement} */ (dpad), zeiger.pointerId, zeiger.clientX, zeiger.clientY);
   });
 
   dpad.addEventListener('contextmenu', (ereignis) => ereignis.preventDefault());
@@ -174,7 +212,7 @@ function bindeSteuerkreuzGleiten() {
   window.addEventListener('pointermove', (ereignis) => {
     const zeiger = /** @type {PointerEvent} */ (ereignis);
     if (!dpadAktiv.has(zeiger.pointerId)) return;
-    aktualisiereSteuerkreuzZeiger(zeiger.pointerId, zeiger.clientX, zeiger.clientY);
+    aktualisiereSteuerkreuzZeiger(/** @type {HTMLElement} */ (dpad), zeiger.pointerId, zeiger.clientX, zeiger.clientY);
   });
 
   for (const name of ['pointerup', 'pointercancel']) {
