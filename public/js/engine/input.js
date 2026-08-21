@@ -69,8 +69,21 @@ function setze(taste, an) {
   }
 }
 
+/**
+ * Ob das Ereignis aus einem echten Formularfeld kommt (Login/Registrierung).
+ * Dort muss die Tastatur normal funktionieren – Pfeiltasten, Leertaste,
+ * Rücktaste und Enter dürfen dort nicht vom Spiel abgefangen werden.
+ * @param {Event} ereignis
+ */
+function kommtAusEingabefeld(ereignis) {
+  const ziel = /** @type {HTMLElement} */ (ereignis.target);
+  if (!ziel) return false;
+  return ziel.tagName === 'INPUT' || ziel.tagName === 'TEXTAREA' || ziel.isContentEditable;
+}
+
 function bindeTastatur() {
   window.addEventListener('keydown', (ereignis) => {
+    if (kommtAusEingabefeld(ereignis)) return;
     const taste = TASTATUR[ereignis.code];
     if (!taste) return;
     ereignis.preventDefault();
@@ -78,6 +91,7 @@ function bindeTastatur() {
   });
 
   window.addEventListener('keyup', (ereignis) => {
+    if (kommtAusEingabefeld(ereignis)) return;
     const taste = TASTATUR[ereignis.code];
     if (!taste) return;
     ereignis.preventDefault();

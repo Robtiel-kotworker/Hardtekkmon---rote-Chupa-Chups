@@ -7,6 +7,7 @@
 // ============================================================================
 
 import { laden as ladeStand, speichern as schreibeStand, loeschen } from '../engine/storage.js';
+import { schreibeCloudStand } from '../engine/konto.js';
 import { erstelleHardtekkmon, frischMachen, MAX_TEAM } from './hardtekkmon.js';
 import { START } from '../data/world/karten.js';
 
@@ -47,12 +48,20 @@ export function neuesSpiel(name = 'Ravey') {
   return spiel;
 }
 
-/** Lädt einen gespeicherten Stand. Liefert false, wenn keiner vorhanden ist. */
-export function ladeSpiel() {
-  const roh = ladeStand();
-  if (!roh || roh.version !== 1) return false;
+/** Mengen liegen im Spiel als Set vor, aber JSON (localStorage wie Cloud) kennt nur Arrays. */
+function nachAussen(stand) {
+  return {
+    ...stand,
+    flaggen: [...stand.flaggen],
+    besiegteTrainer: [...stand.besiegteTrainer],
+    aufgesammelt: [...stand.aufgesammelt],
+    gesehen: [...stand.gesehen],
+    gefangen: [...stand.gefangen],
+  };
+}
 
-  spiel = {
+function nachInnen(roh) {
+  return {
     ...leererStand(),
     ...roh,
     flaggen: new Set(roh.flaggen ?? []),
@@ -61,20 +70,26 @@ export function ladeSpiel() {
     gesehen: new Set(roh.gesehen ?? []),
     gefangen: new Set(roh.gefangen ?? []),
   };
+}
+
+/** Lädt einen gespeicherten Stand. Liefert false, wenn keiner vorhanden ist. */
+export function ladeSpiel() {
+  const roh = ladeStand();
+  if (!roh || roh.version !== 1) return false;
+
+  spiel = nachInnen(roh);
   return true;
 }
 
-/** Schreibt den Stand in den Browserspeicher. */
+/** Schreibt den Stand in den Browserspeicher und stößt einen Cloud-Abgleich an. */
 export function speichereSpiel() {
   if (!spiel) return false;
-  return schreibeStand({
-    ...spiel,
-    flaggen: [...spiel.flaggen],
-    besiegteTrainer: [...spiel.besiegteTrainer],
-    aufgesammelt: [...spiel.aufgesammelt],
-    gesehen: [...spiel.gesehen],
-    gefangen: [...spiel.gefangen],
-  });
+  const platt = nachAussen(spiel);
+  const ok = schreibeStand(platt);
+  // Nicht blockierend: ein langsames oder fehlendes Netz darf das Spiel nie
+  // aufhalten. Der lokale Stand bleibt in jedem Fall die Wahrheit fürs Gerät.
+  schreibeCloudStand(platt).catch(() => {});
+  return ok;
 }
 
 export function loescheSpiel() {

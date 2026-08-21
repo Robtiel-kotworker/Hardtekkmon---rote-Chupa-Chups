@@ -9,10 +9,12 @@ import { ctx, loesche, HOEHE } from './engine/screen.js';
 import { starteEingabe, eingabeSchritt } from './engine/input.js';
 import { schleife } from './engine/loop.js';
 import { starteAudio, audioSchritt, tonUmschalten } from './engine/audio.js';
+import { starteKonto } from './engine/kontoUi.js';
 import { baueKacheln } from './gfx/tiles.js';
 import { zeichneText } from './gfx/font.js';
-import { schiebe, aktualisiereStapel, zeichneStapel } from './scenes/stapel.js';
+import { schiebe, aktuelleSzene, aktualisiereStapel, zeichneStapel } from './scenes/stapel.js';
 import { Titelszene } from './scenes/titel.js';
+import { Beendenszene } from './scenes/beenden.js';
 import { spiel, zaehleZeit } from './game/spielstand.js';
 
 /** Vollbild und Ton lassen sich über zwei kleine Schalter umstellen. */
@@ -40,6 +42,15 @@ function verbindeSchalter() {
   window.addEventListener('keydown', wecken, { once: true });
 }
 
+/** Das rote Power-Kreuz im Gehäuse: öffnet die Beenden-Abfrage. */
+function verbindePowerknopf() {
+  const power = document.getElementById('power');
+  power?.addEventListener('click', () => {
+    if (aktuelleSzene() instanceof Beendenszene) return;
+    schiebe(new Beendenszene());
+  });
+}
+
 /** Zeigt einen Fehler auf dem Spielbildschirm statt in der Konsole. */
 function zeigeFehler(fehler) {
   loesche('#181020');
@@ -51,10 +62,16 @@ function zeigeFehler(fehler) {
   zeichneText(ctx, 'Seite neu laden hilft meistens.', 8, HOEHE - 16, { farbe: '#a0a0b8' });
 }
 
-function start() {
+async function start() {
   starteEingabe();
   verbindeSchalter();
+  verbindePowerknopf();
   baueKacheln();
+
+  // Blockiert, bis eine Sitzung steht (bestehend oder frisch angemeldet) –
+  // erst danach ergibt ein Spielstand überhaupt einen Sinn.
+  await starteKonto();
+
   schiebe(new Titelszene());
 
   const spielschleife = schleife(
@@ -73,9 +90,7 @@ function start() {
   spielschleife.start();
 }
 
-try {
-  start();
-} catch (fehler) {
+start().catch((fehler) => {
   zeigeFehler(fehler);
   throw fehler;
-}
+});

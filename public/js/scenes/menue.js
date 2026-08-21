@@ -15,9 +15,10 @@ import { Auswahl } from '../ui/auswahl.js';
 import { Textfenster } from '../ui/textfenster.js';
 import { spiel, speichereSpiel, spielzeitText, anzahlGigs } from '../game/spielstand.js';
 import { ARTEN_GESAMT } from '../game/hardtekkmon.js';
+import { meldeAb } from '../engine/konto.js';
 import { schiebe, poppe } from './stapel.js';
 
-const EINTRAEGE = ['TEKKDEX', 'TEAM', 'BEUTEL', 'GIGPASS', 'SPEICHERN', 'ZURÜCK'];
+const EINTRAEGE = ['TEKKDEX', 'TEAM', 'BEUTEL', 'GIGPASS', 'SPEICHERN', 'ABMELDEN', 'ZURÜCK'];
 
 export class Menueszene {
   /** @param {object} welt Die darunterliegende Weltszene (nur zum Zeichnen). */
@@ -68,6 +69,11 @@ export class Menueszene {
           : 'Speichern hat nicht geklappt – der Browser lässt nicht.');
         break;
       case 5:
+        effekt('bestaetigen');
+        if (spiel) speichereSpiel();
+        meldeAb().then(() => window.location.reload());
+        break;
+      case 6:
       default:
         poppe();
         break;

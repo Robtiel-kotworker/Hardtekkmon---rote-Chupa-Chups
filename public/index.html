@@ -33,7 +33,6 @@
       <span class="shell__corner shell__corner--br"></span>
       <span class="shell__logo">HARDTEKKMON</span>
       <span class="shell__strap">///&nbsp;KEIN&nbsp;PARDON&nbsp;///</span>
-      <span class="shell__power"></span>
       <span class="shell__grille"></span>
       <span class="shell__side shell__side--left">DRUCK</span>
       <span class="shell__side shell__side--right">VOLLGAS</span>
@@ -42,6 +41,10 @@
       <span class="shell__screw shell__screw--bl"></span>
       <span class="shell__screw shell__screw--br"></span>
     </div>
+
+    <!-- Einziges nicht-dekoratives Gehäuseteil: eine echte Taste, darum
+         außerhalb des aria-hidden-Gehäuses. Öffnet die Beenden-Abfrage. -->
+    <button id="power" class="shell__power" type="button" aria-label="Spiel beenden"></button>
 
     <canvas id="screen" class="screen" width="240" height="160" aria-label="Spielbildschirm"></canvas>
 
@@ -69,6 +72,55 @@
 
     <button id="fullscreen" class="chip chip--fullscreen" aria-label="Vollbild umschalten">⛶</button>
     <button id="sound" class="chip chip--sound" aria-label="Ton umschalten">♪</button>
+  </div>
+
+  <!-- Login/Registrierung: liegt vor allem anderen über der Seite. Echtes
+       HTML statt Canvas – für freie Passworteingabe, Autofill und
+       Zugänglichkeit. Wird per JS erst sichtbar, falls keine Sitzung
+       besteht (main.js/engine/kontoUi.js). -->
+  <div id="konto-tor" class="konto-tor" hidden>
+    <div id="konto-login-fenster" class="konto-fenster">
+      <p class="konto-marke">HARDTEKKMON</p>
+      <h1 class="konto-titel">Anmelden</h1>
+      <p class="konto-untertitel">Ein Konto, überall weiterspielen.</p>
+
+      <form id="konto-login-form" class="konto-form">
+        <label class="konto-feld">
+          <span>Nutzername</span>
+          <input type="text" name="nutzername" autocomplete="username" required minlength="3" maxlength="20" />
+        </label>
+        <label class="konto-feld">
+          <span>Passwort</span>
+          <input type="password" name="passwort" autocomplete="current-password" required minlength="6" />
+        </label>
+        <p id="konto-login-fehler" class="konto-fehler" role="alert" hidden></p>
+        <button type="submit" class="konto-knopf">EINLOGGEN</button>
+      </form>
+
+      <button type="button" id="konto-registrieren-link" class="konto-link">Noch nicht registriert?</button>
+    </div>
+
+    <div id="konto-registrieren-fenster" class="konto-fenster" hidden>
+      <p class="konto-marke">HARDTEKKMON</p>
+      <h1 class="konto-titel">Registrieren</h1>
+      <p class="konto-untertitel">Nutzername frei wählbar, Passwort auch.</p>
+
+      <form id="konto-registrieren-form" class="konto-form">
+        <label class="konto-feld">
+          <span>Nutzername</span>
+          <input type="text" name="nutzername" autocomplete="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_\-]{3,20}" />
+        </label>
+        <label class="konto-feld">
+          <span>Passwort</span>
+          <input type="password" name="passwort" autocomplete="new-password" required minlength="6" />
+        </label>
+        <p id="konto-registrieren-fehler" class="konto-fehler" role="alert" hidden></p>
+        <div class="konto-form__reihe">
+          <button type="button" id="konto-registrieren-abbrechen" class="konto-knopf konto-knopf--zweit">ABBRECHEN</button>
+          <button type="submit" class="konto-knopf">KONTO ANLEGEN</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <noscript>
