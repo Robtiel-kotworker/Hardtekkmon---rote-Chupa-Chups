@@ -287,13 +287,24 @@ body {
   white-space: nowrap;
 }
 
-/* Rotes Kreuz mit "POWER ON"-Beschriftung, wie eine Betriebsanzeige. */
+/* Rotes Kreuz mit "POWER"-Beschriftung, wie eine Betriebsanzeige – zugleich
+   die einzige echte Taste im sonst rein dekorativen Gehäuse: ein Klick fragt
+   nach, ob wirklich beendet werden soll (siehe scenes/beenden.js). Liegt
+   darum außerhalb von .shell und braucht eigene Reset-Regeln, da hier ein
+   <button> statt eines <span> sitzt. */
 .shell__power {
   position: absolute;
+  z-index: 3;
   top: calc(env(safe-area-inset-top) + 3.6vh + 66.67vw + 7.6vh);
   right: calc(env(safe-area-inset-right) + 5vw);
   width: 3.6vh;
   text-align: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .shell__power::before {
@@ -343,9 +354,18 @@ body {
      unsichtbar hinter dem Bildschirm. Tag, Eckakzente, Gitter und die
      Seitentexte bleiben – sie brauchen nur die schmalen Ränder. */
   .shell__logo,
-  .shell__strap,
-  .shell__power {
+  .shell__strap {
     display: none;
+  }
+
+  /* Der Power-Knopf bleibt als einzige echte Taste im Gehäuse erreichbar –
+     er bekommt statt der (rein für das Hochformat berechneten) Position
+     einen festen Platz oben links, analog zu den Chips oben rechts. */
+  .shell__power {
+    top: calc(env(safe-area-inset-top) + 1.5vmin);
+    right: auto;
+    left: calc(env(safe-area-inset-left) + 1.5vmin);
+    width: 6vmin;
   }
 }
 
@@ -640,4 +660,151 @@ body {
   inset: auto 0 2rem;
   text-align: center;
   font-size: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Login / Registrierung
+   ----------------------------------------------------------------------------
+   Echtes HTML statt Canvas (siehe engine/kontoUi.js) – liegt vor allem
+   anderen über der Seite, bis eine Sitzung besteht. Farblich an das
+   Gehäusethema angelehnt (dunkles Plastik, violette Akzente).
+   --------------------------------------------------------------------------- */
+
+.konto-tor {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(6, 5, 9, 0.92);
+  backdrop-filter: blur(2px);
+  touch-action: manipulation;
+  overflow-y: auto;
+}
+
+/* Ohne diese Regel gewinnt "display: grid" oben gegen das UA-Standardstyle
+   [hidden] { display: none } bei gleicher Spezifität – das Tor bliebe dann
+   immer sichtbar, egal ob das hidden-Attribut gesetzt ist. */
+.konto-tor[hidden] {
+  display: none;
+}
+
+.konto-fenster {
+  width: 100%;
+  max-width: 22rem;
+  padding: 1.6rem 1.6rem 1.4rem;
+  border: 1px solid var(--gehaeuse-akzent2);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--gehaeuse-platte) 0%, #0a0810 100%);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 20px 60px rgba(0, 0, 0, 0.55), 0 0 30px rgba(155, 92, 255, 0.12);
+}
+
+.konto-marke {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--gehaeuse-akzent);
+}
+
+.konto-titel {
+  margin: 0 0 0.2rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #f0eefc;
+}
+
+.konto-untertitel {
+  margin: 0 0 1.2rem;
+  font-size: 0.82rem;
+  color: rgba(224, 212, 255, 0.55);
+}
+
+.konto-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.konto-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: rgba(224, 212, 255, 0.75);
+}
+
+.konto-feld input {
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba(178, 140, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f0eefc;
+  font-size: 1rem;
+  font-family: inherit;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.konto-feld input:focus {
+  outline: none;
+  border-color: var(--gehaeuse-akzent);
+  box-shadow: 0 0 0 2px rgba(155, 92, 255, 0.25);
+}
+
+.konto-form__reihe {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.konto-knopf {
+  flex: 1;
+  padding: 0.7rem;
+  border: 1px solid var(--gehaeuse-akzent);
+  border-radius: 6px;
+  background: linear-gradient(160deg, var(--gehaeuse-akzent) 0%, var(--gehaeuse-akzent2) 100%);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.konto-knopf:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.konto-knopf--zweit {
+  background: none;
+  border-color: rgba(178, 140, 255, 0.35);
+  color: rgba(224, 212, 255, 0.7);
+}
+
+.konto-link {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--gehaeuse-rot);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.konto-fehler {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(224, 48, 74, 0.5);
+  border-radius: 6px;
+  background: rgba(224, 48, 74, 0.12);
+  color: #ff9fae;
+  font-size: 0.78rem;
 }
