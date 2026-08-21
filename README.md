@@ -108,7 +108,7 @@ der Konfiguration).
 
 ```jsonc
 {
-  "name": "hardtekkmon-rote-chupa-chups",
+  "name": "hardtekkmon---rote-chupa-chups",
   "compatibility_date": "2026-08-21",
   "assets": {
     "directory": "./public",
