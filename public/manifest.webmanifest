@@ -1,0 +1,13 @@
+{
+  "name": "Hardtekkmon – Rote Chupa Chups",
+  "short_name": "Hardtekkmon",
+  "description": "Fange 151 Hardtekkmon und sammle acht Gigs.",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0b0d12",
+  "theme_color": "#0b0d12",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

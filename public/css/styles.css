@@ -1,0 +1,308 @@
+/* ============================================================================
+   Hardtekkmon – Rote Chupa Chups
+   ----------------------------------------------------------------------------
+   Die Seite besteht nur aus zwei Ebenen: dem Canvas (interne Auflösung
+   240x160, hart hochskaliert für den Pixel-Look) und der halbtransparenten
+   Tastenebene darüber. Das Layout kennt bewusst nur zwei Zustände –
+   Hochformat und Querformat – und wird ausschließlich per Media-Query
+   umgeschaltet, damit im Spiel selbst keine Layout-Logik nötig ist.
+   ============================================================================ */
+
+:root {
+  --gehaeuse: #0b0d12;
+  --rahmen: #1b2030;
+  --taste: rgba(226, 232, 255, 0.16);
+  --taste-rand: rgba(226, 232, 255, 0.34);
+  --taste-aktiv: rgba(255, 92, 138, 0.55);
+  --taste-schrift: rgba(255, 255, 255, 0.62);
+
+  /* Größe der Bedienelemente: im Querformat etwas kompakter, damit vom
+     Spielbild möglichst wenig verdeckt wird. */
+  --dpad: 33vmin;
+  --face: 15vmin;
+  --pad-rand: 4vmin;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--gehaeuse);
+  color: #e8ecff;
+  font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.viewport {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(120% 90% at 50% 0%, #171c2b 0%, var(--gehaeuse) 70%);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Das Canvas füllt den Bildschirm so weit wie möglich, behält aber immer
+   das 3:2-Seitenverhältnis der Vorlage. */
+.screen {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 3 / 2;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #000;
+  box-shadow: 0 0 0 2px #000, 0 0 40px rgba(120, 90, 255, 0.18);
+}
+
+@media (orientation: landscape) {
+  .screen {
+    width: auto;
+    height: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Tastenebene
+   --------------------------------------------------------------------------- */
+
+.pad {
+  position: absolute;
+  inset: 0;
+  pointer-events: none; /* nur die Tasten selbst nehmen Eingaben entgegen */
+}
+
+.btn {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--taste-rand);
+  background: var(--taste);
+  color: var(--taste-schrift);
+  font: inherit;
+  font-weight: 700;
+  pointer-events: auto;
+  backdrop-filter: blur(1px);
+  transition: background-color 60ms linear, transform 60ms linear;
+}
+
+.btn.is-pressed {
+  background: var(--taste-aktiv);
+  transform: scale(0.94);
+}
+
+.pad__dpad {
+  position: absolute;
+  left: var(--pad-rand);
+  bottom: var(--pad-rand);
+  width: var(--dpad);
+  height: var(--dpad);
+}
+
+.pad__hub {
+  position: absolute;
+  left: 33.34%;
+  top: 33.34%;
+  width: 33.33%;
+  height: 33.33%;
+  background: var(--taste);
+  border-top: 1px solid var(--taste-rand);
+  border-bottom: 1px solid var(--taste-rand);
+}
+
+.btn--dir {
+  width: 33.34%;
+  height: 33.34%;
+}
+
+.btn--up {
+  left: 33.33%;
+  top: 0;
+  border-bottom: none;
+  border-radius: 22% 22% 0 0;
+}
+
+.btn--down {
+  left: 33.33%;
+  bottom: 0;
+  border-top: none;
+  border-radius: 0 0 22% 22%;
+}
+
+.btn--left {
+  left: 0;
+  top: 33.33%;
+  border-right: none;
+  border-radius: 22% 0 0 22%;
+}
+
+.btn--right {
+  right: 0;
+  top: 33.33%;
+  border-left: none;
+  border-radius: 0 22% 22% 0;
+}
+
+.pad__face {
+  position: absolute;
+  right: var(--pad-rand);
+  bottom: var(--pad-rand);
+  width: calc(var(--face) * 2.35);
+  height: calc(var(--face) * 1.75);
+}
+
+.btn--face {
+  width: var(--face);
+  height: var(--face);
+  border-radius: 50%;
+  font-size: calc(var(--face) * 0.34);
+  line-height: 1;
+}
+
+.btn--a {
+  right: 0;
+  top: 0;
+}
+
+.btn--b {
+  left: 0;
+  bottom: 0;
+}
+
+.pad__system {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--pad-rand) * 0.5);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2vmin;
+}
+
+.btn--sys {
+  position: static;
+  padding: 0.9vmin 2.6vmin;
+  border-radius: 999px;
+  font-size: max(8px, 1.5vmin);
+  letter-spacing: 0.08em;
+}
+
+/* Im Hochformat sitzt das Bild oben und die Bedienung darunter – wie beim
+   Handheld. Die Bildhöhe ergibt sich aus der Breite (3:2), deshalb lässt sich
+   die Oberkante des Tastenbereichs exakt darunter legen. */
+@media (orientation: portrait) {
+  .viewport {
+    align-items: start;
+    padding-top: calc(env(safe-area-inset-top) + 2vh);
+  }
+
+  .pad {
+    top: calc(env(safe-area-inset-top) + 2vh + 66.67vw);
+  }
+
+  .pad__dpad,
+  .pad__face {
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+
+  .pad__system {
+    bottom: 2vh;
+  }
+}
+
+@media (orientation: portrait) {
+  :root {
+    --dpad: 42vmin;
+    --face: 19vmin;
+    --pad-rand: 6vmin;
+  }
+}
+
+@media (orientation: landscape) {
+  :root {
+    --dpad: 26vmin;
+    --face: 11.5vmin;
+    --pad-rand: 3vmin;
+  }
+
+  .pad__dpad {
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+
+  .pad__face {
+    bottom: 50%;
+    transform: translateY(50%);
+  }
+
+  .pad__system {
+    bottom: 1.5vmin;
+  }
+}
+
+/* Auf Geräten mit Maus/Tastatur treten die Tasten in den Hintergrund,
+   bleiben aber sichtbar und benutzbar. */
+@media (hover: hover) and (pointer: fine) {
+  .pad {
+    opacity: 0.5;
+    transition: opacity 200ms linear;
+  }
+
+  .pad:hover {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Kleine Zusatzschalter (Vollbild, Ton)
+   --------------------------------------------------------------------------- */
+
+.chip {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 1.5vmin);
+  width: 6vmin;
+  height: 6vmin;
+  min-width: 30px;
+  min-height: 30px;
+  border: 1px solid var(--taste-rand);
+  border-radius: 30%;
+  background: var(--taste);
+  color: var(--taste-schrift);
+  font-size: max(12px, 2.4vmin);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chip--fullscreen {
+  right: calc(env(safe-area-inset-right) + 1.5vmin);
+}
+
+.chip--sound {
+  right: calc(env(safe-area-inset-right) + 9vmin + 8px);
+}
+
+.chip.is-off {
+  color: rgba(255, 255, 255, 0.28);
+  text-decoration: line-through;
+}
+
+.noscript {
+  position: absolute;
+  inset: auto 0 2rem;
+  text-align: center;
+  font-size: 1rem;
+}
