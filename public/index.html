@@ -19,6 +19,22 @@
   <!-- Spielfläche: Das Canvas rendert intern in 240x160 (Handheld-Auflösung)
        und wird per CSS seitenverhältnistreu auf den Bildschirm skaliert. -->
   <div id="viewport" class="viewport">
+    <!-- Reines Dekor: das Gehäuse eines gedachten Handhelds ("Tekkdex RCC-151"),
+         das den Bereich rund um den Bildschirm füllt. Liegt hinter Bildschirm
+         und Tasten (z-index), nimmt keine Eingaben entgegen und wird von
+         Screenreadern übersprungen. -->
+    <div class="shell" aria-hidden="true">
+      <span class="shell__stripe"></span>
+      <span class="shell__led"></span>
+      <span class="shell__wordmark">TEKKDEX&nbsp;·&nbsp;RCC&#8209;151</span>
+      <span class="shell__badge"></span>
+      <span class="shell__grille"></span>
+      <span class="shell__screw shell__screw--tl"></span>
+      <span class="shell__screw shell__screw--tr"></span>
+      <span class="shell__screw shell__screw--bl"></span>
+      <span class="shell__screw shell__screw--br"></span>
+    </div>
+
     <canvas id="screen" class="screen" width="240" height="160" aria-label="Spielbildschirm"></canvas>
 
     <!-- Steuerkreuz und Tasten liegen halbtransparent über dem Bild,
