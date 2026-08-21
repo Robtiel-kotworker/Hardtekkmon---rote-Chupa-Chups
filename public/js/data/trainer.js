@@ -33,17 +33,17 @@ function trainer(id, name, figur, team, texte, zusatz = {}) {
 
 // --- Rivale ------------------------------------------------------------------
 trainer('rivale1', 'Bierdusche-Benny', 'rivale', [['Trötomat', 6], ['Ratz-Ronny', 5]], {
-  start: 'Na? Auch Bock auf Krach? Dann zeig mal, was dein Ding kann!',
+  start: 'Na, {name}? Auch Bock auf Krach? Dann zeig mal, was dein Ding kann!',
   sieg: 'Hab ich dir doch gesagt. Üb noch mal ein Jahr.',
   niederlage: 'Ey. Das war Anfängerglück. Eindeutig.',
 }, { preisgeld: 300 });
 trainer('rivale2', 'Bierdusche-Benny', 'rivale', [['Trötomat', 18], ['Kabelkurt', 17], ['Schrubbomat', 19]], {
-  start: 'Ich hab seitdem drei Nächte durchgemacht. Du auch?',
+  start: 'Ich hab seitdem drei Nächte durchgemacht, {name}. Du auch?',
   sieg: 'Merkst du was? Du bist zu ausgeschlafen für dieses Spiel.',
   niederlage: 'Boah. Okay. Ich brauch erst mal ne Mate.',
 }, { preisgeld: 900 });
 trainer('rivale3', 'Bierdusche-Benny', 'rivale', [['Trötenherzog Torsten', 34], ['Kabelkorbinian', 33], ['Boxenbert', 33], ['Pogo-Panzer', 35]], {
-  start: 'Vier Gigs hab ich schon. Und du läufst noch mit dem Rucksack rum.',
+  start: 'Vier Gigs hab ich schon, {name}. Und du läufst noch mit dem Rucksack rum.',
   sieg: 'Geh nach Hause, schlaf dich aus, komm wieder.',
   niederlage: 'Ernsthaft jetzt? Ich hab dafür extra nicht geschlafen!',
 }, { preisgeld: 1800 });
@@ -401,9 +401,9 @@ trainer('elite4', 'Kabelbinder-Kevin', 'gigleiter',
   }, { preisgeld: 9200, blick: 0 });
 trainer('champion', 'Bierdusche-Benny', 'rivale',
   [['Trötenherzog Torsten', 62], ['Kabelbaron Konrad', 62], ['Pogo-Panzer', 63], ['Boxenkaiser Bodo', 63], ['Der Verklatschte', 64], ['Kickzilla Kalle', 65]], {
-    start: 'Überraschung. Ich war schneller. Wie immer.',
+    start: 'Überraschung, {name}. Ich war schneller. Wie immer.',
     sieg: 'Und deswegen steh ich hier oben und du da unten.',
-    niederlage: 'Das … das war stark. Wirklich stark. Der Platz gehört dir.',
+    niederlage: 'Das … das war stark, {name}. Wirklich stark. Der Platz gehört dir.',
   }, { preisgeld: 12000, blick: 0 });
 
 /** @param {string} id */

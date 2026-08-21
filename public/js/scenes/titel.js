@@ -13,9 +13,10 @@ import { zeichneText, textBreite } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { gibtStand } from '../engine/storage.js';
 import { Auswahl } from '../ui/auswahl.js';
-import { neuesSpiel, ladeSpiel } from '../game/spielstand.js';
+import { ladeSpiel } from '../game/spielstand.js';
 import { ersetze } from './stapel.js';
 import { Weltszene } from './welt.js';
+import { Namensszene } from './namenswahl.js';
 
 export class Titelszene {
   constructor() {
@@ -52,8 +53,7 @@ export class Titelszene {
       return;
     }
 
-    neuesSpiel();
-    ersetze(new Weltszene());
+    ersetze(new Namensszene());
   }
 
   zeichnen(ctx) {

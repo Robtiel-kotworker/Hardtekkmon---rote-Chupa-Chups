@@ -50,6 +50,18 @@ const BLENDE_TEMPO = 0.07;
 /** Die drei Anfänger im Labor. */
 const STARTER = { 1: 'Kickolaus', 2: 'Bassbert', 3: 'Acidchen' };
 
+/**
+ * Ersetzt den Platzhalter "{name}" durch den gewählten Spielernamen – damit
+ * können Dialogtexte in den Datendateien (Professor, Rivale, Chef der
+ * Szene …) den Namen einbauen, ohne dass die Daten selbst dynamisch sein
+ * müssten. Wirkt auf einzelne Texte genauso wie auf mehrseitige Arrays.
+ * @param {string|string[]} inhalt
+ */
+function ersetzeName(inhalt) {
+  const ersetze = (zeile) => (zeile.includes('{name}') ? zeile.replaceAll('{name}', spiel.spieler.name) : zeile);
+  return Array.isArray(inhalt) ? inhalt.map(ersetze) : ersetze(inhalt);
+}
+
 /** Pixelposition einer Figur inklusive laufendem Schritt. */
 function figurPixel(figur) {
   const vektor = RICHTUNGS_VEKTOR[figur.richtung] ?? RICHTUNGS_VEKTOR.unten;
@@ -114,13 +126,13 @@ export class Weltszene {
   // --- Ablaufsteuerung -------------------------------------------------------
 
   zeigeText(inhalt, danach = null) {
-    this.textfenster.zeige(inhalt);
+    this.textfenster.zeige(ersetzeName(inhalt));
     this.nachText = danach;
     this.zustand = 'text';
   }
 
   frage(inhalt, beiJa, beiNein = null) {
-    this.textfenster.zeige(inhalt);
+    this.textfenster.zeige(ersetzeName(inhalt));
     this.nachText = () => {
       this.frageAuswahl = new Auswahl({ eintraege: ['Ja', 'Nein'] });
       this.frageAntwort = { beiJa, beiNein };
@@ -603,7 +615,7 @@ export class Weltszene {
         effekt('gefangen');
         this.zeigeText([
           `${name} gehört jetzt dir!`,
-          'Prof. Wummer: "Nimm noch fünf Samplepacks mit. Und pass auf dich auf."',
+          'Prof. Wummer: "Nimm noch fünf Samplepacks mit, {name}. Und pass auf dich auf."',
         ]);
       },
     );
@@ -654,7 +666,7 @@ export class Weltszene {
 
       case 'professor':
         this.zeigeText(spiel.startgewaehlt
-          ? 'Prof. Wummer: "Na, läuft die Anlage? Dann raus mit dir, die Welt wartet."'
+          ? 'Prof. Wummer: "Na, {name}, läuft die Anlage? Dann raus mit dir, die Welt wartet."'
           : npc.text);
         break;
 
