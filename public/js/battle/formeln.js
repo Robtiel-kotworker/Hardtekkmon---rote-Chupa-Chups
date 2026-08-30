@@ -80,9 +80,9 @@ export function berechneSchaden(attacke, angreifer, verteidiger) {
   const eigeneTypen = artVon(angreifer.mon).typen;
   const stab = eigeneTypen.includes(attacke.typ) ? 1.5 : 1;
   const zufall = 0.85 + Math.random() * 0.15;
-  // Bewusst gedämpfter als die klassischen 1.5x: Ein Volltreffer soll
-  // spürbar, aber nicht existenzbedrohend sein.
-  const kritisch = volltreffer ? 1.3 : 1;
+  // Weiter gedämpft als die klassischen 1.5x: Ein Volltreffer soll spürbar
+  // bleiben, aber keine Runden mehr im Alleingang entscheiden.
+  const kritisch = volltreffer ? 1.2 : 1;
 
   const schaden = Math.max(1, Math.floor(grund * stab * wirkung * zufall * kritisch));
   return { schaden, wirkung, volltreffer };
