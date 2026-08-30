@@ -28,6 +28,34 @@ let laufenderTrack = '';
 let naechsterSchrittZeit = 0;
 let schrittZaehler = 0;
 
+// Shuffle-Beutel für Tracks mit mehreren Taktvarianten (siehe TRACKS.kampf):
+// Fisher-Yates-Ziehung ohne Zurücklegen, Beutel wird bei Erschöpfung neu
+// gefüllt. Das garantiert, dass innerhalb eines Durchlaufs jede Variante
+// genau einmal drankommt, bevor sich eine wiederholt – "richtiger" Shuffle
+// statt reinem Zufall, der dieselbe Variante auch zweimal hintereinander
+// hätte ziehen können.
+let varianteBeutel = [];
+let varianteLetzte = -1;
+let varianteIndex = 0;
+
+function ziehVariante(anzahl) {
+  if (varianteBeutel.length === 0) {
+    const stapel = Array.from({ length: anzahl }, (_, i) => i);
+    for (let i = stapel.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [stapel[i], stapel[j]] = [stapel[j], stapel[i]];
+    }
+    // Verhindert, dass die zuletzt gespielte Variante direkt wieder als
+    // erste des neuen Durchlaufs gezogen wird.
+    if (stapel.length > 1 && stapel[0] === varianteLetzte) {
+      [stapel[0], stapel[1]] = [stapel[1], stapel[0]];
+    }
+    varianteBeutel = stapel;
+  }
+  varianteLetzte = varianteBeutel.shift();
+  return varianteLetzte;
+}
+
 /** Halbtonabstand zu A4 -> Frequenz. */
 function hz(halbtoene) {
   return 440 * 2 ** (halbtoene / 12);
@@ -105,30 +133,65 @@ const TRACKS = {
   // den nächsten Schlag hineinklingt, steht sie stur auf den Vierteln statt
   // auf Sechzehnteln – und die Bassspur ist auf ein paar Zwischenschläge
   // ausgedünnt, damit unten herum nichts verwischt.
+  //
+  // Vier Taktvarianten im selben Stil (Tempo, Kick, Grundcharakter bleiben
+  // gleich), die sich nur in Lead-Führung, Zwischenkick und Zaag-Platzierung
+  // unterscheiden. audioSchritt() würfelt per Shuffle-Beutel an jedem
+  // Taktanfang eine neue Variante – so wirkt die Schleife viel länger, ohne
+  // dass sich am Klangcharakter etwas ändert.
   kampf: {
     bpm: 180,
     gabber: true,
     kickDauer: 0.4,
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
-    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    bass: [null, null, -24, null, null, null, -24, null, null, null, -22, null, null, null, -22, null],
-    lead: [12, null, 11, null, 7, null, 11, null, 12, null, 14, null, 15, 14, 12, null],
-    zaag: [null, null, null, null, 12, null, null, null, null, null, null, null, 12, null, 14, null],
+    varianten: [
+      { // Variante 1 – der ursprüngliche Loop als Basis.
+        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        bass: [null, null, -24, null, null, null, -24, null, null, null, -22, null, null, null, -22, null],
+        lead: [12, null, 11, null, 7, null, 11, null, 12, null, 14, null, 15, 14, 12, null],
+        zaag: [null, null, null, null, 12, null, null, null, null, null, null, null, 12, null, 14, null],
+      },
+      { // Variante 2 – Auftakt-Kick vor dem dritten Schlag, Lead klettert höher.
+        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0],
+        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        bass: [null, null, -24, null, null, null, -22, null, null, null, -24, null, null, null, -22, null],
+        lead: [12, null, 14, null, 11, null, 7, null, 11, null, 12, null, 14, 16, 14, null],
+        zaag: [null, null, null, null, null, null, 12, null, null, null, null, null, 14, null, 12, null],
+      },
+      { // Variante 3 – dichtere Kick am Taktanfang, ausgedünnter, gehaltener Lead.
+        kick: [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1],
+        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        bass: [null, null, -22, null, null, null, -24, null, null, null, -22, null, null, null, -24, null],
+        lead: [12, null, null, null, 15, null, null, null, 12, null, null, null, 11, null, 7, null],
+        zaag: [null, null, null, null, null, null, null, 12, null, null, 14, null, null, null, null, 12],
+      },
+      { // Variante 4 – Turnaround: aufsteigender Lead-Fill, dichtere Hat/Zaag am Taktende.
+        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1],
+        bass: [null, null, -24, null, null, null, -22, null, null, null, -24, null, null, null, -19, null],
+        lead: [12, 14, null, null, 15, 17, null, null, 19, null, 17, 15, 14, 12, 11, 12],
+        zaag: [null, null, null, null, 12, null, 14, null, null, null, null, null, 15, 17, 19, null],
+      },
+    ],
   },
   // --- Kampf gegen Trainer, zugleich Musik der Gig-Hallen -------------------
   // Uptempo-Hardcore: noch eine Stufe schneller (190) und mit einer etwas
-  // kürzer gehaltenen Kick, damit die dichteren Schläge am Taktende nicht
-  // ineinanderlaufen. Der härteste Track im regulären Spiel.
+  // kürzer gehaltenen, tieferen Kick für mehr Punch. Ein eigenständiger,
+  // stilverwandter Track statt einer Kampf-Variante: die Kick liegt dichter
+  // und deutlich verschoben von den Vierteln weg (Treffer u. a. auf den
+  // "e"-Sechzehnteln vor Schlag zwei und vier), was ihn hörbar unruhiger und
+  // härter macht als den geradlinigeren Kampf-Loop. Der härteste Track im
+  // regulären Spiel.
   gig: {
     bpm: 190,
     gabber: true,
-    kickDauer: 0.34,
+    kickDauer: 0.32,
     grundton: -37,
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1],
-    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
-    bass: [null, null, -27, null, null, null, -27, null, null, null, -25, null, null, null, -25, null],
-    lead: [16, null, 14, null, 12, null, 14, null, 16, 19, 16, 14, 12, null, null, null],
-    zaag: [null, null, null, null, 12, null, null, null, 12, null, null, null, 12, null, 14, null],
+    kick: [1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0],
+    hat: [0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1],
+    bass: [null, null, null, -27, null, null, -25, null, null, null, null, -27, null, null, -25, null],
+    lead: [19, null, 16, null, null, 17, null, 14, 19, null, 16, null, null, 14, 12, null],
+    zaag: [null, null, 12, null, null, null, 14, null, null, 12, null, null, 15, null, 17, null],
   },
   // --- Boxenstopp (Heilungscenter) ------------------------------------------
   // Bleibt der Ruhepol, ist aber nicht mehr so karg: durchgehender halber
@@ -251,6 +314,7 @@ export function spieleTrack(name) {
   if (name === laufenderTrack) return;
   laufenderTrack = name;
   schrittZaehler = 0;
+  varianteBeutel = [];
   if (ctx) naechsterSchrittZeit = ctx.currentTime;
 }
 
@@ -434,14 +498,19 @@ export function audioSchritt() {
     const i = schrittZaehler % SCHRITTE_PRO_TAKT;
     const zeit = naechsterSchrittZeit;
 
-    if (track.kick[i]) {
+    // Tracks mit mehreren Taktvarianten (siehe TRACKS.kampf) bekommen an
+    // jedem Taktanfang eine neu gezogene Variante aus dem Shuffle-Beutel.
+    if (track.varianten && i === 0) varianteIndex = ziehVariante(track.varianten.length);
+    const muster = track.varianten ? track.varianten[varianteIndex] : track;
+
+    if (muster.kick[i]) {
       if (track.gabber) gabberKick(zeit, track.grundton ?? -36, track.kickDauer ?? 0.38);
       else kick(zeit, track.kickStaerke ?? 1);
     }
-    if (track.hat[i]) hihat(zeit);
-    if (track.bass[i] !== null) ton(zeit, track.bass[i], schrittDauer * 1.6, 'square', 0.12);
-    if (track.lead[i] !== null) ton(zeit, track.lead[i], schrittDauer * 0.9, 'sawtooth', 0.065);
-    if (track.zaag && track.zaag[i] !== null) zaag(zeit, track.zaag[i], schrittDauer * 1.1);
+    if (muster.hat[i]) hihat(zeit);
+    if (muster.bass[i] !== null) ton(zeit, muster.bass[i], schrittDauer * 1.6, 'square', 0.12);
+    if (muster.lead[i] !== null) ton(zeit, muster.lead[i], schrittDauer * 0.9, 'sawtooth', 0.065);
+    if (muster.zaag && muster.zaag[i] !== null) zaag(zeit, muster.zaag[i], schrittDauer * 1.1);
 
     naechsterSchrittZeit += schrittDauer;
     schrittZaehler += 1;
