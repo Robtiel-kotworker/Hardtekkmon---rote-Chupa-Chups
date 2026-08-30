@@ -124,12 +124,19 @@ const TRACKS = {
 };
 
 /**
- * Exakte Länge von public/audio/heilung.wav in Sekunden (248656 Frames bei
- * 44100 Hz). Der Wert steht fest, weil scenes/welt.js die Bildlänge eines
- * Heil-Ticks schon beim Laden des Moduls braucht – lange bevor die Datei
- * dekodiert ist.
+ * Eckdaten der Heilmusik in Sekunden. Beide Werte stehen fest verdrahtet
+ * hier, weil scenes/welt.js die Bildlängen der Heilsequenz schon beim Laden
+ * des Moduls braucht – lange bevor die Datei dekodiert ist.
+ *
+ *   DAUER – Gesamtlänge, 441216 Frames bei 44100 Hz.
+ *   KICK  – Zeitpunkt, an dem die Kick einsetzt: 259117 Frames. Das Stück
+ *           beginnt mit einem knapp sechs Sekunden langen Intro ohne Kick
+ *           (Tiefband um -30 dBFS), dann bricht die Kick herein und der
+ *           Pegel im Band 25-140 Hz springt binnen 100 ms auf -2,5 dBFS.
+ *           Ab genau diesem Frame läuft die Heilsequenz los.
  */
-const HEILUNG_DATEI_DAUER_S = 248656 / 44100;
+const HEILUNG_DATEI_DAUER_S = 441216 / 44100;
+const HEILUNG_KICK_S = 259117 / 44100;
 
 /**
  * Orts- und Kampfmusik als fertig produzierte Audioschleifen statt
@@ -147,8 +154,15 @@ const DATEI_TRACKS = {
   // Arena-Track: Musik der Gig-Hallen und zugleich Kampfmusik aller
   // Trainer- und Gig-Kämpfe (siehe KAMPFMUSIK in scenes/kampfszene.js).
   gig: { dateien: ['audio/arena.mp3'] },
-  // Bleibt als WAV unkomprimiert, siehe Kopf der Datei.
-  heilung: { dateien: ['audio/heilung.wav'], schlagDauer: HEILUNG_DATEI_DAUER_S / 6 },
+  // Bleibt als WAV unkomprimiert, siehe Kopf der Datei. `vorlauf` ist das
+  // Intro bis zum Kick-Einsatz, `schlagDauer` teilt den Rest danach in die
+  // sechs Takes der Heilsequenz – Intro plus sechs Takes ergeben damit
+  // genau die Gesamtlänge des Stücks.
+  heilung: {
+    dateien: ['audio/heilung.wav'],
+    vorlauf: HEILUNG_KICK_S,
+    schlagDauer: (HEILUNG_DATEI_DAUER_S - HEILUNG_KICK_S) / 6,
+  },
   // Normaler Kampftrack: ausschließlich Kämpfe gegen wilde Hardtekkmon.
   kampf: {
     dateien: ['audio/kampf_v1.mp3', 'audio/kampf_v2.mp3', 'audio/kampf_v3.mp3', 'audio/kampf_v4.mp3'],
@@ -340,6 +354,17 @@ export function schlagDauer(name) {
   if (datei?.schlagDauer) return datei.schlagDauer;
   const track = TRACKS[name];
   return track ? 60 / track.bpm : 0.5;
+}
+
+/**
+ * Vorlauf eines Stücks in Sekunden: die Zeit vom Start bis zu dem Moment, an
+ * dem es richtig losgeht – bei der Heilmusik der Einsatz der Kick. Szenen
+ * können ihre Animation damit auf diesen Punkt legen, statt sofort loszulaufen
+ * (siehe Heilsequenz in scenes/welt.js). Stücke ohne Intro liefern 0.
+ * @param {keyof typeof TRACKS | keyof typeof DATEI_TRACKS} name
+ */
+export function vorlauf(name) {
+  return DATEI_TRACKS[name]?.vorlauf ?? 0;
 }
 
 /** Kick: kurzer Sinus mit fallender Tonhöhe, danach in den Verzerrer. */
