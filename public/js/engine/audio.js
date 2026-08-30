@@ -10,7 +10,11 @@
 // Stadt, Route, Gebäude, Kampf, Gig/Arena und Heilung laufen dagegen als
 // fertig produzierte Audioschleifen aus public/audio/ (siehe DATEI_TRACKS).
 // Die Dateien liegen als MP3 vor: Ogg/Vorbis spielt Safari und damit die
-// iOS-Fassung (Capacitor) nicht ab, MP3 kann jeder Zielbrowser.
+// iOS-Fassung (Capacitor) nicht ab, MP3 kann jeder Zielbrowser. Einzige
+// Ausnahme ist die Heilmusik, die als unkomprimiertes WAV bleibt – ihr
+// dichtes, verzerrtes Zaag-Geschrubbe ist das mit Abstand heikelste
+// Material für einen verlustbehafteten Kodierer, und sie ist zugleich das
+// kürzeste Stück, kostet als WAV also kaum etwas.
 // Der Kampf-Track besteht aus vier Varianten, die im Shuffle durchlaufen
 // (siehe ziehVariante) – dieselbe Beutel-Logik, die vorher die synthetischen
 // Kampf-Taktvarianten gezogen hat.
@@ -120,11 +124,10 @@ const TRACKS = {
 };
 
 /**
- * Exakte Länge von public/audio/heilung.mp3 in Sekunden (248656 Frames bei
+ * Exakte Länge von public/audio/heilung.wav in Sekunden (248656 Frames bei
  * 44100 Hz). Der Wert steht fest, weil scenes/welt.js die Bildlänge eines
  * Heil-Ticks schon beim Laden des Moduls braucht – lange bevor die Datei
- * dekodiert ist. Die MP3-Fassung dekodiert samplegenau auf dieselbe Länge
- * wie das WAV-Original, der Wert gilt also unverändert weiter.
+ * dekodiert ist.
  */
 const HEILUNG_DATEI_DAUER_S = 248656 / 44100;
 
@@ -144,7 +147,8 @@ const DATEI_TRACKS = {
   // Arena-Track: Musik der Gig-Hallen und zugleich Kampfmusik aller
   // Trainer- und Gig-Kämpfe (siehe KAMPFMUSIK in scenes/kampfszene.js).
   gig: { dateien: ['audio/arena.mp3'] },
-  heilung: { dateien: ['audio/heilung.mp3'], schlagDauer: HEILUNG_DATEI_DAUER_S / 6 },
+  // Bleibt als WAV unkomprimiert, siehe Kopf der Datei.
+  heilung: { dateien: ['audio/heilung.wav'], schlagDauer: HEILUNG_DATEI_DAUER_S / 6 },
   // Normaler Kampftrack: ausschließlich Kämpfe gegen wilde Hardtekkmon.
   kampf: {
     dateien: ['audio/kampf_v1.mp3', 'audio/kampf_v2.mp3', 'audio/kampf_v3.mp3', 'audio/kampf_v4.mp3'],
