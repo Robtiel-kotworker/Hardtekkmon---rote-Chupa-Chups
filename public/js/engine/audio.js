@@ -128,15 +128,25 @@ const TRACKS = {
  * hier, weil scenes/welt.js die Bildlängen der Heilsequenz schon beim Laden
  * des Moduls braucht – lange bevor die Datei dekodiert ist.
  *
- *   DAUER – Gesamtlänge, 441216 Frames bei 44100 Hz.
- *   KICK  – Zeitpunkt, an dem die Kick einsetzt: 259117 Frames. Das Stück
- *           beginnt mit einem knapp sechs Sekunden langen Intro ohne Kick
- *           (Tiefband um -30 dBFS), dann bricht die Kick herein und der
- *           Pegel im Band 25-140 Hz springt binnen 100 ms auf -2,5 dBFS.
- *           Ab genau diesem Frame läuft die Heilsequenz los.
+ * Das Stück läuft mit ffmpegs atempo=2.0 auf doppeltes Tempo gestreckt (WSOLA
+ * time-stretch, keine Neuabtastung – die Tonhöhe bleibt exakt wie im
+ * Original, gegengeprüft an der Kick-Grundfrequenz vor und nach dem
+ * Stretchen: 40,0 Hz auf beiden Seiten). atempo=2.0 halbiert nicht ganz
+ * exakt jeden Zeitpunkt (WSOLA arbeitet in Fenstern), deshalb sind beide
+ * Werte am gestreckten Ergebnis neu gemessen statt aus dem Original
+ * halbiert:
+ *
+ *   DAUER – Gesamtlänge, 220160 Frames bei 44100 Hz (statt 441216 im
+ *           Original – nicht exakt halbiert, weil atempo in Fenstern
+ *           arbeitet, aber auf 1 ms genau).
+ *   KICK  – Zeitpunkt, an dem die Kick einsetzt: 129764 Frames (statt
+ *           259117 im Original, also 4,7 ms von der reinen Halbierung
+ *           entfernt). Das Tiefband (25-140 Hz) liegt davor bei rund
+ *           -30 dBFS, danach springt es binnen 100 ms auf -2,5 dBFS – exakt
+ *           dasselbe Muster wie im Original, nur mit halber Dauer.
  */
-const HEILUNG_DATEI_DAUER_S = 441216 / 44100;
-const HEILUNG_KICK_S = 259117 / 44100;
+const HEILUNG_DATEI_DAUER_S = 220160 / 44100;
+const HEILUNG_KICK_S = 129764 / 44100;
 
 /**
  * Orts- und Kampfmusik als fertig produzierte Audioschleifen statt
