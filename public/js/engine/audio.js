@@ -1,11 +1,17 @@
 // ============================================================================
 // Klang
 // ----------------------------------------------------------------------------
-// Alle Töne entstehen zur Laufzeit über die Web-Audio-API – es gibt keine
-// Audiodateien im Repo. Kernstück ist die typische Hardtekk-Kick: ein
-// Sinuston mit steil fallender Tonhöhe, durch eine Verzerrerkurve gejagt.
-// Melodien laufen über einen Schrittsequenzer, der aus der Spielschleife
-// heraus mit Vorlauf plant (`audioSchritt`).
+// Titelmelodie, Boxenstopp-Ruhepol und Siegesfanfare entstehen weiterhin zur
+// Laufzeit über die Web-Audio-API: ein Schrittsequenzer, der aus der
+// Spielschleife heraus mit Vorlauf plant (`audioSchritt`). Kernstück dieser
+// synthetischen Stücke ist die typische Hardtekk-Kick: ein Sinuston mit steil
+// fallender Tonhöhe, durch eine Verzerrerkurve gejagt.
+//
+// Stadt, Route, Gebäude, Kampf, Gig/Arena und Heilung laufen dagegen als
+// fertig produzierte Audioschleifen aus public/audio/ (siehe DATEI_TRACKS).
+// Der Kampf-Track besteht aus vier Varianten, die im Shuffle durchlaufen
+// (siehe ziehVariante) – dieselbe Beutel-Logik, die vorher die synthetischen
+// Kampf-Taktvarianten gezogen hat.
 // ============================================================================
 
 const SCHRITTE_PRO_TAKT = 16;
@@ -28,15 +34,14 @@ let laufenderTrack = '';
 let naechsterSchrittZeit = 0;
 let schrittZaehler = 0;
 
-// Shuffle-Beutel für Tracks mit mehreren Taktvarianten (siehe TRACKS.kampf):
-// Fisher-Yates-Ziehung ohne Zurücklegen, Beutel wird bei Erschöpfung neu
-// gefüllt. Das garantiert, dass innerhalb eines Durchlaufs jede Variante
-// genau einmal drankommt, bevor sich eine wiederholt – "richtiger" Shuffle
-// statt reinem Zufall, der dieselbe Variante auch zweimal hintereinander
-// hätte ziehen können.
+// Shuffle-Beutel für Audiodateien mit mehreren Varianten (siehe
+// DATEI_TRACKS.kampf): Fisher-Yates-Ziehung ohne Zurücklegen, Beutel wird bei
+// Erschöpfung neu gefüllt. Das garantiert, dass innerhalb eines Durchlaufs
+// jede Variante genau einmal drankommt, bevor sich eine wiederholt –
+// "richtiger" Shuffle statt reinem Zufall, der dieselbe Variante auch
+// zweimal hintereinander hätte ziehen können.
 let varianteBeutel = [];
 let varianteLetzte = -1;
-let varianteIndex = 0;
 
 function ziehVariante(anzahl) {
   if (varianteBeutel.length === 0) {
@@ -76,11 +81,10 @@ function hz(halbtoene) {
  *                   die Kick tiefer in die Kennlinie und machen sie damit
  *                   nicht nur lauter, sondern hörbar dreckiger; Werte unter 1
  *                   halten sie drinnen-tauglich rund.
- *   `zaag`        – Sägezahn-Screech durch denselben Verzerrer, das typische
- *                   Hardtekk-"Geschrubbe" (siehe zaag()).
  *
- * Die Ortswechsel sollen klar hörbar sein, deshalb steigen Tempo und Härte
- * gestaffelt: Gebäude 128 < Stadt 140 < Route 156 < Kampf 160/166.
+ * Titel, Boxenstopp und Sieg sind die einzigen noch synthetisch erzeugten
+ * Stücke – alle Orts- und Kampf-Tracks laufen als Audiodateien (siehe
+ * DATEI_TRACKS unten).
  */
 const TRACKS = {
   titel: {
@@ -92,108 +96,7 @@ const TRACKS = {
     // Fanfare, mit der viele Titelmelodien im Genre öffnen.
     lead: [0, null, 4, null, 7, null, 12, null, 12, null, 7, null, 4, null, null, null],
   },
-  // --- Stadt (außen) --------------------------------------------------------
-  // Bewusst nah an der bisherigen Fassung: gleiches Tempo, gleiche Tonart,
-  // gleiches Frage-Antwort-Motiv. Neu sind nur ein Auftakt-Kick am Taktende,
-  // eine etwas lebendigere Hi-Hat und eine kleine Variation im zweiten Halbtakt,
-  // damit die Schleife nicht so stumpf umspringt.
-  welt: {
-    bpm: 140,
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
-    hat: [0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1],
-    bass: [-24, null, -24, null, -17, null, -17, null, -22, null, -22, null, -19, null, -19, -17],
-    lead: [0, 4, 7, null, 4, null, 5, null, 0, 4, 7, 9, 7, 5, 4, null],
-  },
-  // --- Route (wildes Gras, Trainer) -----------------------------------------
-  // Düster, schnell, hart: phrygische kleine Sekunde über einem stehenden
-  // tiefen Bass, dichte Kick, durchlaufende Hi-Hat.
-  route: {
-    bpm: 156,
-    kickStaerke: 1.15,
-    kick: [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0],
-    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
-    bass: [-25, null, -25, null, -25, null, -24, null, -20, null, -20, null, -25, null, -25, null],
-    lead: [0, null, 1, null, 0, null, -4, null, 0, null, 1, null, 3, 1, 0, null],
-  },
-  // --- Gebäude (innen) ------------------------------------------------------
-  // Runder und melodischer, aber kein Weichspüler: die Kick läuft weiter
-  // durchgehend, nur mit weniger Vorpegel. Darüber eine harmonisch geführte
-  // Melodie über einer wandernden Bassfolge.
-  gebaeude: {
-    bpm: 128,
-    kickStaerke: 0.8,
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0],
-    bass: [-24, null, null, null, -19, null, null, null, -21, null, null, null, -17, null, null, null],
-    lead: [7, null, 9, null, 12, null, 9, null, 7, null, 4, null, 5, 7, null, null],
-  },
-  // --- Kampf gegen wilde Hardtekkmon ----------------------------------------
-  // Gabber statt Techno: 180 BPM und die lang gezogene, tonale Gabber-Kick
-  // (siehe gabberKick). Weil diese Kick den Bass selbst mitbringt und weit in
-  // den nächsten Schlag hineinklingt, steht sie stur auf den Vierteln statt
-  // auf Sechzehnteln – und die Bassspur ist auf ein paar Zwischenschläge
-  // ausgedünnt, damit unten herum nichts verwischt.
-  //
-  // Vier Taktvarianten im selben Stil (Tempo, Kick, Grundcharakter bleiben
-  // gleich), die sich nur in Lead-Führung, Zwischenkick und Zaag-Platzierung
-  // unterscheiden. audioSchritt() würfelt per Shuffle-Beutel an jedem
-  // Taktanfang eine neue Variante – so wirkt die Schleife viel länger, ohne
-  // dass sich am Klangcharakter etwas ändert.
-  kampf: {
-    bpm: 180,
-    gabber: true,
-    kickDauer: 0.4,
-    varianten: [
-      { // Variante 1 – der ursprüngliche Loop als Basis.
-        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
-        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-        bass: [null, null, -24, null, null, null, -24, null, null, null, -22, null, null, null, -22, null],
-        lead: [12, null, 11, null, 7, null, 11, null, 12, null, 14, null, 15, 14, 12, null],
-        zaag: [null, null, null, null, 12, null, null, null, null, null, null, null, 12, null, 14, null],
-      },
-      { // Variante 2 – Auftakt-Kick vor dem dritten Schlag, Lead klettert höher.
-        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0],
-        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-        bass: [null, null, -24, null, null, null, -22, null, null, null, -24, null, null, null, -22, null],
-        lead: [12, null, 14, null, 11, null, 7, null, 11, null, 12, null, 14, 16, 14, null],
-        zaag: [null, null, null, null, null, null, 12, null, null, null, null, null, 14, null, 12, null],
-      },
-      { // Variante 3 – dichtere Kick am Taktanfang, ausgedünnter, gehaltener Lead.
-        kick: [1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1],
-        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-        bass: [null, null, -22, null, null, null, -24, null, null, null, -22, null, null, null, -24, null],
-        lead: [12, null, null, null, 15, null, null, null, 12, null, null, null, 11, null, 7, null],
-        zaag: [null, null, null, null, null, null, null, 12, null, null, 14, null, null, null, null, 12],
-      },
-      { // Variante 4 – Turnaround: aufsteigender Lead-Fill, dichtere Hat/Zaag am Taktende.
-        kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0],
-        hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1],
-        bass: [null, null, -24, null, null, null, -22, null, null, null, -24, null, null, null, -19, null],
-        lead: [12, 14, null, null, 15, 17, null, null, 19, null, 17, 15, 14, 12, 11, 12],
-        zaag: [null, null, null, null, 12, null, 14, null, null, null, null, null, 15, 17, 19, null],
-      },
-    ],
-  },
-  // --- Kampf gegen Trainer, zugleich Musik der Gig-Hallen -------------------
-  // Uptempo-Hardcore: noch eine Stufe schneller (190) und mit einer etwas
-  // kürzer gehaltenen, tieferen Kick für mehr Punch. Ein eigenständiger,
-  // stilverwandter Track statt einer Kampf-Variante: die Kick liegt dichter
-  // und deutlich verschoben von den Vierteln weg (Treffer u. a. auf den
-  // "e"-Sechzehnteln vor Schlag zwei und vier), was ihn hörbar unruhiger und
-  // härter macht als den geradlinigeren Kampf-Loop. Der härteste Track im
-  // regulären Spiel.
-  gig: {
-    bpm: 190,
-    gabber: true,
-    kickDauer: 0.32,
-    grundton: -37,
-    kick: [1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0],
-    hat: [0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1],
-    bass: [null, null, null, -27, null, null, -25, null, null, null, null, -27, null, null, -25, null],
-    lead: [19, null, 16, null, null, 17, null, 14, 19, null, 16, null, null, 14, 12, null],
-    zaag: [null, null, 12, null, null, null, 14, null, null, 12, null, null, 15, null, 17, null],
-  },
-  // --- Boxenstopp (Heilungscenter) ------------------------------------------
+  // --- Boxenstopp (Heilungscenter, außerhalb der Heilsequenz) ---------------
   // Bleibt der Ruhepol, ist aber nicht mehr so karg: durchgehender halber
   // Puls, weiche Kick und eine vollständig ausgespielte, tröstliche Linie.
   boxenstopp: {
@@ -204,20 +107,6 @@ const TRACKS = {
     bass: [-24, null, null, null, -17, null, null, null, -22, null, null, null, -19, null, null, null],
     lead: [7, null, 11, null, 12, null, 11, null, 9, null, 7, null, 4, null, null, null],
   },
-  // --- Heilsequenz ----------------------------------------------------------
-  // Das Up-Tempo-Zwischenspiel, während die Hardtekkmon aufgepäppelt werden:
-  // stures Vier-Viertel bei 175, darüber durchgehendes Zaag-Geschrubbe. Läuft
-  // exakt sechs Schläge lang, im Gleichtakt mit dem Stroboskop – die Weltszene
-  // holt sich die Schlagdauer über schlagDauer('heilung').
-  heilung: {
-    bpm: 175,
-    kickStaerke: 1.25,
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    bass: [-24, null, -24, null, -24, null, -24, null, -24, null, -24, null, -24, null, -24, null],
-    lead: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
-    zaag: [12, null, 12, 14, 12, null, 12, 10, 12, null, 12, 14, 15, 14, 12, null],
-  },
   sieg: {
     bpm: 144,
     kick: [1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0],
@@ -227,6 +116,99 @@ const TRACKS = {
     lead: [12, 16, 19, null, 12, 16, 19, null, 21, 19, 16, 12, null, null, null, null],
   },
 };
+
+/** Exakte Länge von public/audio/heilung.wav in Sekunden (248656 Frames bei 44100 Hz). */
+const HEILUNG_DATEI_DAUER_S = 248656 / 44100;
+
+/**
+ * Orts- und Kampfmusik als fertig produzierte Audioschleifen statt
+ * synthetisierter Muster. Jeder Eintrag benennt seine Datei(en) unter
+ * public/audio/; `kampf` trägt vier Varianten, die im Shuffle laufen (siehe
+ * ziehVariante). `schlagDauer` ist nur für Stücke gesetzt, deren Länge eine
+ * Animation takten muss (siehe schlagDauer() unten und HEIL_TICKS in
+ * scenes/welt.js) – bei einer festen Audiodatei gibt es kein bpm mehr, aus
+ * dem sich das ableiten ließe.
+ */
+const DATEI_TRACKS = {
+  welt: { dateien: ['audio/stadt.wav'] },
+  route: { dateien: ['audio/route.wav'] },
+  gebaeude: { dateien: ['audio/gebaeude.wav'] },
+  gig: { dateien: ['audio/arena.wav'] },
+  heilung: { dateien: ['audio/heilung.wav'], schlagDauer: HEILUNG_DATEI_DAUER_S / 6 },
+  kampf: {
+    dateien: ['audio/kampf_v1.wav', 'audio/kampf_v2.wav', 'audio/kampf_v3.wav', 'audio/kampf_v4.wav'],
+  },
+};
+
+/** @type {Object<string, AudioBuffer[]>} Dekodierte Puffer je Track, nach dem Laden. */
+const dateiPuffer = {};
+/** @type {AudioBufferSourceNode|null} Gerade laufende Audiodatei. */
+let dateiQuelle = null;
+
+/** Lädt und dekodiert alle Audiodateien einmalig im Hintergrund. */
+async function ladeDateien() {
+  if (!ctx) return;
+  await Promise.all(Object.entries(DATEI_TRACKS).map(async ([name, eintrag]) => {
+    const puffer = await Promise.all(eintrag.dateien.map(async (pfad) => {
+      const antwort = await fetch(pfad);
+      const rohdaten = await antwort.arrayBuffer();
+      return ctx.decodeAudioData(rohdaten);
+    }));
+    dateiPuffer[name] = puffer;
+  }));
+  // Wurde währenddessen schon ein Datei-Track angefordert, jetzt nachstarten.
+  if (DATEI_TRACKS[laufenderTrack] && !dateiQuelle) starteDateiTrack(laufenderTrack);
+}
+
+function stoppeDateiQuelle() {
+  if (!dateiQuelle) return;
+  dateiQuelle.onended = null;
+  try {
+    dateiQuelle.stop();
+  } catch {
+    // Bereits beendet – kann beim Stoppen kurz nach dem natürlichen Ende passieren.
+  }
+  dateiQuelle = null;
+}
+
+/** Einzelne Datei in Dauerschleife (Stadt, Route, Gebäude, Gig, Heilung). */
+function starteEinzelschleife(name) {
+  const puffer = dateiPuffer[name]?.[0];
+  if (!ctx || !musikBus || !puffer) return;
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = puffer;
+  quelle.loop = true;
+  quelle.connect(musikBus);
+  quelle.start();
+  dateiQuelle = quelle;
+}
+
+/**
+ * Kampf-Track: eine der vier Varianten wird gezogen, abgespielt, und beim
+ * natürlichen Ende (kein loop) sofort die nächste gezogene Variante
+ * angeschlossen – so entsteht der lange, im Shuffle laufende Loop.
+ */
+function starteKampfVariante() {
+  const liste = dateiPuffer.kampf;
+  if (!ctx || !musikBus || !liste || liste.length === 0) return;
+  const index = ziehVariante(liste.length);
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = liste[index];
+  quelle.connect(musikBus);
+  quelle.onended = () => {
+    // Nur weiterziehen, wenn wir noch im Kampf sind und nicht durch ein
+    // manuelles stop() (Trackwechsel) hierher kommen.
+    if (laufenderTrack === 'kampf' && dateiQuelle === quelle) starteKampfVariante();
+  };
+  quelle.start();
+  dateiQuelle = quelle;
+}
+
+function starteDateiTrack(name) {
+  stoppeDateiQuelle();
+  if (name === 'kampf') starteKampfVariante();
+  else starteEinzelschleife(name);
+}
 
 function verzerrerKurve(staerke) {
   const punkte = 1024;
@@ -292,6 +274,8 @@ export function starteAudio() {
 
   naechsterSchrittZeit = ctx.currentTime;
   schrittZaehler = 0;
+
+  ladeDateien();
 }
 
 /** @returns {boolean} neuer Zustand */
@@ -308,7 +292,7 @@ export function tonIstAn() {
 }
 
 /**
- * @param {keyof typeof TRACKS | ''} name Leerer Name schaltet die Musik ab.
+ * @param {keyof typeof TRACKS | keyof typeof DATEI_TRACKS | ''} name Leerer Name schaltet die Musik ab.
  */
 export function spieleTrack(name) {
   if (name === laufenderTrack) return;
@@ -316,6 +300,14 @@ export function spieleTrack(name) {
   schrittZaehler = 0;
   varianteBeutel = [];
   if (ctx) naechsterSchrittZeit = ctx.currentTime;
+
+  if (DATEI_TRACKS[name]) {
+    // Puffer evtl. noch nicht geladen – ladeDateien() startet dann selbst nach.
+    if (dateiPuffer[name]) starteDateiTrack(name);
+    else stoppeDateiQuelle();
+  } else {
+    stoppeDateiQuelle();
+  }
 }
 
 export function aktuellerTrack() {
@@ -326,9 +318,11 @@ export function aktuellerTrack() {
  * Länge eines Viertelschlags eines Stücks in Sekunden. Damit können
  * Animationen im Gleichtakt mit der Musik laufen, ohne dass die Szene das
  * Tempo doppelt hinschreiben muss (siehe Heilsequenz in scenes/welt.js).
- * @param {keyof typeof TRACKS} name
+ * @param {keyof typeof TRACKS | keyof typeof DATEI_TRACKS} name
  */
 export function schlagDauer(name) {
+  const datei = DATEI_TRACKS[name];
+  if (datei?.schlagDauer) return datei.schlagDauer;
   const track = TRACKS[name];
   return track ? 60 / track.bpm : 0.5;
 }
@@ -498,19 +492,14 @@ export function audioSchritt() {
     const i = schrittZaehler % SCHRITTE_PRO_TAKT;
     const zeit = naechsterSchrittZeit;
 
-    // Tracks mit mehreren Taktvarianten (siehe TRACKS.kampf) bekommen an
-    // jedem Taktanfang eine neu gezogene Variante aus dem Shuffle-Beutel.
-    if (track.varianten && i === 0) varianteIndex = ziehVariante(track.varianten.length);
-    const muster = track.varianten ? track.varianten[varianteIndex] : track;
-
-    if (muster.kick[i]) {
+    if (track.kick[i]) {
       if (track.gabber) gabberKick(zeit, track.grundton ?? -36, track.kickDauer ?? 0.38);
       else kick(zeit, track.kickStaerke ?? 1);
     }
-    if (muster.hat[i]) hihat(zeit);
-    if (muster.bass[i] !== null) ton(zeit, muster.bass[i], schrittDauer * 1.6, 'square', 0.12);
-    if (muster.lead[i] !== null) ton(zeit, muster.lead[i], schrittDauer * 0.9, 'sawtooth', 0.065);
-    if (muster.zaag && muster.zaag[i] !== null) zaag(zeit, muster.zaag[i], schrittDauer * 1.1);
+    if (track.hat[i]) hihat(zeit);
+    if (track.bass[i] !== null) ton(zeit, track.bass[i], schrittDauer * 1.6, 'square', 0.12);
+    if (track.lead[i] !== null) ton(zeit, track.lead[i], schrittDauer * 0.9, 'sawtooth', 0.065);
+    if (track.zaag && track.zaag[i] !== null) zaag(zeit, track.zaag[i], schrittDauer * 1.1);
 
     naechsterSchrittZeit += schrittDauer;
     schrittZaehler += 1;
