@@ -37,11 +37,20 @@ function hz(halbtoene) {
  * `null` bedeutet Pause.
  *
  * Zweite Fassung, näher an klassischen Pokémon-Melodien orientiert: kurze,
- * wiederkehrende Hooks statt frei springender Läufe, spürbar ruhigeres
- * Tempo (132-156 statt 150-180) und eine deutlich dünnere Hi-Hat-Spur.
- * Der harte Verzerrer sitzt jetzt ausschließlich auf der Kick (siehe
- * kickBus in starteAudio) – Bass und Lead bleiben klar, das nimmt dem
- * Ganzen die Härte, ohne den Hardtekk-Punch der Kick zu verlieren.
+ * wiederkehrende Hooks statt frei springender Läufe und eine überschaubare
+ * Hi-Hat-Spur. Der harte Verzerrer sitzt ausschließlich auf dem kickBus
+ * (siehe starteAudio) – Bass und Lead bleiben klar.
+ *
+ * Zusätzliche Felder je Stück:
+ *   `kickStaerke` – Vorpegel der Kick VOR dem Verzerrer. Werte über 1 fahren
+ *                   die Kick tiefer in die Kennlinie und machen sie damit
+ *                   nicht nur lauter, sondern hörbar dreckiger; Werte unter 1
+ *                   halten sie drinnen-tauglich rund.
+ *   `zaag`        – Sägezahn-Screech durch denselben Verzerrer, das typische
+ *                   Hardtekk-"Geschrubbe" (siehe zaag()).
+ *
+ * Die Ortswechsel sollen klar hörbar sein, deshalb steigen Tempo und Härte
+ * gestaffelt: Gebäude 128 < Stadt 140 < Route 156 < Kampf 160/166.
  */
 const TRACKS = {
   titel: {
@@ -53,41 +62,90 @@ const TRACKS = {
     // Fanfare, mit der viele Titelmelodien im Genre öffnen.
     lead: [0, null, 4, null, 7, null, 12, null, 12, null, 7, null, 4, null, null, null],
   },
+  // --- Stadt (außen) --------------------------------------------------------
+  // Bewusst nah an der bisherigen Fassung: gleiches Tempo, gleiche Tonart,
+  // gleiches Frage-Antwort-Motiv. Neu sind nur ein Auftakt-Kick am Taktende,
+  // eine etwas lebendigere Hi-Hat und eine kleine Variation im zweiten Halbtakt,
+  // damit die Schleife nicht so stumpf umspringt.
   welt: {
     bpm: 140,
+    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+    hat: [0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1],
+    bass: [-24, null, -24, null, -17, null, -17, null, -22, null, -22, null, -19, null, -19, -17],
+    lead: [0, 4, 7, null, 4, null, 5, null, 0, 4, 7, 9, 7, 5, 4, null],
+  },
+  // --- Route (wildes Gras, Trainer) -----------------------------------------
+  // Düster, schnell, hart: phrygische kleine Sekunde über einem stehenden
+  // tiefen Bass, dichte Kick, durchlaufende Hi-Hat.
+  route: {
+    bpm: 156,
+    kickStaerke: 1.15,
+    kick: [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0],
+    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
+    bass: [-25, null, -25, null, -25, null, -24, null, -20, null, -20, null, -25, null, -25, null],
+    lead: [0, null, 1, null, 0, null, -4, null, 0, null, 1, null, 3, 1, 0, null],
+  },
+  // --- Gebäude (innen) ------------------------------------------------------
+  // Runder und melodischer, aber kein Weichspüler: die Kick läuft weiter
+  // durchgehend, nur mit weniger Vorpegel. Darüber eine harmonisch geführte
+  // Melodie über einer wandernden Bassfolge.
+  gebaeude: {
+    bpm: 128,
+    kickStaerke: 0.8,
     kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    hat: [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
-    bass: [-24, null, -24, null, -17, null, -17, null, -22, null, -22, null, -19, null, -19, null],
-    // Ein viertaktiges Frage-Antwort-Motiv, wie man es aus Overworld-Themes
-    // kennt: erst eine kurze Wendung nach oben, dann die Antwort zurück.
-    lead: [0, 4, 7, null, 4, null, 5, null, 0, 4, 7, null, 5, 4, null, null],
+    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0],
+    bass: [-24, null, null, null, -19, null, null, null, -21, null, null, null, -17, null, null, null],
+    lead: [7, null, 9, null, 12, null, 9, null, 7, null, 4, null, 5, 7, null, null],
   },
+  // --- Kampf gegen wilde Hardtekkmon ----------------------------------------
+  // Flotter als vorher (148 -> 160), Kick deutlich druckvoller in den
+  // Verzerrer gefahren und um Sechzehntel-Doppelschläge ergänzt; dazu ein
+  // paar Zaag-Stiche als Akzent.
   kampf: {
-    bpm: 148,
-    kick: [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0],
+    bpm: 160,
+    kickStaerke: 1.3,
+    kick: [1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1],
     hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    bass: [-24, null, -24, null, -19, null, -19, null, -22, null, -22, null, -17, null, -17, null],
-    // Angespannter, aber wiederholter Ritt über eine kleine Molltonleiter –
-    // dringlich statt chaotisch.
-    lead: [12, null, 11, null, 7, null, 11, null, 12, null, 14, null, 11, null, 7, null],
+    bass: [-24, null, -24, -24, -19, null, -19, null, -22, null, -22, -22, -17, null, -17, null],
+    lead: [12, null, 11, null, 7, null, 11, null, 12, null, 14, null, 15, 14, 12, null],
+    zaag: [null, null, null, null, null, null, null, null, null, null, null, null, 12, null, 12, null],
   },
+  // --- Kampf gegen Trainer, zugleich Musik der Gig-Hallen -------------------
+  // Derselbe Ruck wie beim wilden Kampf, nur eine Spur schneller und tiefer:
+  // Das hier ist der härteste Track im regulären Spiel.
   gig: {
-    bpm: 154,
-    kick: [1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1],
-    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
-    bass: [-27, null, -27, null, -20, null, -20, null, -22, null, -22, null, -25, null, -25, null],
-    // Der intensivste Track im Spiel, aber immer noch ein klarer,
-    // wiederholter Hook statt eines durchgehenden Sechzehntellaufs.
+    bpm: 166,
+    kickStaerke: 1.35,
+    kick: [1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1],
+    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
+    bass: [-27, null, -27, -27, -20, null, -20, null, -22, null, -22, -22, -25, null, -25, null],
     lead: [16, null, 14, null, 12, null, 14, null, 16, 19, 16, 14, 12, null, null, null],
+    zaag: [null, null, null, null, 12, null, null, null, null, null, null, null, 12, null, 14, null],
   },
+  // --- Boxenstopp (Heilungscenter) ------------------------------------------
+  // Bleibt der Ruhepol, ist aber nicht mehr so karg: durchgehender halber
+  // Puls, weiche Kick und eine vollständig ausgespielte, tröstliche Linie.
   boxenstopp: {
-    bpm: 116,
+    bpm: 120,
+    kickStaerke: 0.7,
     kick: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-    hat: [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-    bass: [-24, null, null, null, null, null, -19, null, -22, null, null, null, null, null, -17, null],
-    // Ruhig fallend und wieder aufsteigend, viel Raum zwischen den Tönen –
-    // die Healing-Center-Melodie soll erholen, nicht antreiben.
-    lead: [7, null, null, 11, null, 12, null, null, 9, null, null, 7, null, 4, null, null],
+    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+    bass: [-24, null, null, null, -17, null, null, null, -22, null, null, null, -19, null, null, null],
+    lead: [7, null, 11, null, 12, null, 11, null, 9, null, 7, null, 4, null, null, null],
+  },
+  // --- Heilsequenz ----------------------------------------------------------
+  // Das Up-Tempo-Zwischenspiel, während die Hardtekkmon aufgepäppelt werden:
+  // stures Vier-Viertel bei 175, darüber durchgehendes Zaag-Geschrubbe. Läuft
+  // exakt sechs Schläge lang, im Gleichtakt mit dem Stroboskop – die Weltszene
+  // holt sich die Schlagdauer über schlagDauer('heilung').
+  heilung: {
+    bpm: 175,
+    kickStaerke: 1.25,
+    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+    hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+    bass: [-24, null, -24, null, -24, null, -24, null, -24, null, -24, null, -24, null, -24, null],
+    lead: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    zaag: [12, null, 12, 14, 12, null, 12, 10, 12, null, 12, 14, 15, 14, 12, null],
   },
   sieg: {
     bpm: 144,
@@ -175,6 +233,17 @@ export function aktuellerTrack() {
   return laufenderTrack;
 }
 
+/**
+ * Länge eines Viertelschlags eines Stücks in Sekunden. Damit können
+ * Animationen im Gleichtakt mit der Musik laufen, ohne dass die Szene das
+ * Tempo doppelt hinschreiben muss (siehe Heilsequenz in scenes/welt.js).
+ * @param {keyof typeof TRACKS} name
+ */
+export function schlagDauer(name) {
+  const track = TRACKS[name];
+  return track ? 60 / track.bpm : 0.5;
+}
+
 /** Kick: kurzer Sinus mit fallender Tonhöhe, danach in den Verzerrer. */
 function kick(zeit, staerke = 1) {
   if (!ctx || !kickBus) return;
@@ -193,6 +262,41 @@ function kick(zeit, staerke = 1) {
   huellkurve.connect(kickBus);
   oszillator.start(zeit);
   oszillator.stop(zeit + 0.3);
+}
+
+/**
+ * Zaag: der Sägezahn-Screech des Hardtekk. Zwei leicht gegeneinander
+ * verstimmte Sägezähne durch ein resonantes Tiefpassfilter, dessen Eckfrequenz
+ * über die Tondauer nach unten fährt – und dann durch denselben Verzerrer wie
+ * die Kick. Genau diese Kette ergibt das typische "Geschrubbe".
+ */
+function zaag(zeit, halbtoene, dauer, lautstaerke = 0.09) {
+  if (!ctx || !kickBus) return;
+  const grund = hz(halbtoene);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.Q.value = 9;
+  filter.frequency.setValueAtTime(4200, zeit);
+  filter.frequency.exponentialRampToValueAtTime(650, zeit + dauer);
+
+  const huellkurve = ctx.createGain();
+  huellkurve.gain.setValueAtTime(0.0001, zeit);
+  huellkurve.gain.exponentialRampToValueAtTime(lautstaerke, zeit + 0.006);
+  huellkurve.gain.exponentialRampToValueAtTime(0.0001, zeit + dauer);
+
+  filter.connect(huellkurve);
+  huellkurve.connect(kickBus);
+
+  // Zwei Stimmen mit minimalem Versatz – das Schweben macht den Screech breit.
+  for (const versatz of [1, 1.008]) {
+    const oszillator = ctx.createOscillator();
+    oszillator.type = 'sawtooth';
+    oszillator.frequency.setValueAtTime(grund * versatz, zeit);
+    oszillator.connect(filter);
+    oszillator.start(zeit);
+    oszillator.stop(zeit + dauer + 0.02);
+  }
 }
 
 function rauschQuelle(dauer) {
@@ -260,10 +364,11 @@ export function audioSchritt() {
     const i = schrittZaehler % SCHRITTE_PRO_TAKT;
     const zeit = naechsterSchrittZeit;
 
-    if (track.kick[i]) kick(zeit);
+    if (track.kick[i]) kick(zeit, track.kickStaerke ?? 1);
     if (track.hat[i]) hihat(zeit);
     if (track.bass[i] !== null) ton(zeit, track.bass[i], schrittDauer * 1.6, 'square', 0.12);
     if (track.lead[i] !== null) ton(zeit, track.lead[i], schrittDauer * 0.9, 'sawtooth', 0.065);
+    if (track.zaag && track.zaag[i] !== null) zaag(zeit, track.zaag[i], schrittDauer * 1.1);
 
     naechsterSchrittZeit += schrittDauer;
     schrittZaehler += 1;
@@ -283,6 +388,8 @@ const EFFEKTE = {
   gefangen: { halbtoene: 24, dauer: 0.3, form: 'square', lautstaerke: 0.2 },
   aufstieg: { halbtoene: 16, dauer: 0.25, form: 'square', lautstaerke: 0.2 },
   item: { halbtoene: 21, dauer: 0.18, form: 'square', lautstaerke: 0.18 },
+  // Ein Piep je Stroboskop-Blitz der Heilsequenz.
+  heilPuls: { halbtoene: 26, dauer: 0.12, form: 'square', lautstaerke: 0.17 },
 };
 
 /** @param {keyof typeof EFFEKTE} name */

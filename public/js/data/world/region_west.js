@@ -231,7 +231,9 @@ baueKarte('route2', {
 
 // --- Plattenwald -----------------------------------------------------------------
 baueKarte('plattenwald', {
-  name: 'Plattenwald', breite: 32, hoehe: 40, musik: 'welt',
+  // Ohne festes `musik`: Der Plattenwald ist Wildgebiet und bekommt damit
+  // die Routenmusik statt der Stadtmusik.
+  name: 'Plattenwald', breite: 32, hoehe: 40,
   begegnungen: 'plattenwald', verbindungen: { sueden: 'route2', norden: 'kellerstadt' },
 }, (bauer) => {
   const weg = mitteX(32);
