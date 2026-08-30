@@ -51,9 +51,13 @@ export function trifft(attacke, angreifer, verteidiger) {
   return Math.random() < anteil;
 }
 
-/** Volltreffer? Attacken mit `krit`-Effekt treffen deutlich häufiger kritisch. */
+/**
+ * Volltreffer? Attacken mit `krit`-Effekt treffen deutlich häufiger kritisch
+ * (1 zu 5), alle anderen deutlich seltener (1 zu 20) – Volltreffer sollen
+ * eine seltene Ausnahme bleiben, nicht mehrmals hintereinander vorkommen.
+ */
 export function istVolltreffer(attacke) {
-  const chance = attacke.effekt?.art === 'krit' ? 0.25 : 0.0625;
+  const chance = attacke.effekt?.art === 'krit' ? 0.2 : 0.05;
   return Math.random() < chance;
 }
 
