@@ -16,6 +16,25 @@ export const KARTEN = {};
  * @param {object} einstellungen Name, Größe, Musik, Begegnungen, Verbindungen …
  * @param {(bauer: Kartenbauer) => object|void} aufbau Zeichnet das Gelände
  */
+/**
+ * Musik einer Karte. Ein ausdrücklich gesetztes `musik` gewinnt immer
+ * (Boxenstopp, Gig-Halle); sonst entscheidet die Art des Ortes, damit sich
+ * Gebäude, Stadt und Route klar voneinander abheben:
+ *
+ *   Wildgebiet (hat Begegnungen) -> "route"    – düster, schnell, hart
+ *   Innenraum                    -> "gebaeude" – runder, melodischer
+ *   sonst (Stadt, Freifläche)    -> "welt"
+ *
+ * Die Begegnungen werden bewusst vor `drinnen` geprüft: Höhlen wie der
+ * Boxenberg sind formal Innenräume, spielen sich aber wie eine Route.
+ */
+function waehleMusik(einstellungen) {
+  if (einstellungen.musik) return einstellungen.musik;
+  if (einstellungen.begegnungen) return 'route';
+  if (einstellungen.drinnen) return 'gebaeude';
+  return 'welt';
+}
+
 export function baueKarte(id, einstellungen, aufbau) {
   const bauer = new Kartenbauer(
     einstellungen.breite,
@@ -31,7 +50,7 @@ export function baueKarte(id, einstellungen, aufbau) {
     name: einstellungen.name,
     breite: einstellungen.breite,
     hoehe: einstellungen.hoehe,
-    musik: einstellungen.musik ?? 'welt',
+    musik: waehleMusik(einstellungen),
     drinnen: einstellungen.drinnen ?? false,
     dunkel: einstellungen.dunkel ?? false,
     begegnungen: einstellungen.begegnungen ?? null,

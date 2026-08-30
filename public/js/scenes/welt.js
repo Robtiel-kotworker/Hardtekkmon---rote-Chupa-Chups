@@ -9,7 +9,8 @@
 
 import { BREITE, HOEHE } from '../engine/screen.js';
 import { gedrueckt, gehalten, richtung as eingaberichtung } from '../engine/input.js';
-import { spieleTrack, effekt } from '../engine/audio.js';
+import { spieleTrack, effekt, schlagDauer } from '../engine/audio.js';
+import { BILDER_PRO_SEKUNDE } from '../engine/loop.js';
 import { KACHEL, kachelInfo } from '../gfx/tiles.js';
 import { zeichneMensch } from '../gfx/menschen.js';
 import { monSprite } from '../gfx/monsprites.js';
@@ -46,6 +47,17 @@ const RENN_TEMPO = 4;
 const DREHZEIT = 5;
 const BEGEGNUNGSCHANCE = 0.12;
 const BLENDE_TEMPO = 0.07;
+
+/**
+ * Heilsequenz im Boxenstopp: sechs Takes, jeder genau einen Viertelschlag der
+ * Heilmusik lang. Weil die Bildlänge aus schlagDauer('heilung') abgeleitet
+ * wird, laufen Stroboskop und Musik zwangsläufig im Gleichtakt – das Tempo
+ * steht nur an einer Stelle, nämlich im Stück selbst.
+ */
+const HEIL_TICKS = 6;
+const HEIL_TICK_BILDER = Math.max(1, Math.round(BILDER_PRO_SEKUNDE * schlagDauer('heilung')));
+/** Deckkraft des hellsten Stroboskop-Blitzes – bewusst nur ein leichtes Zucken. */
+const HEIL_BLITZ = 0.38;
 
 /** Die drei Anfänger im Labor. */
 const STARTER = { 1: 'Kickolaus', 2: 'Bassbert', 3: 'Acidchen' };
@@ -84,6 +96,8 @@ export class Weltszene {
     this.warpSperre = true;
     this.anmarsch = null;
     this.kampfNachBlende = null;
+    /** Läuft die Heilsequenz? { tick, rest, blitz } – sonst null. */
+    this.heilung = null;
   }
 
   betreten() {
@@ -298,6 +312,10 @@ export class Weltszene {
         this.aktualisiereAnmarsch();
         break;
 
+      case 'heilung':
+        this.aktualisiereHeilung();
+        break;
+
       case 'frei':
       default:
         this.aktualisiereFrei();
@@ -443,6 +461,45 @@ export class Weltszene {
 
     if (this.pruefeTrainerblick()) return;
     this.pruefeBegegnung();
+  }
+
+  // --- Heilsequenz ------------------------------------------------------------
+
+  /**
+   * Startet die Heilung samt eigener Musik und Stroboskop. Geheilt wird sofort
+   * (der Spielstand soll auch dann stimmen, wenn die Szene zwischendrin
+   * verlassen wird); sichtbar wird das Ganze über die sechs folgenden Takes.
+   */
+  starteHeilung() {
+    heileTeam();
+    merkeBoxenstopp(this.karte.id, this.figur.x, this.figur.y);
+    speichereSpiel();
+
+    spieleTrack('heilung');
+    effekt('heilPuls');
+    this.heilung = { tick: 0, rest: HEIL_TICK_BILDER, blitz: 1 };
+    this.zustand = 'heilung';
+  }
+
+  aktualisiereHeilung() {
+    const stand = this.heilung;
+    // Der Blitz verglüht über genau einen Take, sodass jeder Schlag der Musik
+    // sein eigenes Aufleuchten bekommt.
+    stand.blitz = Math.max(0, stand.blitz - 1 / HEIL_TICK_BILDER);
+    stand.rest -= 1;
+    if (stand.rest > 0) return;
+
+    stand.tick += 1;
+    if (stand.tick >= HEIL_TICKS) {
+      this.heilung = null;
+      spieleTrack(this.karte.daten.musik);
+      this.zeigeText('Alles wieder frisch. Bis zum nächsten Mal!');
+      return;
+    }
+
+    stand.rest = HEIL_TICK_BILDER;
+    stand.blitz = 1;
+    effekt('heilPuls');
   }
 
   merkeBoxenstoppWennNoetig() {
@@ -667,13 +724,8 @@ export class Weltszene {
 
     switch (aktion.art) {
       case 'heilen':
-        this.frage(npc.text, () => {
-          heileTeam();
-          merkeBoxenstopp(this.karte.id, this.figur.x, this.figur.y);
-          speichereSpiel();
-          effekt('gefangen');
-          this.zeigeText('Alles wieder frisch. Bis zum nächsten Mal!');
-        }, () => this.zeigeText('Auch gut. Pass auf dich auf.'));
+        this.frage(npc.text, () => this.starteHeilung(),
+          () => this.zeigeText('Auch gut. Pass auf dich auf.'));
         break;
 
       case 'laden':
@@ -747,6 +799,12 @@ export class Weltszene {
     }
 
     this.zeichneOrtsschild(ctx);
+
+    // Stroboskop der Heilsequenz: liegt über allem außer der Überblendung,
+    // damit der Kartenwechsel weiterhin sauber abdunkelt.
+    if (this.heilung) {
+      zeichneBlende(ctx, BREITE, HOEHE, this.heilung.blitz * HEIL_BLITZ, '#f8f8ff');
+    }
     zeichneBlende(ctx, BREITE, HOEHE, this.blende.wert);
   }
 
