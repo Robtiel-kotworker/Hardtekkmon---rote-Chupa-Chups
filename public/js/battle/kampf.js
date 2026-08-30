@@ -64,6 +64,39 @@ export function starteKampf(vorgabe) {
 const ereignis = (typ, daten = {}) => ({ typ, ...daten });
 const text = (inhalt) => ereignis('text', { text: inhalt });
 
+/**
+ * Getragenes Heil- oder Statusitem (über "Geben" im Team-Menü vergeben, z. B.
+ * Mate): setzt sich automatisch ein, sobald die KP unter 20 fallen. Wird nach
+ * jedem Schaden geprüft, den ein Hardtekkmon nimmt – ganz gleich ob durch
+ * einen Treffer, Rückstoß, Verwirrung oder Zustandsschaden am Rundenende.
+ * Ein Statusitem greift nur, wenn tatsächlich ein passender Zustand vorliegt;
+ * ohne einen wartet es weiter, statt sich wirkungslos zu verbrauchen.
+ */
+function pruefeGetragenesItem(kaempfer, seite, ereignisse) {
+  const mon = kaempfer.mon;
+  if (!mon.item || istUmgekippt(mon) || mon.kp >= 20) return;
+
+  const daten = gegenstandInfo(mon.item);
+  if (!daten) return;
+
+  if (daten.art === 'heilung') {
+    const geheilt = heile(mon, daten.wirkung.kp);
+    if (geheilt <= 0) return;
+    const name = mon.item;
+    mon.item = null;
+    ereignisse.push(text(`${anzeigename(mon)}s ${name} setzt automatisch ein!`));
+    ereignisse.push(ereignis('heilung', { seite, menge: geheilt }));
+    ereignisse.push(text(`${anzeigename(mon)} bekommt ${geheilt} Kraftpunkte zurück.`));
+  } else if (daten.art === 'status') {
+    if (!mon.status || !daten.wirkung.heiltStatus.includes(mon.status)) return;
+    const name = mon.item;
+    mon.item = null;
+    mon.status = null;
+    ereignisse.push(text(`${anzeigename(mon)}s ${name} setzt automatisch ein!`));
+    ereignisse.push(text(`${anzeigename(mon)} geht es wieder gut.`));
+  }
+}
+
 /** Wertestufe ändern und passenden Text liefern. */
 function aendereStufe(kaempfer, schluessel, stufen, ereignisse, seite) {
   const alt = kaempfer.stufen[schluessel] ?? 0;
@@ -150,6 +183,7 @@ function wendeEffektAn(effekt, angreifer, verteidiger, seiteAngreifer, schaden, 
       fuegeSchadenZu(angreifer.mon, rueck);
       ereignisse.push(ereignis('schaden', { seite: seiteAngreifer, menge: rueck }));
       ereignisse.push(text(`${anzeigename(angreifer.mon)} nimmt den Rückstoß mit.`));
+      pruefeGetragenesItem(angreifer, seiteAngreifer, ereignisse);
       break;
     }
 
@@ -218,6 +252,7 @@ function kannHandeln(kaempfer, seite, ereignisse) {
       fuegeSchadenZu(kaempfer.mon, eigen);
       ereignisse.push(ereignis('schaden', { seite, menge: eigen }));
       ereignisse.push(text(`${name} ist neben der Spur und trifft sich selbst!`));
+      pruefeGetragenesItem(kaempfer, seite, ereignisse);
       return false;
     }
     ereignisse.push(text(`${name} ist noch immer neben der Spur …`));
@@ -281,6 +316,7 @@ function fuehreAttacke(kampf, seite, attackenIndex, ereignisse) {
       const wirklich = fuegeSchadenZu(verteidiger.mon, schaden);
       gesamtschaden += wirklich;
       ereignisse.push(ereignis('schaden', { seite: seiteZiel, menge: wirklich, wirkung }));
+      pruefeGetragenesItem(verteidiger, seiteZiel, ereignisse);
     }
 
     if (treffer > 1) ereignisse.push(text(`Volltreffer – ${treffer} Mal hintereinander!`));
@@ -311,6 +347,7 @@ function rundenEnde(kampf, ereignisse) {
     ereignisse.push(text(kaempfer.mon.status === 'verkatert'
       ? `${anzeigename(kaempfer.mon)} leidet unter dem Kater.`
       : `${anzeigename(kaempfer.mon)} ist völlig ausgebrannt.`));
+    pruefeGetragenesItem(kaempfer, seite, ereignisse);
   }
 }
 

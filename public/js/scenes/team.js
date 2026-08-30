@@ -2,8 +2,9 @@
 // Team-Übersicht
 // ----------------------------------------------------------------------------
 // Zeigt die bis zu sechs Hardtekkmon im Team mit Sprite, Kraftpunkten und
-// Zustand. Von hier aus lassen sich Reihenfolge tauschen und Heilmittel
-// benutzen.
+// Zustand. Ein Klick auf ein Hardtekkmon öffnet ein Untermenü (Geben/Nehmen/
+// Tauschen); daneben kommt hier auch das direkte Anwenden eines im Beutel
+// gewählten Gegenstands an (siehe Konstruktor).
 // ============================================================================
 
 import { BREITE, HOEHE } from '../engine/screen.js';
@@ -17,9 +18,12 @@ import {
   anzeigename, artVon, maxKp, heile, istUmgekippt, stufeErhoehen, entwicklungFaellig, entwickle,
 } from '../game/hardtekkmon.js';
 import { spiel, nimmGegenstand, gibGegenstand, merkeGefangen } from '../game/spielstand.js';
-import { gegenstandInfo } from '../data/gegenstaende.js';
+import { gegenstandInfo, tragbar } from '../data/gegenstaende.js';
+import { Auswahl } from '../ui/auswahl.js';
 import { Textfenster } from '../ui/textfenster.js';
 import { poppe } from './stapel.js';
+
+const UNTERMENUE_EINTRAEGE = ['Geben', 'Nehmen', 'Tauschen'];
 
 export class Teamszene {
   /**
@@ -31,6 +35,13 @@ export class Teamszene {
     this.index = 0;
     this.tauschIndex = null;
     this.gegenstand = vorgabe.gegenstand ?? null;
+    // Untermenü Geben/Nehmen/Tauschen für das per A ausgewählte Hardtekkmon.
+    this.untermenue = null;
+    this.untermenueMon = null;
+    // Item-Auswahl innerhalb von "Geben".
+    this.gebenListe = null;
+    this.gebenNamen = [];
+    this.gebenMon = null;
     this.textfenster = new Textfenster();
     this.bildzaehler = 0;
   }
@@ -46,6 +57,15 @@ export class Teamszene {
     const anzahl = spiel.team.length;
     if (anzahl === 0) {
       poppe();
+      return;
+    }
+
+    if (this.gebenListe) {
+      this.aktualisiereGebenListe();
+      return;
+    }
+    if (this.untermenue) {
+      this.aktualisiereUntermenue();
       return;
     }
 
@@ -69,17 +89,90 @@ export class Teamszene {
       return;
     }
 
-    if (this.tauschIndex === null) {
-      this.tauschIndex = this.index;
+    if (this.tauschIndex !== null) {
+      const anderes = spiel.team[this.tauschIndex];
+      spiel.team[this.tauschIndex] = mon;
+      spiel.team[this.index] = anderes;
+      this.tauschIndex = null;
       effekt('bestaetigen');
       return;
     }
 
-    const anderes = spiel.team[this.tauschIndex];
-    spiel.team[this.tauschIndex] = mon;
-    spiel.team[this.index] = anderes;
-    this.tauschIndex = null;
+    this.untermenue = new Auswahl({ eintraege: UNTERMENUE_EINTRAEGE });
+    this.untermenueMon = this.index;
     effekt('bestaetigen');
+  }
+
+  /** Verarbeitet Geben/Nehmen/Tauschen für das zuvor ausgewählte Hardtekkmon. */
+  aktualisiereUntermenue() {
+    const antwort = this.untermenue.aktualisieren();
+    if (antwort === 'abbruch') {
+      effekt('zurueck');
+      this.untermenue = null;
+      this.untermenueMon = null;
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    const mon = spiel.team[this.untermenueMon];
+    const wahl = this.untermenue.index;
+    const monIndex = this.untermenueMon;
+    this.untermenue = null;
+    this.untermenueMon = null;
+    if (!mon) return;
+
+    if (wahl === 0) this.oeffneGebenListe(mon);
+    else if (wahl === 1) this.nehmen(mon);
+    else {
+      // Tauschen: Position dieses Hardtekkmon merken, die Bestätigung auf
+      // dem Zielplatz erledigt bestaetige() wie gehabt.
+      this.tauschIndex = monIndex;
+      this.index = monIndex;
+    }
+  }
+
+  /** Öffnet die Auswahl der trag- und gebbaren Gegenstände im Beutel. */
+  oeffneGebenListe(mon) {
+    this.gebenNamen = Object.keys(spiel.beutel)
+      .filter(tragbar)
+      .sort((a, b) => a.localeCompare(b, 'de'));
+
+    if (this.gebenNamen.length === 0) {
+      this.textfenster.zeige('Nichts im Beutel, das sich zum Tragen geben lässt.');
+      return;
+    }
+    this.gebenMon = mon;
+    this.gebenListe = new Auswahl({ eintraege: this.gebenNamen, sichtbar: 6 });
+  }
+
+  aktualisiereGebenListe() {
+    const antwort = this.gebenListe.aktualisieren();
+    if (antwort === 'abbruch') {
+      effekt('zurueck');
+      this.gebenListe = null;
+      this.gebenMon = null;
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    const name = this.gebenNamen[this.gebenListe.index];
+    const mon = this.gebenMon;
+    this.gebenListe = null;
+    this.gebenMon = null;
+    this.trageAn(mon, name);
+  }
+
+  /** Nimmt ein getragenes Item ab und legt es zurück in den Beutel. */
+  nehmen(mon) {
+    if (!mon.item) {
+      this.textfenster.zeige(`${anzeigename(mon)} trägt gerade nichts.`);
+      return;
+    }
+    const item = mon.item;
+    mon.item = null;
+    gibGegenstand(item, 1);
+    effekt('item');
+    this.textfenster.zeige(`${anzeigename(mon)} gibt ${item} zurück in den Beutel.`);
   }
 
   benutzeGegenstand(mon) {
@@ -137,32 +230,36 @@ export class Teamszene {
       }
       this.textfenster.zeige(meldungen);
     } else if (daten.art === 'anlege') {
-      this.trageAn(mon);
+      this.trageAn(mon, this.gegenstand);
       return;
     }
 
     if (!spiel.beutel[this.gegenstand]) this.gegenstand = null;
   }
 
-  /** Legt ein Anlegeitem an (oder wieder ab, wenn es schon getragen wird). */
-  trageAn(mon) {
+  /**
+   * Legt ein Gegenstand zum Tragen an (oder wieder ab, wenn er es schon ist).
+   * Trägt das Hardtekkmon bereits etwas anderes, wandert das zurück in den
+   * Beutel – es kann immer nur ein Item gleichzeitig getragen werden.
+   */
+  trageAn(mon, name) {
     const bisher = mon.item;
-    if (bisher === this.gegenstand) {
+    if (bisher === name) {
       mon.item = null;
-      gibGegenstand(this.gegenstand, 1);
+      gibGegenstand(name, 1);
       effekt('item');
-      this.textfenster.zeige(`${anzeigename(mon)} legt ${this.gegenstand} wieder ab.`);
+      this.textfenster.zeige(`${anzeigename(mon)} legt ${name} wieder ab.`);
     } else {
       if (bisher) gibGegenstand(bisher, 1);
-      mon.item = this.gegenstand;
-      nimmGegenstand(this.gegenstand, 1);
+      mon.item = name;
+      nimmGegenstand(name, 1);
       effekt('item');
       this.textfenster.zeige(bisher
-        ? `${anzeigename(mon)} tauscht ${bisher} gegen ${this.gegenstand}.`
-        : `${anzeigename(mon)} trägt jetzt ${this.gegenstand}.`);
+        ? `${anzeigename(mon)} tauscht ${bisher} gegen ${name}.`
+        : `${anzeigename(mon)} trägt jetzt ${name}.`);
     }
 
-    if (!spiel.beutel[this.gegenstand]) this.gegenstand = null;
+    if (this.gegenstand && !spiel.beutel[this.gegenstand]) this.gegenstand = null;
   }
 
   zeichnen(ctx) {
@@ -199,6 +296,26 @@ export class Teamszene {
       if (gewaehlt) zeiger(ctx, x - 2, y + 8, this.bildzaehler);
     });
 
+    if (this.untermenue) this.zeichneUntermenue(ctx);
+    if (this.gebenListe) this.zeichneGebenListe(ctx);
+
     this.textfenster.zeichnen(ctx);
+  }
+
+  /** Geben/Nehmen/Tauschen, aufgeklappt neben der Zeile des gewählten Hardtekkmon. */
+  zeichneUntermenue(ctx) {
+    const hoehe = UNTERMENUE_EINTRAEGE.length * 14 + 8;
+    const y = Math.max(4, Math.min(16 + this.untermenueMon * 23, HOEHE - hoehe - 4));
+    this.untermenue.zeichnen(ctx, 128, y, 108, hoehe, { zeilenhoehe: 14 });
+  }
+
+  /** Auswahl der trag- und gebbaren Gegenstände im Beutel, für "Geben". */
+  zeichneGebenListe(ctx) {
+    zeichneText(ctx, `${anzeigename(this.gebenMon)} tragen lassen:`, 8, 5,
+      { farbe: UI.textHell, schatten: UI.dunkel });
+    this.gebenListe.zeichnen(ctx, 20, 16, BREITE - 40, HOEHE - 28, {
+      zeilenhoehe: 12,
+      zusatz: (index) => `×${spiel.beutel[this.gebenNamen[index]] ?? 0}`,
+    });
   }
 }

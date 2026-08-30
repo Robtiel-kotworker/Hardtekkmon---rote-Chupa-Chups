@@ -122,6 +122,17 @@ export function anlegbar(name) {
   return GEGENSTAENDE[name]?.art === 'anlege';
 }
 
+/**
+ * Gegenstände, die sich über "Geben" im Team-Menü einem Hardtekkmon zum
+ * Tragen geben lassen: Anlegeitems wie der EP-Teiler, aber auch Heil- und
+ * Statusmittel wie Mate – die setzen sich dann automatisch ein, sobald die
+ * KP unter 20 fallen (siehe pruefeGetragenesItem in battle/kampf.js).
+ */
+export function tragbar(name) {
+  const art = GEGENSTAENDE[name]?.art;
+  return art === 'anlege' || art === 'heilung' || art === 'status';
+}
+
 /** Sortierreihenfolge im Beutel. */
 export const BEUTEL_REIHENFOLGE = [
   'fang', 'heilung', 'status', 'beleben', 'levelauf', 'kampfhilfe', 'anlege', 'schluessel',

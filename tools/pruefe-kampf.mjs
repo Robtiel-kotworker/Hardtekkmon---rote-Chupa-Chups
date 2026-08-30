@@ -40,6 +40,11 @@ for (let i = 0; i < ANZAHL; i += 1) {
   if (team.length > 1 && Math.random() < 0.2) {
     team[1 + Math.floor(Math.random() * (team.length - 1))].item = 'EP-Teiler';
   }
+  // Und das kämpfende Mon selbst trägt gelegentlich ein Heil- oder
+  // Statusmittel – prüft den automatischen Einsatz unter 20 KP mit.
+  if (Math.random() < 0.3) {
+    team[0].item = Math.random() < 0.5 ? 'Mate' : 'Kaugummi';
+  }
 
   const kampf = istTrainer
     ? starteKampf({ art: 'trainer', team, gegnerTeam: zufallsTeam(1 + Math.floor(Math.random() * 4), stufe), trainer: { name: 'Prüfer' } })
