@@ -9,7 +9,7 @@
 
 import { BREITE, HOEHE } from '../engine/screen.js';
 import { gedrueckt, gehalten, richtung as eingaberichtung } from '../engine/input.js';
-import { spieleTrack, effekt, schlagDauer } from '../engine/audio.js';
+import { spieleTrack, effekt, schlagDauer, vorlauf } from '../engine/audio.js';
 import { BILDER_PRO_SEKUNDE } from '../engine/loop.js';
 import { KACHEL, kachelInfo, TELLER_PLAETZE, zeichneGoldPlatte } from '../gfx/tiles.js';
 import { zeichneMensch } from '../gfx/menschen.js';
@@ -70,13 +70,29 @@ const STRECKENFUNDE = [
 const TRAINER_JE_BELOHNUNG = 10;
 
 /**
- * Heilsequenz im Boxenstopp: sechs Takes, jeder genau einen Viertelschlag der
- * Heilmusik lang. Weil die Bildlänge aus schlagDauer('heilung') abgeleitet
- * wird, laufen Stroboskop und Musik zwangsläufig im Gleichtakt – das Tempo
- * steht nur an einer Stelle, nämlich im Stück selbst.
+ * Heilsequenz im Boxenstopp. Die Heilmusik beginnt mit einem knapp sechs
+ * Sekunden langen Intro ohne Kick; erst danach bricht sie los. Im Bild
+ * passiert deshalb während des Intros bewusst nichts – kein Stroboskop, keine
+ * Platten, keine Heilanimation. Genau in dem Moment, in dem die Kick
+ * einsetzt, springt alles zugleich an.
+ *
+ * Beide Längen kommen aus engine/audio.js und damit aus dem Stück selbst:
+ * vorlauf('heilung') ist das Intro bis zum Kick-Einsatz, schlagDauer('heilung')
+ * ein Take. Vorlauf plus sechs Takes decken das Stück genau ab, Musik und
+ * Animation enden also gemeinsam.
  */
 const HEIL_TICKS = 6;
+const HEIL_VORLAUF_BILDER = Math.max(0, Math.round(BILDER_PRO_SEKUNDE * vorlauf('heilung')));
 const HEIL_TICK_BILDER = Math.max(1, Math.round(BILDER_PRO_SEKUNDE * schlagDauer('heilung')));
+/**
+ * Das Stroboskop blitzt nicht einmal pro Take, sondern fünfmal – ein Take
+ * ist mit gut 0,68 s dafür viel zu lang. Fünf Blitze je Take ergeben rund
+ * 0,137 s Abstand und liegen damit praktisch auf dem Kick-Geknüppel des
+ * Stücks (gemessener Abstand der Kicks: 0,139 s im Mittel). Zum Take-Beginn
+ * wird der Takt neu gesetzt, damit die Blitze nicht wegdriften.
+ */
+const HEIL_BLITZE_PRO_TICK = 5;
+const HEIL_BLITZ_BILDER = Math.max(1, Math.round(HEIL_TICK_BILDER / HEIL_BLITZE_PRO_TICK));
 /** Deckkraft des hellsten Stroboskop-Blitzes. */
 const HEIL_BLITZ = 0.72;
 
@@ -497,9 +513,10 @@ export class Weltszene {
   // --- Heilsequenz ------------------------------------------------------------
 
   /**
-   * Startet die Heilung samt eigener Musik und Stroboskop. Geheilt wird sofort
-   * (der Spielstand soll auch dann stimmen, wenn die Szene zwischendrin
-   * verlassen wird); sichtbar wird das Ganze über die sechs folgenden Takes.
+   * Startet die Heilung samt eigener Musik. Geheilt wird sofort (der
+   * Spielstand soll auch dann stimmen, wenn die Szene zwischendrin verlassen
+   * wird); sichtbar wird das Ganze über die sechs Takes, die aber erst mit
+   * dem Kick-Einsatz beginnen – solange läuft nur das Intro des Stücks.
    */
   starteHeilung() {
     heileTeam();
@@ -507,23 +524,46 @@ export class Weltszene {
     speichereSpiel();
 
     spieleTrack('heilung');
-    effekt('heilPuls');
     // Die Lage des Plattenspielers wird einmal gesucht und gemerkt; fehlt er
     // auf der Karte, läuft die Sequenz einfach ohne die Platten weiter.
     this.heilung = {
+      vorlauf: HEIL_VORLAUF_BILDER,
       tick: 0,
       rest: HEIL_TICK_BILDER,
-      blitz: 1,
+      // Im Vorlauf bleibt das Bild unangetastet: kein Blitz, keine Platte.
+      blitz: 0,
+      blitzRest: HEIL_BLITZ_BILDER,
       teller: this.karte.findeKachel('heilteller'),
     };
     this.zustand = 'heilung';
   }
 
+  /** Läuft die Heilsequenz schon sichtbar, ist das Intro also durch? */
+  heilungLaeuft() {
+    return Boolean(this.heilung) && this.heilung.vorlauf <= 0;
+  }
+
   aktualisiereHeilung() {
     const stand = this.heilung;
-    // Der Blitz verglüht über genau einen Take, sodass jeder Schlag der Musik
-    // sein eigenes Aufleuchten bekommt.
-    stand.blitz = Math.max(0, stand.blitz - 1 / HEIL_TICK_BILDER);
+
+    // --- Intro: Musik läuft, im Bild passiert noch nichts ------------------
+    if (stand.vorlauf > 0) {
+      stand.vorlauf -= 1;
+      if (stand.vorlauf > 0) return;
+      // Die Kick setzt ein – ab hier zünden Stroboskop, Platten und
+      // Heilanimation gemeinsam.
+      this.zuendeHeilTakt(stand);
+      return;
+    }
+
+    // --- Stroboskop: verglüht über einen Blitzabstand und zündet neu -------
+    stand.blitz = Math.max(0, stand.blitz - 1 / HEIL_BLITZ_BILDER);
+    stand.blitzRest -= 1;
+    if (stand.blitzRest <= 0) {
+      stand.blitzRest = HEIL_BLITZ_BILDER;
+      stand.blitz = 1;
+    }
+
     stand.rest -= 1;
     if (stand.rest > 0) return;
 
@@ -536,7 +576,13 @@ export class Weltszene {
     }
 
     stand.rest = HEIL_TICK_BILDER;
+    this.zuendeHeilTakt(stand);
+  }
+
+  /** Beginn eines Takes: Blitz neu zünden und den Blitztakt neu setzen. */
+  zuendeHeilTakt(stand) {
     stand.blitz = 1;
+    stand.blitzRest = HEIL_BLITZ_BILDER;
     effekt('heilPuls');
   }
 
@@ -843,7 +889,7 @@ export class Weltszene {
     this.zeichneFiguren(ctx, kamera, spielerPixel);
 
     if (this.karte.daten.dunkel) this.zeichneDunkelheit(ctx, spielerPixel, kamera);
-    if (this.heilung) this.zeichneHeilteller(ctx, kamera);
+    if (this.heilungLaeuft()) this.zeichneHeilteller(ctx, kamera);
     if (this.zustand === 'anmarsch' && this.anmarsch) this.zeichneAusrufezeichen(ctx, kamera);
 
     this.textfenster.zeichnen(ctx);
@@ -917,7 +963,9 @@ export class Weltszene {
   /**
    * Legt die bisher eingelaufenen goldenen Platten in den Plattenspieler.
    * Mit jedem Take kommt eine dazu, nach sechs Takes sind alle sechs Mulden
-   * belegt – im Gleichtakt mit Musik und Stroboskop.
+   * belegt – im Gleichtakt mit Musik und Stroboskop. Während des Intros
+   * bleibt der Plattenspieler leer, die erste Platte fällt mit dem
+   * Kick-Einsatz.
    */
   zeichneHeilteller(ctx, kamera) {
     const teller = this.heilung.teller;
