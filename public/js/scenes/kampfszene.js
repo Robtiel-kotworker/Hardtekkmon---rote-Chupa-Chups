@@ -314,12 +314,20 @@ export class Kampfszene {
     this.zustand = 'verarbeitung';
   }
 
-  /** Neues Hardtekkmon im Ring: Balken springen hart auf den neuen Wert. */
-  setzeAnzeigeNeu() {
-    this.anzeige.eigeneKp = this.kampf.eigene.mon.kp;
-    this.anzeige.gegnerKp = this.kampf.gegner.mon.kp;
-    this.anzeige.zielEigeneKp = this.kampf.eigene.mon.kp;
-    this.anzeige.zielGegnerKp = this.kampf.gegner.mon.kp;
+  /**
+   * Neues Hardtekkmon im Ring: Balken springen hart auf den neuen Wert.
+   * @param {number} [eigeneKp] Eingefrorener KP-Stand beim Wechsel (siehe
+   *   'eigenerWechsel'/'gegnerWechsel' in kampf.js) – ohne Angabe wird der
+   *   aktuelle (live) Wert genommen, was nur außerhalb eines laufenden
+   *   Rundenablaufs korrekt ist, z. B. beim erzwungenen Wechsel direkt nach
+   *   dem eigenen K.o., wo die Runde damit sofort endet.
+   * @param {number} [gegnerKp]
+   */
+  setzeAnzeigeNeu(eigeneKp = this.kampf.eigene.mon.kp, gegnerKp = this.kampf.gegner.mon.kp) {
+    this.anzeige.eigeneKp = eigeneKp;
+    this.anzeige.gegnerKp = gegnerKp;
+    this.anzeige.zielEigeneKp = eigeneKp;
+    this.anzeige.zielGegnerKp = gegnerKp;
     this.anzeige.erfahrung = erfahrungsAnteil(this.kampf.eigene.mon);
     this.anzeige.zielErfahrung = this.anzeige.erfahrung;
     this.anzeige.eigenesSichtbar = true;
@@ -433,13 +441,17 @@ export class Kampfszene {
 
       case 'gegnerWechsel':
         a.gegnerSichtbar = true;
-        this.setzeAnzeigeNeu();
+        // Eingefrorenen Wert aus dem Ereignis nehmen (siehe kampf.js) statt
+        // live nachzuschauen: Die Runde ist zu diesem Zeitpunkt oft schon
+        // vollständig durchgerechnet, der aktuelle KP-Stand könnte also
+        // bereits spätere Treffer dieser Runde enthalten.
+        this.setzeAnzeigeNeu(this.anzeige.eigeneKp, ereignis.kp);
         this.wartezeit = WARTE.wechsel;
         break;
 
       case 'eigenerWechsel':
         a.eigenesSichtbar = true;
-        this.setzeAnzeigeNeu();
+        this.setzeAnzeigeNeu(ereignis.kp, this.anzeige.gegnerKp);
         this.wartezeit = WARTE.wechsel;
         break;
 
