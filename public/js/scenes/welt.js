@@ -70,26 +70,31 @@ const STRECKENFUNDE = [
 const TRAINER_JE_BELOHNUNG = 10;
 
 /**
- * Heilsequenz im Boxenstopp. Die Heilmusik beginnt mit einem knapp sechs
- * Sekunden langen Intro ohne Kick; erst danach bricht sie los. Im Bild
- * passiert deshalb während des Intros bewusst nichts – kein Stroboskop, keine
- * Platten, keine Heilanimation. Genau in dem Moment, in dem die Kick
- * einsetzt, springt alles zugleich an.
+ * Heilsequenz im Boxenstopp. Die Heilmusik läuft auf doppeltem Tempo
+ * (time-gestreckt, siehe HEILUNG_DATEI_DAUER_S in engine/audio.js) und
+ * beginnt mit einem knapp drei Sekunden langen Intro ohne Kick; erst danach
+ * bricht sie los. Im Bild passiert deshalb während des Intros bewusst nichts
+ * – kein Stroboskop, keine Platten, keine Heilanimation. Genau in dem
+ * Moment, in dem die Kick einsetzt, springt alles zugleich an.
  *
  * Beide Längen kommen aus engine/audio.js und damit aus dem Stück selbst:
  * vorlauf('heilung') ist das Intro bis zum Kick-Einsatz, schlagDauer('heilung')
  * ein Take. Vorlauf plus sechs Takes decken das Stück genau ab, Musik und
- * Animation enden also gemeinsam.
+ * Animation enden also gemeinsam – und weil beide Längen aus der (jetzt
+ * halbierten) Dateidauer kommen, laufen Sequenz und Musik automatisch mit,
+ * ohne dass hier irgendetwas verdoppelt werden musste.
  */
 const HEIL_TICKS = 6;
 const HEIL_VORLAUF_BILDER = Math.max(0, Math.round(BILDER_PRO_SEKUNDE * vorlauf('heilung')));
 const HEIL_TICK_BILDER = Math.max(1, Math.round(BILDER_PRO_SEKUNDE * schlagDauer('heilung')));
 /**
  * Das Stroboskop blitzt nicht einmal pro Take, sondern fünfmal – ein Take
- * ist mit gut 0,68 s dafür viel zu lang. Fünf Blitze je Take ergeben rund
- * 0,137 s Abstand und liegen damit praktisch auf dem Kick-Geknüppel des
- * Stücks (gemessener Abstand der Kicks: 0,139 s im Mittel). Zum Take-Beginn
- * wird der Takt neu gesetzt, damit die Blitze nicht wegdriften.
+ * ist mit gut 0,34 s dafür viel zu lang. Fünf Blitze je Take ergeben rund
+ * 0,068 s Abstand und liegen damit praktisch auf dem Kick-Geknüppel des
+ * gestreckten Stücks (gemessener Abstand der Kicks: 0,071 s im Mittel, exakt
+ * die Hälfte des Ursprungswerts von 0,139 s – die Verdopplung des Tempos hat
+ * sich also 1:1 auf den Kick-Abstand übertragen). Zum Take-Beginn wird der
+ * Takt neu gesetzt, damit die Blitze nicht wegdriften.
  */
 const HEIL_BLITZE_PRO_TICK = 5;
 const HEIL_BLITZ_BILDER = Math.max(1, Math.round(HEIL_TICK_BILDER / HEIL_BLITZE_PRO_TICK));
