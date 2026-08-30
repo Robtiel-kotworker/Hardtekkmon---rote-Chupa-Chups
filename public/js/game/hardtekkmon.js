@@ -90,6 +90,8 @@ export function erstelleHardtekkmon(artAngabe, stufe, zusatz = {}) {
       .map(baueAttacke)
       .filter(Boolean),
     original: zusatz.original ?? null,
+    // Angelegtes Spezialitem (z. B. der EP-Teiler); null, solange nichts getragen wird.
+    item: null,
   };
 
   if (mon.attacken.length === 0) mon.attacken = [baueAttacke(artDaten.lernsatz[0].attacke)];
@@ -159,6 +161,28 @@ export function gibErfahrung(mon, menge) {
   }
 
   return { neueStufen, neueAttacken };
+}
+
+/**
+ * Erhöht die Stufe direkt um eins, unabhängig von der Erfahrung (Roter
+ * Lolli). Die Erfahrung wird auf die neue Mindestschwelle angehoben, damit
+ * der EP-Balken danach nicht negativ oder über 100 % erscheint.
+ * @returns {{ neueAttacken: string[] }}
+ */
+export function stufeErhoehen(mon) {
+  if (mon.stufe >= 100) return { neueAttacken: [] };
+
+  mon.stufe += 1;
+  mon.erfahrung = Math.max(mon.erfahrung, erfahrungFuerStufe(mon.stufe));
+
+  const grenze = maxKp(mon);
+  mon.kp = Math.min(grenze, mon.kp + Math.max(1, Math.floor(grenze / 12)));
+
+  const neueAttacken = [];
+  for (const eintrag of artVon(mon).lernsatz) {
+    if (eintrag.stufe === mon.stufe) neueAttacken.push(eintrag.attacke);
+  }
+  return { neueAttacken };
 }
 
 /** Fortschritt zur nächsten Stufe (0..1). */
