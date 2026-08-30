@@ -10,7 +10,7 @@
 import { BREITE, HOEHE } from '../engine/screen.js';
 import { gedrueckt } from '../engine/input.js';
 import { spieleTrack, effekt, aktuellerTrack } from '../engine/audio.js';
-import { fenster, balken, kpFarbe, blende, gegenstandSymbol, typSchild } from '../gfx/ui.js';
+import { fenster, balken, kpFarbe, blende, gegenstandSymbol, typSchild, fangSymbol } from '../gfx/ui.js';
 import { zeichneText, textBreite } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { monSprite } from '../gfx/monsprites.js';
@@ -52,6 +52,13 @@ export class Kampfszene {
     this.anzeige = {
       eigeneKp: this.kampf.eigene.mon.kp,
       gegnerKp: this.kampf.gegner.mon.kp,
+      // Ziel, dem die Balken hinterherlaufen: wird erst Schritt für Schritt je
+      // abgespieltem Ereignis nachgezogen (siehe fuehreEreignisAus) – nicht
+      // sofort auf den echten (bereits fertig gerechneten) Endwert der Runde
+      // gesetzt. Nur so zeigt die Anzeige erst den eigenen Treffer und danach
+      // den gegnerischen, statt beides gleichzeitig vorwegzunehmen.
+      zielEigeneKp: this.kampf.eigene.mon.kp,
+      zielGegnerKp: this.kampf.gegner.mon.kp,
       erfahrung: erfahrungsAnteil(this.kampf.eigene.mon),
       eigenerVersatz: 0,
       gegnerVersatz: 0,
@@ -64,6 +71,10 @@ export class Kampfszene {
 
     this.befehlsmenue = new Auswahl({ eintraege: ['KAMPF', 'BEUTEL', 'TEAM', 'ABHAUEN'], spalten: 2 });
     this.attackenmenue = null;
+    // Merkt sich den zuletzt gewählten Attackenplatz, damit der Zeiger beim
+    // nächsten Öffnen des Attackenmenüs dort stehen bleibt statt auf den
+    // ersten Eintrag zurückzuspringen – so lässt sich eine Attacke spammen.
+    this.letzterAttackenIndex = 0;
     this.beutelmenue = null;
     this.beutelNamen = [];
     this.teammenue = null;
@@ -118,15 +129,15 @@ export class Kampfszene {
     }
   }
 
-  /** Balken und Sprites laufen der Wahrheit weich hinterher. */
+  /** Balken und Sprites laufen ihrem jeweiligen Zwischenziel weich hinterher. */
   animiereAnzeige() {
     const a = this.anzeige;
     const naehere = (wert, ziel, schritt) => (
       Math.abs(ziel - wert) <= schritt ? ziel : wert + Math.sign(ziel - wert) * schritt
     );
 
-    a.eigeneKp = naehere(a.eigeneKp, this.kampf.eigene.mon.kp, Math.max(1, maxKp(this.kampf.eigene.mon) / 60));
-    a.gegnerKp = naehere(a.gegnerKp, this.kampf.gegner.mon.kp, Math.max(1, maxKp(this.kampf.gegner.mon) / 60));
+    a.eigeneKp = naehere(a.eigeneKp, a.zielEigeneKp, Math.max(1, maxKp(this.kampf.eigene.mon) / 40));
+    a.gegnerKp = naehere(a.gegnerKp, a.zielGegnerKp, Math.max(1, maxKp(this.kampf.gegner.mon) / 40));
     a.erfahrung = naehere(a.erfahrung, erfahrungsAnteil(this.kampf.eigene.mon), 0.02);
 
     a.eigenerVersatz = naehere(a.eigenerVersatz, 0, 1.5);
@@ -169,6 +180,11 @@ export class Kampfszene {
       eintraege: attacken.map((eintrag) => eintrag.name),
       spalten: 2,
     });
+    // Zeiger auf den zuletzt gewählten Platz setzen (begrenzt auf die
+    // tatsächlich vorhandenen Attacken), statt immer bei der ersten
+    // anzufangen.
+    this.attackenmenue.index = Math.min(this.letzterAttackenIndex, attacken.length - 1);
+    this.attackenmenue.haltePosition();
     this.zustand = 'attacke';
   }
 
@@ -180,6 +196,7 @@ export class Kampfszene {
     }
     if (antwort !== 'bestaetigt') return;
 
+    this.letzterAttackenIndex = this.attackenmenue.index;
     const eintrag = this.kampf.eigene.mon.attacken[this.attackenmenue.index];
     if (!eintrag || eintrag.ap <= 0) {
       this.textfenster.zeige('Da ist nichts mehr drin! Nimm eine andere.');
@@ -273,9 +290,12 @@ export class Kampfszene {
     this.zustand = 'verarbeitung';
   }
 
+  /** Neues Hardtekkmon im Ring: Balken springen hart auf den neuen Wert. */
   setzeAnzeigeNeu() {
     this.anzeige.eigeneKp = this.kampf.eigene.mon.kp;
     this.anzeige.gegnerKp = this.kampf.gegner.mon.kp;
+    this.anzeige.zielEigeneKp = this.kampf.eigene.mon.kp;
+    this.anzeige.zielGegnerKp = this.kampf.gegner.mon.kp;
     this.anzeige.erfahrung = erfahrungsAnteil(this.kampf.eigene.mon);
     this.anzeige.eigenesSichtbar = true;
     this.anzeige.gegnerSichtbar = true;
@@ -307,10 +327,18 @@ export class Kampfszene {
     this.fuehreEreignisAus(ereignis);
   }
 
+  /**
+   * Ist die Anzeige mit ihrem eigenen Zwischenziel im Reinen? Verglichen wird
+   * bewusst nicht mit dem (längst fertig berechneten) echten Kraftpunktestand
+   * der Runde, sondern mit `zielEigeneKp`/`zielGegnerKp` – die wachsen erst
+   * Ereignis für Ereignis mit, siehe fuehreEreignisAus. So wartet die
+   * Verarbeitung nur auf die Animation des zuletzt gespielten Ereignisses,
+   * nicht auf das Endergebnis der ganzen Runde.
+   */
   anzeigeRuhig() {
     const a = this.anzeige;
-    return a.eigeneKp === this.kampf.eigene.mon.kp
-      && a.gegnerKp === this.kampf.gegner.mon.kp
+    return a.eigeneKp === a.zielEigeneKp
+      && a.gegnerKp === a.zielGegnerKp
       && !a.wurf;
   }
 
@@ -335,21 +363,39 @@ export class Kampfszene {
       }
 
       case 'schaden':
-        if (ereignis.seite === 'spieler') a.eigenesBlinken = 20;
-        else a.gegnerBlinken = 20;
+        // Erst hier – wenn das Ereignis tatsächlich an der Reihe ist – zieht
+        // das Ziel des Balkens nach. Bis dahin zeigt die Anzeige noch den
+        // Stand vor diesem Treffer, auch wenn der echte Kraftpunktestand für
+        // die ganze Runde längst feststeht.
+        if (ereignis.seite === 'spieler') {
+          a.eigenesBlinken = 20;
+          a.zielEigeneKp = Math.max(0, a.zielEigeneKp - ereignis.menge);
+        } else {
+          a.gegnerBlinken = 20;
+          a.zielGegnerKp = Math.max(0, a.zielGegnerKp - ereignis.menge);
+        }
         effekt(ereignis.wirkung >= 2 ? 'starkerTreffer'
           : ereignis.wirkung !== undefined && ereignis.wirkung < 1 ? 'schwacherTreffer' : 'treffer');
         this.wartezeit = WARTE.treffer;
         break;
 
-      case 'heilung':
+      case 'heilung': {
+        const grenze = ereignis.seite === 'spieler' ? maxKp(this.kampf.eigene.mon) : maxKp(this.kampf.gegner.mon);
+        if (ereignis.seite === 'spieler') a.zielEigeneKp = Math.min(grenze, a.zielEigeneKp + ereignis.menge);
+        else a.zielGegnerKp = Math.min(grenze, a.zielGegnerKp + ereignis.menge);
         effekt('item');
         this.wartezeit = WARTE.kurz;
         break;
+      }
 
       case 'umkippen':
-        if (ereignis.seite === 'spieler') a.eigenesSichtbar = false;
-        else a.gegnerSichtbar = false;
+        if (ereignis.seite === 'spieler') {
+          a.eigenesSichtbar = false;
+          a.zielEigeneKp = 0;
+        } else {
+          a.gegnerSichtbar = false;
+          a.zielGegnerKp = 0;
+        }
         effekt('umkippen');
         this.wartezeit = WARTE.wechsel;
         break;
@@ -576,6 +622,11 @@ export class Kampfszene {
 
     const name = anzeigename(mon);
     zeichneText(ctx, name, x + 5, y + 4, { farbe: UI.text });
+    // Wildes, schon einmal gefangenes Hardtekkmon: kleines Fang-Symbol neben
+    // dem Namen, wie im Tekkdex.
+    if (!eigenes && this.kampf.art === 'wild' && spiel.gefangen.has(mon.artId)) {
+      fangSymbol(ctx, x + 5 + textBreite(name) + 3, y + 3);
+    }
     zeichneText(ctx, `St.${mon.stufe}`, x + breite - 26, y + 4, { farbe: UI.text });
 
     const grenze = maxKp(mon);

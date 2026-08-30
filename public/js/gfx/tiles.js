@@ -418,6 +418,9 @@ export const KACHELN = {
   },
   tresen: {
     fest: true,
+    // Reicht über den Tresen hinweg: Wer davorsteht, kann die Person direkt
+    // dahinter trotzdem ansprechen (siehe interagiere() in welt.js).
+    reichweite: true,
     zeichne(ctx) {
       flaeche(ctx, WELT.bodenInnen);
       kasten(ctx, '#8a6038', 0, 2, 16, 12);
@@ -440,6 +443,9 @@ export const KACHELN = {
   },
   tisch: {
     fest: true,
+    // Wie der Tresen: blockiert das Laufen, aber nicht das Ansprechen einer
+    // Person direkt auf der anderen Seite.
+    reichweite: true,
     zeichne(ctx) {
       flaeche(ctx, WELT.bodenInnen);
       kasten(ctx, '#8a6038', 1, 3, 14, 10);
@@ -483,6 +489,18 @@ export const KACHELN = {
       kasten(ctx, '#101014', 3, 4, 9, 9);
       kasten(ctx, '#c8c8d0', 7, 8, 1, 1);
       kasten(ctx, '#e04058', 12, 4, 2, 6);
+    },
+  },
+  computer: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, WELT.bodenInnen);
+      kasten(ctx, '#d8d8e0', 3, 10, 10, 3);
+      kasten(ctx, '#9098a8', 3, 12, 10, 1);
+      kasten(ctx, '#282838', 2, 2, 12, 9);
+      kasten(ctx, '#4098e0', 3, 3, 10, 7);
+      kasten(ctx, '#a8e0f8', 4, 4, 6, 2);
+      kasten(ctx, '#282838', 4, 7, 8, 1);
     },
   },
 };

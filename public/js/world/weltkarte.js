@@ -80,6 +80,14 @@ export class Weltkarte {
     return Boolean(kachelInfo(this.kachelAn(x, y)).fest);
   }
 
+  /**
+   * Blockiert die Kachel das Laufen, lässt aber das Ansprechen einer Person
+   * dahinter zu (Tresen, Tisch)? Siehe interagiere() in welt.js.
+   */
+  reichweiteHindernis(x, y) {
+    return Boolean(kachelInfo(this.kachelAn(x, y)).reichweite);
+  }
+
   /** Begehbar inklusive Figuren und Gegenständen. */
   istBegehbar(x, y) {
     if (this.istFest(x, y)) return false;

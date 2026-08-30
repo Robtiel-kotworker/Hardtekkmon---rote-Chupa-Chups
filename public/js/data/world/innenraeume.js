@@ -48,6 +48,7 @@ export function baueBoxenstopp(id, ort, rueck) {
     bauer.setze(2, 7, 'tisch');
     bauer.setze(3, 7, 'tisch');
     bauer.setze(10, 7, 'plattenspieler');
+    bauer.setze(12, 7, 'computer');
 
     return {
       warps: ausgang(matteX, matteY, rueck),
@@ -252,6 +253,8 @@ export function setzeBoxenstopp(bauer, x, y, stadtId, ortName) {
   const { tuerX, tuerY } = bauer.haus(x, y, 6, 5, {
     dach: 'dachRot', ziel: id, zx: MATTE.standard.x, zy: MATTE.standard.y,
   });
+  // Schild neben dem Eingang – von außen sofort als Heilungscenter erkennbar.
+  bauer.schild(x + 6, y + 4, 'Heilungscenter');
   baueBoxenstopp(id, ortName, { karte: stadtId, x: tuerX, y: tuerY });
   return { tuerX, tuerY };
 }
@@ -262,6 +265,8 @@ export function setzeKiosk(bauer, x, y, stadtId, ortName, waren) {
   const { tuerX, tuerY } = bauer.haus(x, y, 6, 5, {
     dach: 'dachBlau', ziel: id, zx: MATTE.standard.x, zy: MATTE.standard.y,
   });
+  // Schild neben dem Eingang – von außen sofort als Einkaufszentrum erkennbar.
+  bauer.schild(x + 6, y + 4, 'Einkaufszentrum');
   baueKiosk(id, ortName, { karte: stadtId, x: tuerX, y: tuerY }, waren);
   return { tuerX, tuerY };
 }
