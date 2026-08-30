@@ -364,7 +364,13 @@ function pruefeUmgekippt(kampf, ereignisse) {
     if (kampf.art === 'trainer' && naechster >= 0) {
       kampf.gegnerIndex = naechster;
       kampf.gegner = alsKaempfer(kampf.gegnerTeam[naechster]);
-      ereignisse.push(ereignis('gegnerWechsel', { index: naechster }));
+      // Die KP werden hier eingefroren, statt später live aus dem Hardtekkmon
+      // zu lesen: Die Runde kann nach diesem Wechsel noch weiterlaufen und
+      // das frisch eingewechselte Mon selbst treffen – ohne den eingefrorenen
+      // Wert würde die Anzeige beim Erscheinen schon den (dann bereits
+      // verrechneten) späteren Stand zeigen, statt sichtbar erst zu starten
+      // und danach zu sinken.
+      ereignisse.push(ereignis('gegnerWechsel', { index: naechster, kp: kampf.gegner.mon.kp }));
       ereignisse.push(text(`${kampf.trainer.name} schickt ${anzeigename(kampf.gegner.mon)} in den Ring!`));
     } else {
       kampf.vorbei = true;
@@ -530,7 +536,12 @@ export function wechsleEigenes(kampf, index, ereignisse = []) {
   kampf.eigenesIndex = index;
   kampf.eigene = alsKaempfer(neues);
   kampf.wechselNoetig = false;
-  ereignisse.push(ereignis('eigenerWechsel', { index }));
+  // KP hier einfrieren, nicht später live lesen: Bei einem freiwilligen
+  // Wechsel greift der Gegner in derselben Runde noch an – ohne den
+  // eingefrorenen Wert würde das frisch eingewechselte Hardtekkmon beim
+  // Erscheinen schon mit dem (dann bereits verrechneten) Schaden aus diesem
+  // Gegenangriff gezeigt, statt sichtbar erst bei voller Kraft anzutreten.
+  ereignisse.push(ereignis('eigenerWechsel', { index, kp: neues.kp }));
   ereignisse.push(text(`Los, ${anzeigename(neues)}!`));
   return ereignisse;
 }
