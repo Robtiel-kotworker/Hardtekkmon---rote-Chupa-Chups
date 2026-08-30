@@ -60,6 +60,11 @@ export class Kampfszene {
       zielEigeneKp: this.kampf.eigene.mon.kp,
       zielGegnerKp: this.kampf.gegner.mon.kp,
       erfahrung: erfahrungsAnteil(this.kampf.eigene.mon),
+      // Genau wie die KP-Balken: Der EP-Balken folgt erst seinem eigenen
+      // Zwischenziel, sobald das 'erfahrung'-Ereignis abgespielt wird – also
+      // erst, wenn die gesamte Kampfhandlung (Attacken, Treffer, K.O.) fertig
+      // ist, nicht schon während der Kampf noch läuft.
+      zielErfahrung: erfahrungsAnteil(this.kampf.eigene.mon),
       eigenerVersatz: 0,
       gegnerVersatz: 0,
       eigenesBlinken: 0,
@@ -138,7 +143,7 @@ export class Kampfszene {
 
     a.eigeneKp = naehere(a.eigeneKp, a.zielEigeneKp, Math.max(1, maxKp(this.kampf.eigene.mon) / 40));
     a.gegnerKp = naehere(a.gegnerKp, a.zielGegnerKp, Math.max(1, maxKp(this.kampf.gegner.mon) / 40));
-    a.erfahrung = naehere(a.erfahrung, erfahrungsAnteil(this.kampf.eigene.mon), 0.02);
+    a.erfahrung = naehere(a.erfahrung, a.zielErfahrung, 0.02);
 
     a.eigenerVersatz = naehere(a.eigenerVersatz, 0, 1.5);
     a.gegnerVersatz = naehere(a.gegnerVersatz, 0, 1.5);
@@ -297,6 +302,7 @@ export class Kampfszene {
     this.anzeige.zielEigeneKp = this.kampf.eigene.mon.kp;
     this.anzeige.zielGegnerKp = this.kampf.gegner.mon.kp;
     this.anzeige.erfahrung = erfahrungsAnteil(this.kampf.eigene.mon);
+    this.anzeige.zielErfahrung = this.anzeige.erfahrung;
     this.anzeige.eigenesSichtbar = true;
     this.anzeige.gegnerSichtbar = true;
   }
@@ -339,6 +345,7 @@ export class Kampfszene {
     const a = this.anzeige;
     return a.eigeneKp === a.zielEigeneKp
       && a.gegnerKp === a.zielGegnerKp
+      && a.erfahrung === a.zielErfahrung
       && !a.wurf;
   }
 
@@ -417,9 +424,23 @@ export class Kampfszene {
         this.wartezeit = WARTE.wechsel;
         break;
 
+      case 'erfahrung':
+        // Erst hier – am Ende des Kampfgeschehens – darf der EP-Balken
+        // überhaupt loslaufen. Steht noch ein Stufenaufstieg an, füllt er
+        // sich zunächst ganz (Ereignis 'aufstieg' setzt danach zurück),
+        // sonst direkt auf den neuen (Teil-)Stand.
+        a.zielErfahrung = ereignis.wirdAufsteigen ? 1 : erfahrungsAnteil(this.kampf.eigene.mon);
+        this.wartezeit = 4;
+        break;
+
       case 'aufstieg':
         effekt('aufstieg');
-        this.anzeige.erfahrung = 0;
+        // Balken erst bei null neu ansetzen, sobald er tatsächlich voll
+        // angekommen ist (anzeigeRuhig() gattert das bereits ab) – dann für
+        // den nächsten Aufstieg wieder auf voll oder, beim letzten in dieser
+        // Reihe, auf den tatsächlichen Rest der aktuellen Stufe zielen.
+        a.erfahrung = 0;
+        a.zielErfahrung = ereignis.letzte ? erfahrungsAnteil(this.kampf.eigene.mon) : 1;
         this.wartezeit = WARTE.kurz;
         break;
 
@@ -438,7 +459,6 @@ export class Kampfszene {
 
       case 'status':
       case 'werte':
-      case 'erfahrung':
       default:
         this.wartezeit = 4;
         break;

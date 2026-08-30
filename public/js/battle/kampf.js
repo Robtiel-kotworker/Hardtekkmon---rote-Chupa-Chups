@@ -321,13 +321,16 @@ function verteileErfahrung(kampf, besiegt, ereignisse) {
   if (istUmgekippt(eigenes)) return;
 
   const { neueStufen, neueAttacken } = gibErfahrung(eigenes, menge);
-  ereignisse.push(ereignis('erfahrung', { menge }));
+  // `wirdAufsteigen` sagt der Kampfansicht, ob nach diesem Ereignis noch
+  // mindestens ein Stufenaufstieg folgt – dann füllt sich der EP-Balken erst
+  // ganz, statt direkt auf den (schon verrechneten) Zwischenstand zu springen.
+  ereignisse.push(ereignis('erfahrung', { menge, wirdAufsteigen: neueStufen.length > 0 }));
   ereignisse.push(text(`${anzeigename(eigenes)} bekommt ${menge} Erfahrung.`));
 
-  for (const stufe of neueStufen) {
-    ereignisse.push(ereignis('aufstieg', { stufe }));
+  neueStufen.forEach((stufe, index) => {
+    ereignisse.push(ereignis('aufstieg', { stufe, letzte: index === neueStufen.length - 1 }));
     ereignisse.push(text(`${anzeigename(eigenes)} ist jetzt auf Stufe ${stufe}!`));
-  }
+  });
   for (const attacke of neueAttacken) {
     ereignisse.push(ereignis('lernen', { attacke }));
   }
