@@ -20,9 +20,17 @@ function wuerfleErbwerte() {
   return { kp: wert(), ang: wert(), ver: wert(), spa: wert(), spv: wert(), ini: wert() };
 }
 
-/** Erfahrung, die für eine Stufe insgesamt nötig ist. */
+/**
+ * Erfahrung, die für eine Stufe insgesamt nötig ist. Die reine Kubikkurve
+ * (Stufe³) macht frühe Stufen unverhältnismäßig zäh, weil wilde Hardtekkmon
+ * dort selbst kaum Erfahrung hergeben. Ein Rabatt federt das ab: Er ist bei
+ * niedriger Stufe am größten und schmilzt mit steigender Stufe, bis er ab
+ * etwa Stufe 50 kaum noch ins Gewicht fällt – von da an läuft die Kurve
+ * praktisch wie die klassische Kubikkurve weiter.
+ */
 export function erfahrungFuerStufe(stufe) {
-  return stufe ** 3;
+  const rabatt = 1 - 0.55 * Math.exp(-stufe / 15);
+  return Math.round(stufe ** 3 * rabatt);
 }
 
 /**
