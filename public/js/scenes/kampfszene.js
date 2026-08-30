@@ -39,6 +39,22 @@ const SPRITE = 56;
 /** Wartezeiten in Bildern. */
 const WARTE = { text: 24, treffer: 20, wechsel: 26, wurf: 34, kurz: 12 };
 
+/**
+ * Kampfmusik nach Gegnerart. Es gibt genau diese beiden Kampfarten – wild
+ * und trainer, vergeben in starteWildkampf() und starteTrainerkampf() der
+ * Weltszene –, damit deckt die Tabelle alle Kämpfe ab:
+ *
+ *   wild    – Begegnungen mit wilden Hardtekkmon (hohes Gras und die festen
+ *             Legenden auf der Karte): der normale Kampftrack, vier
+ *             Varianten im Shuffle.
+ *   trainer – Trainerkämpfe unterwegs und die Gig-/Arena-Kämpfe: der
+ *             härtere Arena-Track, zugleich die Musik der Gig-Hallen.
+ *
+ * Beide Tracks sind eigene Stücke, wilde und Trainer-/Gig-Kämpfe klingen
+ * damit deutlich verschieden.
+ */
+const KAMPFMUSIK = { wild: 'kampf', trainer: 'gig' };
+
 export class Kampfszene {
   /**
    * @param {{ kampf: object, beiEnde: (ergebnis: string) => void }} vorgabe
@@ -93,7 +109,7 @@ export class Kampfszene {
   }
 
   betreten() {
-    spieleTrack(this.kampf.art === 'trainer' ? 'gig' : 'kampf');
+    spieleTrack(KAMPFMUSIK[this.kampf.art] ?? 'kampf');
     const gegner = this.kampf.gegner.mon;
     const einleitung = this.kampf.art === 'trainer'
       ? [`${this.kampf.trainer.name} will einen Kampf!`,
