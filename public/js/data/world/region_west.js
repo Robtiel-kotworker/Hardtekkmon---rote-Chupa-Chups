@@ -138,6 +138,11 @@ baueKarte('route1', {
       kaempfer(weg + 1, 8, 'maedchen', 'unten', 'r1_conny'),
       person(4, 33, 'opa', 'unten', {
         text: 'Hohes Gras? Da wohnt was drin. Immer erst schwächen, dann Samplepack werfen.',
+        aktion: {
+          art: 'gib', flagge: 'gib_r1_opa',
+          gegenstand: 'Samplepack', anzahl: 2,
+          nochmalText: 'Hab nichts mehr. Wirf sie halt zielgenau.',
+        },
       }),
     ],
     gegenstaende: [fundstueck(20, 4, 'Samplepack', 2), fundstueck(3, 14, 'Mate')],
@@ -223,6 +228,11 @@ baueKarte('route2', {
     npcs: [
       person(6, 16, 'kumpel', 'rechts', {
         text: 'Im Plattenwald verlaufen sich die Leute. Ich steh seit Dienstag hier.',
+        aktion: {
+          art: 'gib', flagge: 'gib_r2_kumpel',
+          gegenstand: 'Mate', anzahl: 2,
+          nochmalText: 'Mehr hab ich nicht. Ich brauch selbst noch was.',
+        },
       }),
     ],
     gegenstaende: [fundstueck(18, 30, 'Samplepack', 3)],
@@ -276,6 +286,11 @@ baueKarte('plattenwald', {
       kaempfer(26, 22, 'opa', 'unten', 'wald_pit'),
       person(8, 35, 'zombie', 'oben', {
         text: 'Ich such hier eine Platte. Seit vier Jahren. Sie ist irgendwo.',
+        aktion: {
+          art: 'gib', flagge: 'gib_wald_zombie',
+          gegenstand: 'Super-Sample', anzahl: 1,
+          nochmalText: 'Immer noch nicht gefunden. Die Platte, mein ich.',
+        },
       }),
     ],
     gegenstaende: [
@@ -373,6 +388,11 @@ baueKarte('route3', {
       kaempfer(27, quer + 1, 'oma', 'links', 'r3_waltraud'),
       person(8, 16, 'kumpel', 'oben', {
         text: 'Der Berg heißt Boxenberg, weil da mal jemand 200 Boxen reingeschleppt hat. Sie stehen noch da.',
+        aktion: {
+          art: 'gib', flagge: 'gib_r3_kumpel',
+          gegenstand: 'Kohletablette', anzahl: 2,
+          nochmalText: 'Die zweihundert Boxen stehen immer noch da. Ehrlich.',
+        },
       }),
     ],
     gegenstaende: [fundstueck(20, 3, 'Super-Sample'), fundstueck(35, 18, 'Taschenlampe')],
@@ -454,6 +474,11 @@ baueKarte('route4', {
       kaempfer(16, quer - 1, 'techniker', 'rechts', 'r5_schorsch'),
       person(24, 6, 'schrauber', 'unten', {
         text: 'Die Leitungen hier oben? Die gehören alle zur Anlage in Subwoofer City.',
+        aktion: {
+          art: 'gib', flagge: 'gib_r4_schrauber',
+          gegenstand: 'Anlaufhilfe', anzahl: 1,
+          nochmalText: 'Nicht an den Leitungen ziehen. Danke.',
+        },
       }),
     ],
     gegenstaende: [fundstueck(12, 18, 'Kaugummi', 2)],
@@ -537,6 +562,11 @@ baueKarte('route5', {
       kaempfer(weg + 3, 12, 'raver', 'links', 'r5_enrico'),
       person(17, 33, 'opa', 'oben', {
         text: 'Der Hafen unten ist voll mit Platten. Und mit Leuten, die keine Platten mehr abgeben wollen.',
+        aktion: {
+          art: 'gib', flagge: 'gib_r5_opa',
+          gegenstand: 'Super-Mate', anzahl: 1,
+          nochmalText: 'Runter zum Hafen. Aber nimm nichts mit, was quietscht.',
+        },
       }),
     ],
     gegenstaende: [fundstueck(19, 3, 'Giga-Mate'), fundstueck(4, 30, 'Super-Sample', 2)],

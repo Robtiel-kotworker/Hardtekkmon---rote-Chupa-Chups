@@ -10,7 +10,9 @@
 import { BREITE, HOEHE } from '../engine/screen.js';
 import { gedrueckt } from '../engine/input.js';
 import { spieleTrack, effekt, aktuellerTrack } from '../engine/audio.js';
-import { fenster, balken, kpFarbe, blende, gegenstandSymbol, typSchild, fangSymbol } from '../gfx/ui.js';
+import {
+  fenster, balken, kpFarbe, blende, gegenstandSymbol, typSchild, fangSymbol, teamPlatte,
+} from '../gfx/ui.js';
 import { zeichneText, textBreite } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { monSprite } from '../gfx/monsprites.js';
@@ -609,12 +611,26 @@ export class Kampfszene {
 
     if (this.anzeige.wurf) this.zeichneWurf(ctx);
 
+    if (this.kampf.art === 'trainer') this.zeichneGegnerTeam(ctx);
+
     this.zeichneInfobox(ctx, gegner, 8, 10, false);
     this.zeichneInfobox(ctx, eigenes, 126, 68, true);
 
     this.textfenster.zeichnen(ctx);
     this.zeichneMenues(ctx);
     blende(ctx, BREITE, HOEHE, this.blendenwert);
+  }
+
+  /**
+   * Sechs Schallplatten in einer Linie am oberen Rand: eine silberne je
+   * Hardtekkmon im Team des Trainers, die restlichen Plätze bleiben nur
+   * schwach angedeutet.
+   */
+  zeichneGegnerTeam(ctx) {
+    const anzahl = this.kampf.gegnerTeam.length;
+    for (let i = 0; i < 6; i += 1) {
+      teamPlatte(ctx, 8 + i * 11, 1, i < anzahl);
+    }
   }
 
   zeichneHintergrund(ctx) {

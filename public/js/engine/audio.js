@@ -20,6 +20,8 @@ let musikBus = null;
 /** @type {GainNode|null} */
 let kickBus = null;
 let verzerrer = null;
+/** @type {GainNode|null} Vorpegel in die harte Gabber-Kennlinie. */
+let gabberEingang = null;
 
 let an = true;
 let laufenderTrack = '';
@@ -98,29 +100,35 @@ const TRACKS = {
     lead: [7, null, 9, null, 12, null, 9, null, 7, null, 4, null, 5, 7, null, null],
   },
   // --- Kampf gegen wilde Hardtekkmon ----------------------------------------
-  // Flotter als vorher (148 -> 160), Kick deutlich druckvoller in den
-  // Verzerrer gefahren und um Sechzehntel-Doppelschläge ergänzt; dazu ein
-  // paar Zaag-Stiche als Akzent.
+  // Gabber statt Techno: 180 BPM und die lang gezogene, tonale Gabber-Kick
+  // (siehe gabberKick). Weil diese Kick den Bass selbst mitbringt und weit in
+  // den nächsten Schlag hineinklingt, steht sie stur auf den Vierteln statt
+  // auf Sechzehnteln – und die Bassspur ist auf ein paar Zwischenschläge
+  // ausgedünnt, damit unten herum nichts verwischt.
   kampf: {
-    bpm: 160,
-    kickStaerke: 1.3,
-    kick: [1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1],
+    bpm: 180,
+    gabber: true,
+    kickDauer: 0.4,
+    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0],
     hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-    bass: [-24, null, -24, -24, -19, null, -19, null, -22, null, -22, -22, -17, null, -17, null],
+    bass: [null, null, -24, null, null, null, -24, null, null, null, -22, null, null, null, -22, null],
     lead: [12, null, 11, null, 7, null, 11, null, 12, null, 14, null, 15, 14, 12, null],
-    zaag: [null, null, null, null, null, null, null, null, null, null, null, null, 12, null, 12, null],
+    zaag: [null, null, null, null, 12, null, null, null, null, null, null, null, 12, null, 14, null],
   },
   // --- Kampf gegen Trainer, zugleich Musik der Gig-Hallen -------------------
-  // Derselbe Ruck wie beim wilden Kampf, nur eine Spur schneller und tiefer:
-  // Das hier ist der härteste Track im regulären Spiel.
+  // Uptempo-Hardcore: noch eine Stufe schneller (190) und mit einer etwas
+  // kürzer gehaltenen Kick, damit die dichteren Schläge am Taktende nicht
+  // ineinanderlaufen. Der härteste Track im regulären Spiel.
   gig: {
-    bpm: 166,
-    kickStaerke: 1.35,
-    kick: [1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1],
+    bpm: 190,
+    gabber: true,
+    kickDauer: 0.34,
+    grundton: -37,
+    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1],
     hat: [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
-    bass: [-27, null, -27, -27, -20, null, -20, null, -22, null, -22, -22, -25, null, -25, null],
+    bass: [null, null, -27, null, null, null, -27, null, null, null, -25, null, null, null, -25, null],
     lead: [16, null, 14, null, 12, null, 14, null, 16, 19, 16, 14, 12, null, null, null],
-    zaag: [null, null, null, null, 12, null, null, null, null, null, null, null, 12, null, 14, null],
+    zaag: [null, null, null, null, 12, null, null, null, 12, null, null, null, 12, null, 14, null],
   },
   // --- Boxenstopp (Heilungscenter) ------------------------------------------
   // Bleibt der Ruhepol, ist aber nicht mehr so karg: durchgehender halber
@@ -196,6 +204,23 @@ export function starteAudio() {
   kickBus.connect(verzerrer);
   verzerrer.connect(summe);
 
+  // Zweite, deutlich härtere Kennlinie nur für die Gabber-Kick. Der hohe
+  // Vorpegel fährt das Signal absichtlich weit über die Aussteuerung, sodass
+  // aus dem Sinus eine geclippte, obertonreiche Rechteckwelle wird – genau
+  // der übersteuerte 909-Klang, aus dem das Genre gebaut ist.
+  const gabberVerzerrer = ctx.createWaveShaper();
+  gabberVerzerrer.curve = verzerrerKurve(60);
+  gabberVerzerrer.oversample = '4x';
+
+  const gabberAusgang = ctx.createGain();
+  gabberAusgang.gain.value = 0.28;
+
+  gabberEingang = ctx.createGain();
+  gabberEingang.gain.value = 5;
+  gabberEingang.connect(gabberVerzerrer);
+  gabberVerzerrer.connect(gabberAusgang);
+  gabberAusgang.connect(summe);
+
   musikBus = ctx.createGain();
   musikBus.gain.value = 0.8;
   musikBus.connect(summe);
@@ -262,6 +287,51 @@ function kick(zeit, staerke = 1) {
   huellkurve.connect(kickBus);
   oszillator.start(zeit);
   oszillator.stop(zeit + 0.3);
+}
+
+/**
+ * Gabber-Kick: das Herzstück von Gabber und Uptempo-Hardcore und etwas ganz
+ * anderes als die kurze Techno-Kick oben. Die Tonhöhe fällt steil ab und
+ * bleibt dann auf einem Grundton stehen, statt ins Nichts zu rutschen – die
+ * Kick wird dadurch lang gezogen und tonal und trägt zugleich den Bass. Beim
+ * Weg durch die harte Kennlinie wird aus dem Sinus praktisch eine geclippte
+ * Rechteckwelle mit kräftigen Obertönen.
+ *
+ * Genau diese Übersteuerung frisst aber die tiefen Anteile auf. Deshalb läuft
+ * parallel eine unverzerrte Sinusspur auf demselben Grundton mit: Der
+ * verzerrte Teil liefert den Biss, der saubere den Druck im Keller.
+ *
+ * @param {number} grundton Halbtonabstand zu A4; -36 entspricht A1 (55 Hz).
+ */
+function gabberKick(zeit, grundton = -36, dauer = 0.38) {
+  if (!ctx || !gabberEingang || !summe) return;
+  const ziel = hz(grundton);
+
+  const verzerrt = ctx.createOscillator();
+  const huellkurve = ctx.createGain();
+  verzerrt.type = 'sine';
+  verzerrt.frequency.setValueAtTime(ziel * 7, zeit);
+  verzerrt.frequency.exponentialRampToValueAtTime(ziel, zeit + 0.055);
+  huellkurve.gain.setValueAtTime(0.0001, zeit);
+  huellkurve.gain.exponentialRampToValueAtTime(1, zeit + 0.004);
+  huellkurve.gain.exponentialRampToValueAtTime(0.0001, zeit + dauer);
+  verzerrt.connect(huellkurve);
+  huellkurve.connect(gabberEingang);
+  verzerrt.start(zeit);
+  verzerrt.stop(zeit + dauer + 0.02);
+
+  const sub = ctx.createOscillator();
+  const subHuelle = ctx.createGain();
+  sub.type = 'sine';
+  sub.frequency.setValueAtTime(ziel * 3, zeit);
+  sub.frequency.exponentialRampToValueAtTime(ziel, zeit + 0.05);
+  subHuelle.gain.setValueAtTime(0.0001, zeit);
+  subHuelle.gain.exponentialRampToValueAtTime(0.45, zeit + 0.006);
+  subHuelle.gain.exponentialRampToValueAtTime(0.0001, zeit + dauer * 0.9);
+  sub.connect(subHuelle);
+  subHuelle.connect(summe);
+  sub.start(zeit);
+  sub.stop(zeit + dauer + 0.02);
 }
 
 /**
@@ -364,7 +434,10 @@ export function audioSchritt() {
     const i = schrittZaehler % SCHRITTE_PRO_TAKT;
     const zeit = naechsterSchrittZeit;
 
-    if (track.kick[i]) kick(zeit, track.kickStaerke ?? 1);
+    if (track.kick[i]) {
+      if (track.gabber) gabberKick(zeit, track.grundton ?? -36, track.kickDauer ?? 0.38);
+      else kick(zeit, track.kickStaerke ?? 1);
+    }
     if (track.hat[i]) hihat(zeit);
     if (track.bass[i] !== null) ton(zeit, track.bass[i], schrittDauer * 1.6, 'square', 0.12);
     if (track.lead[i] !== null) ton(zeit, track.lead[i], schrittDauer * 0.9, 'sawtooth', 0.065);

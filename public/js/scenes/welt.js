@@ -11,7 +11,7 @@ import { BREITE, HOEHE } from '../engine/screen.js';
 import { gedrueckt, gehalten, richtung as eingaberichtung } from '../engine/input.js';
 import { spieleTrack, effekt, schlagDauer } from '../engine/audio.js';
 import { BILDER_PRO_SEKUNDE } from '../engine/loop.js';
-import { KACHEL, kachelInfo } from '../gfx/tiles.js';
+import { KACHEL, kachelInfo, TELLER_PLAETZE, zeichneGoldPlatte } from '../gfx/tiles.js';
 import { zeichneMensch } from '../gfx/menschen.js';
 import { monSprite } from '../gfx/monsprites.js';
 import { blende as zeichneBlende, fenster, gegenstandSymbol } from '../gfx/ui.js';
@@ -28,7 +28,7 @@ import { Auswahl } from '../ui/auswahl.js';
 import { karte as kartendaten } from '../data/world/karten.js';
 import { begegnungstabelle } from '../data/world/begegnungen.js';
 import { trainerInfo } from '../data/trainer.js';
-import { artNachName } from '../data/arten.js';
+import { artNachName, ARTEN } from '../data/arten.js';
 import { erstelleHardtekkmon, ausTabelle } from '../game/hardtekkmon.js';
 import {
   spiel, hatGegenstand, gibGegenstand, merkeAufgesammelt, schonAufgesammelt,
@@ -49,6 +49,27 @@ const BEGEGNUNGSCHANCE = 0.12;
 const BLENDE_TEMPO = 0.07;
 
 /**
+ * Chance auf ein legendäres Hardtekkmon, wenn im hohen Gras eine Begegnung
+ * ausgelöst wurde – eine von fünfzig. Höhlen sind bewusst ausgenommen: dort
+ * wächst kein Gras.
+ */
+const LEGENDEN_CHANCE = 1 / 50;
+const GRASGRUPPEN = new Set(['wiese', 'moor']);
+
+/**
+ * Fundstücke der Routen. Dieselbe Auswahl geben freundliche Leute unterwegs
+ * heraus und fällt selten nach einem Trainerkampf ab.
+ */
+const STRECKENFUNDE = [
+  'Samplepack', 'Super-Sample', 'Mate', 'Super-Mate', 'Giga-Mate',
+  'Allzweckreiniger', 'Defibrillator', 'Kaugummi', 'Kohletablette',
+  'Anlaufhilfe', 'Ohrstöpsel', 'Turnschuh-Wachs', 'Boxenkondensator',
+];
+
+/** Nach je so vielen besiegten Trainern gibt es ein Fundstück obendrauf. */
+const TRAINER_JE_BELOHNUNG = 10;
+
+/**
  * Heilsequenz im Boxenstopp: sechs Takes, jeder genau einen Viertelschlag der
  * Heilmusik lang. Weil die Bildlänge aus schlagDauer('heilung') abgeleitet
  * wird, laufen Stroboskop und Musik zwangsläufig im Gleichtakt – das Tempo
@@ -56,8 +77,8 @@ const BLENDE_TEMPO = 0.07;
  */
 const HEIL_TICKS = 6;
 const HEIL_TICK_BILDER = Math.max(1, Math.round(BILDER_PRO_SEKUNDE * schlagDauer('heilung')));
-/** Deckkraft des hellsten Stroboskop-Blitzes – bewusst nur ein leichtes Zucken. */
-const HEIL_BLITZ = 0.38;
+/** Deckkraft des hellsten Stroboskop-Blitzes. */
+const HEIL_BLITZ = 0.72;
 
 /** Die drei Anfänger im Labor. */
 const STARTER = { 1: 'Kickolaus', 2: 'Bassbert', 3: 'Acidchen' };
@@ -225,6 +246,16 @@ export class Weltszene {
         });
         speichereSpiel();
         return;
+      }
+
+      // Selten gibt es nach einem Sieg noch ein Fundstück obendrauf. Gezählt
+      // werden die tatsächlich besiegten Trainer (die Menge enthält jeden nur
+      // einmal), sodass jeder zehnte Trainer eines abwirft.
+      if (spiel.besiegteTrainer.size % TRAINER_JE_BELOHNUNG === 0) {
+        const fund = STRECKENFUNDE[Math.floor(Math.random() * STRECKENFUNDE.length)];
+        gibGegenstand(fund, 1);
+        effekt('item');
+        texte.push(`${trainer.name} kramt noch was raus: 1× ${fund}!`);
       }
 
       this.zeigeText(texte);
@@ -477,7 +508,14 @@ export class Weltszene {
 
     spieleTrack('heilung');
     effekt('heilPuls');
-    this.heilung = { tick: 0, rest: HEIL_TICK_BILDER, blitz: 1 };
+    // Die Lage des Plattenspielers wird einmal gesucht und gemerkt; fehlt er
+    // auf der Karte, läuft die Sequenz einfach ohne die Platten weiter.
+    this.heilung = {
+      tick: 0,
+      rest: HEIL_TICK_BILDER,
+      blitz: 1,
+      teller: this.karte.findeKachel('heilteller'),
+    };
     this.zustand = 'heilung';
   }
 
@@ -525,6 +563,20 @@ export class Weltszene {
 
     const eintrag = ausTabelle(tabelle);
     const stufe = eintrag.min + Math.floor(Math.random() * (eintrag.max - eintrag.min + 1));
+
+    // Seltener Ausreißer im hohen Gras: Statt der Tabelle taucht mit 1 zu 50
+    // ein legendäres Hardtekkmon auf. Es kommt ein paar Stufen über dem
+    // Niveau der Route, damit es sich abhebt, ohne den Fortschritt zu
+    // zerlegen – die festen Legenden auf den Karten bleiben davon unberührt.
+    if (GRASGRUPPEN.has(gruppe) && Math.random() < LEGENDEN_CHANCE) {
+      const legenden = ARTEN.filter((art) => art.legende);
+      const gewaehlt = legenden[Math.floor(Math.random() * legenden.length)];
+      if (gewaehlt) {
+        this.starteWildkampf(gewaehlt.name, Math.min(100, eintrag.max + 3));
+        return;
+      }
+    }
+
     this.starteWildkampf(eintrag.art, stufe);
   }
 
@@ -791,6 +843,7 @@ export class Weltszene {
     this.zeichneFiguren(ctx, kamera, spielerPixel);
 
     if (this.karte.daten.dunkel) this.zeichneDunkelheit(ctx, spielerPixel, kamera);
+    if (this.heilung) this.zeichneHeilteller(ctx, kamera);
     if (this.zustand === 'anmarsch' && this.anmarsch) this.zeichneAusrufezeichen(ctx, kamera);
 
     this.textfenster.zeichnen(ctx);
@@ -859,6 +912,21 @@ export class Weltszene {
 
     ctx.fillStyle = verlauf;
     ctx.fillRect(0, 0, BREITE, HOEHE);
+  }
+
+  /**
+   * Legt die bisher eingelaufenen goldenen Platten in den Plattenspieler.
+   * Mit jedem Take kommt eine dazu, nach sechs Takes sind alle sechs Mulden
+   * belegt – im Gleichtakt mit Musik und Stroboskop.
+   */
+  zeichneHeilteller(ctx, kamera) {
+    const teller = this.heilung.teller;
+    if (!teller) return;
+
+    const x = teller.x * KACHEL - kamera.x;
+    const y = teller.y * KACHEL - kamera.y;
+    const platten = Math.min(TELLER_PLAETZE.length, this.heilung.tick + 1);
+    for (let i = 0; i < platten; i += 1) zeichneGoldPlatte(ctx, x, y, i);
   }
 
   zeichneAusrufezeichen(ctx, kamera) {
