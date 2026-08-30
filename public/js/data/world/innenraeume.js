@@ -53,7 +53,10 @@ export function baueBoxenstopp(id, ort, rueck) {
     return {
       warps: ausgang(matteX, matteY, rueck),
       npcs: [
-        person(5, 2, 'schwester', 'unten', {
+        // Steht genau in der Spur der linken Türkachel (Matte auf x = 6):
+        // vom Eingang aus reicht geradeaus nach oben laufen. Der Tresen
+        // dazwischen blockiert nur das Laufen, nicht das Ansprechen.
+        person(6, 2, 'schwester', 'unten', {
           aktion: { art: 'heilen' },
           text: 'Willkommen im Boxenstopp. Soll ich deine Hardtekkmon wieder auf Betriebstemperatur bringen?',
         }),
@@ -253,8 +256,9 @@ export function setzeBoxenstopp(bauer, x, y, stadtId, ortName) {
   const { tuerX, tuerY } = bauer.haus(x, y, 6, 5, {
     dach: 'dachRot', ziel: id, zx: MATTE.standard.x, zy: MATTE.standard.y,
   });
-  // Schild neben dem Eingang – von außen sofort als Heilungscenter erkennbar.
-  bauer.schild(x + 6, y + 4, 'Heilungscenter');
+  // Festes Reklameschild mittig am Gebäude, auf dem Wandstreifen über der
+  // Tür – von außen dauerhaft als Heilungscenter lesbar.
+  bauer.beschriftung(x, y + 3, 6, 'Heilungscenter');
   baueBoxenstopp(id, ortName, { karte: stadtId, x: tuerX, y: tuerY });
   return { tuerX, tuerY };
 }
@@ -265,8 +269,9 @@ export function setzeKiosk(bauer, x, y, stadtId, ortName, waren) {
   const { tuerX, tuerY } = bauer.haus(x, y, 6, 5, {
     dach: 'dachBlau', ziel: id, zx: MATTE.standard.x, zy: MATTE.standard.y,
   });
-  // Schild neben dem Eingang – von außen sofort als Einkaufszentrum erkennbar.
-  bauer.schild(x + 6, y + 4, 'Einkaufszentrum');
+  // Festes Reklameschild mittig am Gebäude, auf dem Wandstreifen über der
+  // Tür – von außen dauerhaft als Einkaufszentrum lesbar.
+  bauer.beschriftung(x, y + 3, 6, 'Einkaufszentrum');
   baueKiosk(id, ortName, { karte: stadtId, x: tuerX, y: tuerY }, waren);
   return { tuerX, tuerY };
 }

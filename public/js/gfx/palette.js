@@ -23,6 +23,10 @@ export const UI = {
   erfahrung: '#48a8e0',
   dunkel: '#181820',
   halbdunkel: '#282838',
+  // Schriftfarben der Typenhilfe im Kampf. Dunkler als kpGut/kpWenig,
+  // damit sie auf dem hellen Fenstergrund gut lesbar bleiben.
+  wirksamGut: '#1f8a34',
+  wirksamSchlecht: '#b8203c',
 };
 
 /** Farben der Hardtekkmon-Typen (Sprites, Kampf-Anzeigen, Tekkdex). */

@@ -24,6 +24,8 @@ export class Kartenbauer {
     this.warps = [];
     /** @type {{x: number, y: number, text: string}[]} */
     this.schilder = [];
+    /** @type {{x: number, y: number, breite: number, text: string}[]} */
+    this.beschriftungen = [];
   }
 
   innen(x, y) {
@@ -206,8 +208,25 @@ export class Kartenbauer {
     return this;
   }
 
+  /**
+   * Festes Reklameschild am Gebäude: Die Aufschrift wird direkt ins
+   * Kartenbild gerendert und ist dauerhaft lesbar – nichts zum Anklicken.
+   * @param {number} x linke Kachelspalte des beschrifteten Streifens
+   * @param {number} y Kachelzeile des Streifens
+   * @param {number} breite Breite des Streifens in Kacheln (zum Zentrieren)
+   */
+  beschriftung(x, y, breite, text) {
+    this.beschriftungen.push({ x, y, breite, text });
+    return this;
+  }
+
   fertig() {
-    return { kacheln: this.kacheln, warps: this.warps, schilder: this.schilder };
+    return {
+      kacheln: this.kacheln,
+      warps: this.warps,
+      schilder: this.schilder,
+      beschriftungen: this.beschriftungen,
+    };
   }
 }
 

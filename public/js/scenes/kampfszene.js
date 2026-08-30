@@ -24,7 +24,9 @@ import {
 } from '../game/hardtekkmon.js';
 import {
   spiel, nimmAuf, nimmGegenstand, aendereGeld, merkeGefangen, hatGegenstand,
+  typhilfeAn,
 } from '../game/spielstand.js';
+import { wirksamkeitGegen } from '../data/typen.js';
 import { fuehreRunde, wechsleEigenes } from '../battle/kampf.js';
 import { poppe } from './stapel.js';
 
@@ -664,11 +666,33 @@ export class Kampfszene {
     }
 
     if (eigenes) {
-      const zahlen = `${Math.round(angezeigt)}/${grenze}`;
+      // Aufrunden, solange überhaupt noch etwas übrig ist: Ein Hardtekkmon,
+      // das noch steht, darf nie "0" anzeigen (siehe balken() in gfx/ui.js).
+      const rest = angezeigt > 0 ? Math.max(1, Math.ceil(angezeigt)) : 0;
+      const zahlen = `${rest}/${grenze}`;
       zeichneText(ctx, zahlen, x + breite - textBreite(zahlen) - 5, y + 22, { farbe: UI.text });
       zeichneText(ctx, 'EP', x + 5, y + 31, { farbe: '#4058a8' });
       balken(ctx, x + 20, y + 33, breite - 28, this.anzeige.erfahrung, UI.erfahrung, 2);
     }
+  }
+
+  /**
+   * Schriftfarbe eines Attackeneintrags für die optionale Typenhilfe
+   * ("Cheaten" im Hauptmenü). Ist sie aus, bleibt alles in der normalen
+   * Schriftfarbe. Statusattacken ohne Stärke werden nicht eingefärbt – bei
+   * ihnen sagt die Typentabelle nichts über den Nutzen aus.
+   */
+  attackenFarbe(index) {
+    if (!typhilfeAn()) return UI.text;
+
+    const eintrag = this.kampf.eigene.mon.attacken[index];
+    const daten = eintrag ? findeAttacke(eintrag.name) : null;
+    if (!daten || daten.staerke <= 0) return UI.text;
+
+    const faktor = wirksamkeitGegen(daten.typ, artVon(this.kampf.gegner.mon).typen);
+    if (faktor > 1) return UI.wirksamGut;
+    if (faktor < 1) return UI.wirksamSchlecht;
+    return UI.text;
   }
 
   zeichneMenues(ctx) {
@@ -681,7 +705,10 @@ export class Kampfszene {
       const eintrag = this.kampf.eigene.mon.attacken[this.attackenmenue.index];
       const daten = eintrag ? findeAttacke(eintrag.name) : null;
 
-      this.attackenmenue.zeichnen(ctx, 4, HOEHE - 46, 164, 42, { zeilenhoehe: 15 });
+      this.attackenmenue.zeichnen(ctx, 4, HOEHE - 46, 164, 42, {
+        zeilenhoehe: 15,
+        farbe: (index) => this.attackenFarbe(index),
+      });
       fenster(ctx, 170, HOEHE - 46, 66, 42);
       if (daten && eintrag) {
         zeichneText(ctx, `AP ${eintrag.ap}/${eintrag.maxAp}`, 175, HOEHE - 41, { farbe: UI.text });

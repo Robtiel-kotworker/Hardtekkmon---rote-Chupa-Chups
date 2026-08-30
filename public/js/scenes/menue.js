@@ -13,12 +13,14 @@ import { zeichneText } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { Auswahl } from '../ui/auswahl.js';
 import { Textfenster } from '../ui/textfenster.js';
-import { spiel, speichereSpiel, spielzeitText, anzahlGigs } from '../game/spielstand.js';
+import {
+  spiel, speichereSpiel, spielzeitText, anzahlGigs, typhilfeAn, schalteTyphilfe,
+} from '../game/spielstand.js';
 import { ARTEN_GESAMT } from '../game/hardtekkmon.js';
 import { meldeAb } from '../engine/konto.js';
 import { schiebe, poppe } from './stapel.js';
 
-const EINTRAEGE = ['TEKKDEX', 'TEAM', 'BEUTEL', 'GIGPASS', 'SPEICHERN', 'ABMELDEN', 'ZURÜCK'];
+const EINTRAEGE = ['TEKKDEX', 'TEAM', 'BEUTEL', 'GIGPASS', 'CHEATEN', 'SPEICHERN', 'ABMELDEN', 'ZURÜCK'];
 
 export class Menueszene {
   /** @param {object} welt Die darunterliegende Weltszene (nur zum Zeichnen). */
@@ -28,6 +30,8 @@ export class Menueszene {
     this.auswahl = new Auswahl({ eintraege: EINTRAEGE });
     this.textfenster = new Textfenster();
     this.zeigeGigpass = false;
+    /** Untermenü der optionalen Hilfen; null, solange es zu ist. */
+    this.cheatAuswahl = null;
   }
 
   aktualisieren() {
@@ -39,6 +43,11 @@ export class Menueszene {
     if (this.zeigeGigpass) {
       const antwort = this.auswahl.aktualisieren();
       if (antwort) this.zeigeGigpass = false;
+      return;
+    }
+
+    if (this.cheatAuswahl) {
+      this.aktualisiereCheaten();
       return;
     }
 
@@ -64,20 +73,44 @@ export class Menueszene {
         break;
       case 4:
         effekt('bestaetigen');
+        this.cheatAuswahl = new Auswahl({ eintraege: ['Typenhilfe', 'Zurück'] });
+        break;
+      case 5:
+        effekt('bestaetigen');
         this.textfenster.zeige(speichereSpiel()
           ? 'Spielstand gesichert. Läuft.'
           : 'Speichern hat nicht geklappt – der Browser lässt nicht.');
         break;
-      case 5:
+      case 6:
         effekt('bestaetigen');
         if (spiel) speichereSpiel();
         meldeAb().then(() => window.location.reload());
         break;
-      case 6:
+      case 7:
       default:
         poppe();
         break;
     }
+  }
+
+  aktualisiereCheaten() {
+    const antwort = this.cheatAuswahl.aktualisieren();
+    if (antwort === 'abbruch') {
+      this.cheatAuswahl = null;
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    if (this.cheatAuswahl.index === 0) {
+      const an = schalteTyphilfe();
+      effekt('bestaetigen');
+      speichereSpiel();
+      this.textfenster.zeige(an
+        ? 'Typenhilfe an: Im Kampf stehen wirksame Attacken grün, schwache rot.'
+        : 'Typenhilfe aus. Wieder alles selbst herausfinden.');
+      return;
+    }
+    this.cheatAuswahl = null;
   }
 
   zeichnen(ctx) {
@@ -91,7 +124,22 @@ export class Menueszene {
 
     const breite = 86;
     this.auswahl.zeichnen(ctx, BREITE - breite - 4, 4, breite, EINTRAEGE.length * 12 + 8);
+
+    if (this.cheatAuswahl) this.zeichneCheaten(ctx);
     this.textfenster.zeichnen(ctx);
+  }
+
+  /** Untermenü der optionalen Hilfen samt aktuellem Schaltzustand. */
+  zeichneCheaten(ctx) {
+    const breite = 118;
+    const x = 8;
+    const y = 20;
+    fenster(ctx, x, y, breite, 46);
+    zeichneText(ctx, 'CHEATEN', x + 6, y + 5, { farbe: UI.text });
+    this.cheatAuswahl.zeichnen(ctx, x, y + 14, breite, 30, {
+      rahmen: false,
+      zusatz: (index) => (index === 0 ? (typhilfeAn() ? 'AN' : 'AUS') : ''),
+    });
   }
 
   zeichneGigpass(ctx) {
