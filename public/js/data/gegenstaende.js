@@ -8,7 +8,7 @@
 // ============================================================================
 
 /**
- * @typedef {'fang'|'heilung'|'status'|'beleben'|'kampfhilfe'|'schluessel'} Gegenstandsart
+ * @typedef {'fang'|'heilung'|'status'|'beleben'|'levelauf'|'kampfhilfe'|'anlege'|'schluessel'} Gegenstandsart
  */
 
 /** @type {Record<string, object>} */
@@ -18,29 +18,40 @@ function gegenstand(name, art, preis, symbol, wirkung, text) {
   GEGENSTAENDE[name] = { name, art, preis, symbol, wirkung, text };
 }
 
-// --- Samplepacks (Fangen) ----------------------------------------------------
+// --- Samplepacks (Fangen) -----------------------------------------------------
+// Vier Stufen, deren Fangbonus mit dem Spielfortschritt wächst. Samplepack und
+// Super-Sample gibt es von Anfang an im Kiosk, Giga-Sample erst in größeren
+// Kiosken späterer Städte – Master-Sample ist wie eh und je ein einzelnes,
+// garantiertes Fundstück und nirgends käuflich.
 gegenstand('Samplepack', 'fang', 200, 'samplepack', { fangbonus: 1 },
   'Ein handelsübliches Pack. Fängt geschwächte Hardtekkmon ein.');
-gegenstand('Fettes Samplepack', 'fang', 600, 'samplepackGross', { fangbonus: 1.5 },
+gegenstand('Super-Sample', 'fang', 600, 'samplepackGross', { fangbonus: 1.5 },
   'Mehr Speicher, mehr Chancen. Deutlich fängiger.');
-gegenstand('Studio-Samplepack', 'fang', 1200, 'samplepackGross', { fangbonus: 2 },
+gegenstand('Giga-Sample', 'fang', 1200, 'samplepackGross', { fangbonus: 2 },
   'Studioqualität. Da will jedes Hardtekkmon rein.');
-gegenstand('Meister-Sample', 'fang', 0, 'samplepackGross', { fangbonus: 255 },
+gegenstand('Master-Sample', 'fang', 0, 'samplepackGross', { fangbonus: 255 },
   'Das legendäre Pack. Fängt garantiert – nur einmal zu bekommen.');
 
-// --- Heilmittel --------------------------------------------------------------
+// --- Heilmittel ----------------------------------------------------------------
+// Dieselbe Vier-Stufen-Logik wie bei den Samplepacks: Mate und Super-Mate sind
+// von Anfang an erhältlich, Giga-Mate und Mate-Mate erst in den großen Kiosken
+// der späteren Städte.
 gegenstand('Mate', 'heilung', 200, 'trank', { kp: 20 },
   'Kalt, koffeinhaltig, heilt 20 Kraftpunkte.');
-gegenstand('Doppelmate', 'heilung', 500, 'trank', { kp: 50 },
+gegenstand('Super-Mate', 'heilung', 500, 'trank', { kp: 50 },
   'Zwei auf einmal. Heilt 50 Kraftpunkte.');
-gegenstand('Turbo-Mate', 'heilung', 1200, 'trank', { kp: 120 },
-  'Nicht mehr ganz legal. Heilt 120 Kraftpunkte.');
-gegenstand('Roter Lolli', 'heilung', 2500, 'pille', { kp: 999 },
-  'Der rote Chupa Chups. Stellt alle Kraftpunkte wieder her.');
-gegenstand('Erste-Hilfe-Riegel', 'beleben', 1500, 'pille', { beleben: 0.5 },
+gegenstand('Giga-Mate', 'heilung', 1200, 'trank', { kp: 80 },
+  'Nicht mehr ganz legal. Heilt 80 Kraftpunkte.');
+gegenstand('Mate-Mate', 'heilung', 2500, 'pille', { kp: 999 },
+  'Volle Dröhnung. Stellt alle Kraftpunkte wieder her.');
+gegenstand('Defibrillator', 'beleben', 1500, 'pille', { beleben: 0.5 },
   'Bringt ein umgekipptes Hardtekkmon mit halber Kraft zurück.');
-gegenstand('Defibrillator', 'beleben', 3500, 'pille', { beleben: 1 },
+gegenstand('Schwarzer Defibrillator', 'beleben', 3500, 'pille', { beleben: 1 },
   'Bringt ein umgekipptes Hardtekkmon mit voller Kraft zurück.');
+
+// --- Levelaufstieg ---------------------------------------------------------------
+gegenstand('Roter Lolli', 'levelauf', 5000, 'pille', { stufen: 1 },
+  'Scharf, süß, sofort spürbar: Ein Hardtekkmon, das ihn bekommt, geht um eine Stufe hoch.');
 
 // --- Zustandsheilung ---------------------------------------------------------
 gegenstand('Kaugummi', 'status', 150, 'pille', { heiltStatus: ['zugedröhnt'] },
@@ -64,6 +75,18 @@ gegenstand('Ohrstöpsel', 'kampfhilfe', 400, 'pille', { werte: { spv: 1 } },
   'Dämpft alles ab: Spezial-Verteidigung steigt im Kampf.');
 gegenstand('Turnschuh-Wachs', 'kampfhilfe', 400, 'pille', { werte: { ini: 1 } },
   'Für schnellere Beine: Initiative steigt im Kampf.');
+gegenstand('Boxenkondensator', 'kampfhilfe', 400, 'pille', { werte: { ver: 1 } },
+  'Puffert die Wucht ab: Verteidigung steigt im Kampf.');
+gegenstand('Subwoofer-Kern', 'kampfhilfe', 400, 'pille', { werte: { spa: 1 } },
+  'Mehr Druck aus dem Bass: Spezial-Angriff steigt im Kampf.');
+
+// --- Anlegbare Spezialitems ----------------------------------------------------
+// Anders als alle bisherigen Gegenstände werden diese nicht verbraucht,
+// sondern einem Hardtekkmon dauerhaft zum Tragen gegeben (siehe Teamszene).
+// Von jedem gibt es im ganzen Spiel nur ein einziges Exemplar, nirgends
+// käuflich – reine Fundstücke auf den Routen.
+gegenstand('EP-Teiler', 'anlege', 0, 'karte', {},
+  'Wer das trägt, bekommt die Hälfte der Erfahrung aus jedem Kampf ab – auch ohne dabei zu sein. Die andere Hälfte bekommt weiterhin, wer tatsächlich kämpft.');
 
 // --- Schlüsselgegenstände ----------------------------------------------------
 gegenstand('Tekkdex', 'schluessel', 0, 'karte', {},
@@ -84,15 +107,22 @@ export function gegenstandInfo(name) {
 export function imKampfNutzbar(name) {
   const eintrag = GEGENSTAENDE[name];
   if (!eintrag) return false;
-  return ['fang', 'heilung', 'status', 'beleben', 'kampfhilfe'].includes(eintrag.art);
+  return ['fang', 'heilung', 'status', 'beleben', 'levelauf', 'kampfhilfe'].includes(eintrag.art);
 }
 
 /** Kann der Gegenstand außerhalb des Kampfes benutzt werden? */
 export function ausserhalbNutzbar(name) {
   const eintrag = GEGENSTAENDE[name];
   if (!eintrag) return false;
-  return ['heilung', 'status', 'beleben'].includes(eintrag.art);
+  return ['heilung', 'status', 'beleben', 'levelauf'].includes(eintrag.art);
+}
+
+/** Kann der Gegenstand einem Hardtekkmon dauerhaft zum Tragen gegeben werden? */
+export function anlegbar(name) {
+  return GEGENSTAENDE[name]?.art === 'anlege';
 }
 
 /** Sortierreihenfolge im Beutel. */
-export const BEUTEL_REIHENFOLGE = ['fang', 'heilung', 'status', 'beleben', 'kampfhilfe', 'schluessel'];
+export const BEUTEL_REIHENFOLGE = [
+  'fang', 'heilung', 'status', 'beleben', 'levelauf', 'kampfhilfe', 'anlege', 'schluessel',
+];

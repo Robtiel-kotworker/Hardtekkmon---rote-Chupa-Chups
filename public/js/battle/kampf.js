@@ -10,7 +10,7 @@
 import { findeAttacke, STATUS, LETZTE_KRAFT } from '../data/attacken.js';
 import { wirksamkeitText, wirksamkeitGegen } from '../data/typen.js';
 import {
-  anzeigename, artVon, fuegeSchadenZu, heile, maxKp, gibErfahrung,
+  anzeigename, artVon, fuegeSchadenZu, heile, maxKp, gibErfahrung, stufeErhoehen,
   entwicklungFaellig, istUmgekippt,
 } from '../game/hardtekkmon.js';
 import { gegenstandInfo } from '../data/gegenstaende.js';
@@ -314,11 +314,25 @@ function rundenEnde(kampf, ereignisse) {
   }
 }
 
-/** Erfahrung nach einem Sieg verteilen. */
+/**
+ * Erfahrung nach einem Sieg verteilen. Trägt ein anderes Team-Mitglied als
+ * das kämpfende einen EP-Teiler, geht die Erfahrung je zur Hälfte an beide –
+ * das EP-Teiler-Mon lernt dabei still im Hintergrund, ohne eigene
+ * Kampfanimation.
+ */
 function verteileErfahrung(kampf, besiegt, ereignisse) {
-  const menge = erfahrungFuerSieg(besiegt, kampf.art === 'trainer');
+  const vollMenge = erfahrungFuerSieg(besiegt, kampf.art === 'trainer');
   const eigenes = kampf.eigene.mon;
   if (istUmgekippt(eigenes)) return;
+
+  const teiler = kampf.team.find((mon) => mon !== eigenes && mon.item === 'EP-Teiler');
+  const menge = teiler ? Math.max(1, Math.floor(vollMenge / 2)) : vollMenge;
+
+  if (teiler) {
+    const teilerMenge = Math.max(1, vollMenge - menge);
+    gibErfahrung(teiler, teilerMenge);
+    ereignisse.push(text(`${anzeigename(teiler)} bekommt über den EP-Teiler ${teilerMenge} Erfahrung.`));
+  }
 
   const { neueStufen, neueAttacken } = gibErfahrung(eigenes, menge);
   // `wirdAufsteigen` sagt der Kampfansicht, ob nach diesem Ereignis noch
@@ -444,7 +458,7 @@ function benutzeGegenstand(kampf, aktion, ereignisse) {
 
   if (daten.art === 'fang') {
     if (kampf.art === 'trainer') {
-      ereignisse.push(text('Fremde Hardtekkmon fängt man nicht. So viel Anstand muss sein.'));
+      ereignisse.push(text('Das würde nichts bringen.'));
       return;
     }
     ereignisse.push(text(`Du wirfst ein ${daten.name}!`));
@@ -468,8 +482,12 @@ function benutzeGegenstand(kampf, aktion, ereignisse) {
 
   if (daten.art === 'heilung') {
     const geheilt = heile(ziel, daten.wirkung.kp);
-    ereignisse.push(ereignis('heilung', { seite: 'spieler', menge: geheilt }));
-    ereignisse.push(text(`${anzeigename(ziel)} bekommt ${geheilt} Kraftpunkte zurück.`));
+    if (geheilt === 0) {
+      ereignisse.push(text('Das würde nichts bringen.'));
+    } else {
+      ereignisse.push(ereignis('heilung', { seite: 'spieler', menge: geheilt }));
+      ereignisse.push(text(`${anzeigename(ziel)} bekommt ${geheilt} Kraftpunkte zurück.`));
+    }
   } else if (daten.art === 'status') {
     if (ziel.status && daten.wirkung.heiltStatus.includes(ziel.status)) {
       ziel.status = null;
@@ -483,6 +501,18 @@ function benutzeGegenstand(kampf, aktion, ereignisse) {
       ereignisse.push(text(`${anzeigename(ziel)} ist wieder auf den Beinen!`));
     } else {
       ereignisse.push(text('Das steht doch noch.'));
+    }
+  } else if (daten.art === 'levelauf') {
+    if (ziel.stufe >= 100) {
+      ereignisse.push(text('Das würde nichts bringen.'));
+    } else {
+      const { neueAttacken } = stufeErhoehen(ziel);
+      ereignisse.push(ereignis('aufstieg', { stufe: ziel.stufe, letzte: true }));
+      ereignisse.push(text(`${anzeigename(ziel)} ist jetzt auf Stufe ${ziel.stufe}!`));
+      for (const attacke of neueAttacken) ereignisse.push(ereignis('lernen', { attacke }));
+
+      const zielArt = entwicklungFaellig(ziel);
+      if (zielArt) ereignisse.push(ereignis('entwicklung', { zielId: zielArt.id }));
     }
   } else if (daten.art === 'kampfhilfe') {
     for (const [schluessel, stufen] of Object.entries(daten.wirkung.werte)) {

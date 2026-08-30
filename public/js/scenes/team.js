@@ -13,8 +13,10 @@ import { fenster, balken, kpFarbe, zeiger, typSchild } from '../gfx/ui.js';
 import { zeichneText } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { monSprite } from '../gfx/monsprites.js';
-import { anzeigename, artVon, maxKp, heile, istUmgekippt } from '../game/hardtekkmon.js';
-import { spiel, nimmGegenstand } from '../game/spielstand.js';
+import {
+  anzeigename, artVon, maxKp, heile, istUmgekippt, stufeErhoehen, entwicklungFaellig, entwickle,
+} from '../game/hardtekkmon.js';
+import { spiel, nimmGegenstand, gibGegenstand, merkeGefangen } from '../game/spielstand.js';
 import { gegenstandInfo } from '../data/gegenstaende.js';
 import { Textfenster } from '../ui/textfenster.js';
 import { poppe } from './stapel.js';
@@ -91,7 +93,7 @@ export class Teamszene {
       }
       const geheilt = heile(mon, daten.wirkung.kp);
       if (geheilt === 0) {
-        this.textfenster.zeige(`${anzeigename(mon)} ist schon voll da.`);
+        this.textfenster.zeige('Das würde nichts bringen.');
         return;
       }
       nimmGegenstand(this.gegenstand, 1);
@@ -115,6 +117,49 @@ export class Teamszene {
       nimmGegenstand(this.gegenstand, 1);
       effekt('item');
       this.textfenster.zeige(`${anzeigename(mon)} ist wieder auf den Beinen!`);
+    } else if (daten.art === 'levelauf') {
+      if (mon.stufe >= 100) {
+        this.textfenster.zeige('Das würde nichts bringen.');
+        return;
+      }
+      const { neueAttacken } = stufeErhoehen(mon);
+      nimmGegenstand(this.gegenstand, 1);
+      effekt('aufstieg');
+      const meldungen = [`${anzeigename(mon)} ist jetzt auf Stufe ${mon.stufe}!`];
+      for (const attacke of neueAttacken) meldungen.push(`${anzeigename(mon)} lernt ${attacke}!`);
+
+      const zielArt = entwicklungFaellig(mon);
+      if (zielArt) {
+        const alterName = anzeigename(mon);
+        entwickle(mon, zielArt);
+        merkeGefangen(zielArt.id);
+        meldungen.push(`Was passiert denn da? ${alterName} wird zu ${zielArt.name}!`);
+      }
+      this.textfenster.zeige(meldungen);
+    } else if (daten.art === 'anlege') {
+      this.trageAn(mon);
+      return;
+    }
+
+    if (!spiel.beutel[this.gegenstand]) this.gegenstand = null;
+  }
+
+  /** Legt ein Anlegeitem an (oder wieder ab, wenn es schon getragen wird). */
+  trageAn(mon) {
+    const bisher = mon.item;
+    if (bisher === this.gegenstand) {
+      mon.item = null;
+      gibGegenstand(this.gegenstand, 1);
+      effekt('item');
+      this.textfenster.zeige(`${anzeigename(mon)} legt ${this.gegenstand} wieder ab.`);
+    } else {
+      if (bisher) gibGegenstand(bisher, 1);
+      mon.item = this.gegenstand;
+      nimmGegenstand(this.gegenstand, 1);
+      effekt('item');
+      this.textfenster.zeige(bisher
+        ? `${anzeigename(mon)} tauscht ${bisher} gegen ${this.gegenstand}.`
+        : `${anzeigename(mon)} trägt jetzt ${this.gegenstand}.`);
     }
 
     if (!spiel.beutel[this.gegenstand]) this.gegenstand = null;
@@ -135,7 +180,8 @@ export class Teamszene {
 
       ctx.drawImage(monSprite(artVon(mon), 'klein'), x + 3, y - 3, 28, 28);
       zeichneText(ctx, anzeigename(mon), x + 34, y + 3, { farbe: UI.text });
-      zeichneText(ctx, `St.${mon.stufe}`, x + 34, y + 12, { farbe: UI.text });
+      zeichneText(ctx, mon.item ? `St.${mon.stufe} · ${mon.item}` : `St.${mon.stufe}`, x + 34, y + 12,
+        { farbe: UI.text });
 
       const grenze = maxKp(mon);
       const anteil = mon.kp / grenze;

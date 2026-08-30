@@ -238,9 +238,26 @@ export class Kampfszene {
     if (!hatGegenstand(name)) return;
 
     const daten = gegenstandInfo(name);
+
+    // Vorab prüfen, statt Gegenstand und Zug für nichts zu verbrauchen: Ein
+    // Mate, das nichts mehr heilt, oder ein Sample gegen einen Trainer,
+    // bleibt im Beutel und kostet keinen Zug.
+    if (daten.art === 'heilung' && this.kampf.eigene.mon.kp >= maxKp(this.kampf.eigene.mon)) {
+      this.textfenster.zeige('Das würde nichts bringen.');
+      return;
+    }
+    if (daten.art === 'fang' && this.kampf.art === 'trainer') {
+      this.textfenster.zeige('Das würde nichts bringen.');
+      return;
+    }
+    if (daten.art === 'levelauf' && this.kampf.eigene.mon.stufe >= 100) {
+      this.textfenster.zeige('Das würde nichts bringen.');
+      return;
+    }
+
     nimmGegenstand(name, 1);
 
-    if (daten.art === 'heilung' || daten.art === 'status' || daten.art === 'beleben') {
+    if (daten.art === 'heilung' || daten.art === 'status' || daten.art === 'beleben' || daten.art === 'levelauf') {
       this.starteRunde({ art: 'gegenstand', gegenstand: name, zielIndex: this.kampf.eigenesIndex });
     } else {
       this.starteRunde({ art: 'gegenstand', gegenstand: name });
@@ -695,6 +712,25 @@ export class Kampfszene {
     return UI.text;
   }
 
+  /**
+   * Schriftfarbe eines Team-Eintrags beim Wechseln, für dieselbe optionale
+   * Typenhilfe: Grün, wenn einer der eigenen Typen des Hardtekkmon gegen den
+   * Gegner mehr als normal austeilen würde, rot, wenn selbst der beste
+   * eigene Typ schlechter oder gar nicht wirkt.
+   */
+  teamFarbe(index) {
+    if (!typhilfeAn()) return UI.text;
+
+    const mon = spiel.team[index];
+    if (!mon) return UI.text;
+
+    const zielTypen = artVon(this.kampf.gegner.mon).typen;
+    const beste = Math.max(...artVon(mon).typen.map((typ) => wirksamkeitGegen(typ, zielTypen)));
+    if (beste > 1) return UI.wirksamGut;
+    if (beste < 1) return UI.wirksamSchlecht;
+    return UI.text;
+  }
+
   zeichneMenues(ctx) {
     if (this.zustand === 'befehl') {
       this.befehlsmenue.zeichnen(ctx, BREITE - 108, HOEHE - 46, 104, 42, { zeilenhoehe: 15 });
@@ -727,7 +763,10 @@ export class Kampfszene {
     }
 
     if (this.zustand === 'team') {
-      this.teammenue.zeichnen(ctx, 4, HOEHE - 86, 176, 82, { zeilenhoehe: 12 });
+      this.teammenue.zeichnen(ctx, 4, HOEHE - 86, 176, 82, {
+        zeilenhoehe: 12,
+        farbe: (index) => this.teamFarbe(index),
+      });
     }
   }
 }

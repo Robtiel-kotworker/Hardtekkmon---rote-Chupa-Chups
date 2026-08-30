@@ -30,10 +30,14 @@ function legende(x, y, spezies, stufe, flagge) {
   };
 }
 
-const KIOSK_MITTEL = ['Samplepack', 'Fettes Samplepack', 'Mate', 'Doppelmate', 'Allzweckreiniger', 'Erste-Hilfe-Riegel'];
+const KIOSK_MITTEL = [
+  'Samplepack', 'Super-Sample', 'Mate', 'Super-Mate',
+  'Allzweckreiniger', 'Defibrillator', 'Boxenkondensator', 'Subwoofer-Kern',
+];
 const KIOSK_GROSS = [
-  'Fettes Samplepack', 'Studio-Samplepack', 'Doppelmate', 'Turbo-Mate', 'Roter Lolli',
-  'Allzweckreiniger', 'Erste-Hilfe-Riegel', 'Defibrillator', 'Anlaufhilfe', 'Ohrstöpsel', 'Turnschuh-Wachs',
+  'Super-Sample', 'Giga-Sample', 'Super-Mate', 'Giga-Mate', 'Mate-Mate', 'Roter Lolli',
+  'Allzweckreiniger', 'Defibrillator', 'Schwarzer Defibrillator', 'Anlaufhilfe', 'Ohrstöpsel', 'Turnschuh-Wachs',
+  'Boxenkondensator', 'Subwoofer-Kern',
 ];
 
 // --- Route 7 -------------------------------------------------------------------
@@ -63,7 +67,7 @@ baueKarte('route7', {
       kaempfer(31, quer - 1, 'raver', 'links', 'r7_tanja'),
       kaempfer(38, quer + 3, 'opa', 'oben', 'r7_gerd'),
     ],
-    gegenstaende: [fundstueck(7, 18, 'Studio-Samplepack'), fundstueck(40, 3, 'Turbo-Mate')],
+    gegenstaende: [fundstueck(7, 18, 'Giga-Sample'), fundstueck(40, 3, 'Giga-Mate')],
   };
 });
 
@@ -117,7 +121,7 @@ baueKarte('schranzheim', {
         text: 'Ich steh hier seit dem Gig am Freitag. Welcher Freitag, weiß ich nicht.',
       }),
     ],
-    gegenstaende: [fundstueck(37, 29, 'Defibrillator')],
+    gegenstaende: [fundstueck(37, 29, 'Schwarzer Defibrillator')],
   };
 });
 
@@ -142,7 +146,7 @@ baueKarte('route9', {
         text: 'Weiter nördlich wird es feucht. Und neblig. Und irgendwie unheimlich.',
       }),
     ],
-    gegenstaende: [fundstueck(20, 5, 'Studio-Samplepack'), fundstueck(3, 33, 'Roter Lolli')],
+    gegenstaende: [fundstueck(20, 5, 'Giga-Sample'), fundstueck(3, 33, 'Mate-Mate')],
   };
 });
 
@@ -178,7 +182,7 @@ baueKarte('nebelmoor', {
       }),
       legende(31, 4, 'Nebelzar', 45, 'legende_nebelzar'),
     ],
-    gegenstaende: [fundstueck(3, 15, 'Allzweckreiniger', 2)],
+    gegenstaende: [fundstueck(3, 15, 'Allzweckreiniger', 2), fundstueck(30, 18, 'Subwoofer-Kern')],
   };
 });
 
@@ -203,7 +207,7 @@ baueKarte('route10', {
       kaempfer(28, quer + 3, 'raver', 'oben', 'donk_rita'),
       legende(38, 18, 'Wummerlord', 50, 'legende_wummerlord'),
     ],
-    gegenstaende: [fundstueck(9, 18, 'Fettes Samplepack', 3)],
+    gegenstaende: [fundstueck(9, 18, 'Super-Sample', 3)],
   };
 });
 
@@ -251,7 +255,7 @@ baueKarte('donkhausen', {
         text: 'Detlefs Team federt alles ab. Nimm was Schnelles mit.',
       }),
     ],
-    gegenstaende: [fundstueck(31, 3, 'Turbo-Mate', 2)],
+    gegenstaende: [fundstueck(31, 3, 'Giga-Mate', 2)],
   };
 });
 
@@ -281,7 +285,7 @@ baueKarte('route11', {
       }),
       legende(3, 3, 'Acidprophet', 52, 'legende_acidprophet'),
     ],
-    gegenstaende: [fundstueck(20, 17, 'Defibrillator')],
+    gegenstaende: [fundstueck(20, 17, 'Schwarzer Defibrillator')],
   };
 });
 
@@ -339,7 +343,7 @@ baueKarte('glitchstadt', {
         text: 'Hinter dem Siegesweg warten die Vier Verstärker. Und danach der Chef.',
       }),
     ],
-    gegenstaende: [fundstueck(35, 27, 'Roter Lolli')],
+    gegenstaende: [fundstueck(35, 27, 'Mate-Mate')],
   };
 });
 
@@ -382,8 +386,9 @@ baueKarte('siegesweg', {
       legende(5, 36, 'Roter Chupa Chups', 60, 'legende_chupachups'),
     ],
     gegenstaende: [
-      fundstueck(24, 40, 'Meister-Sample'),
-      fundstueck(2, 20, 'Roter Lolli', 2),
+      fundstueck(24, 40, 'Master-Sample'),
+      fundstueck(2, 20, 'Mate-Mate', 2),
+      fundstueck(18, 8, 'Roter Lolli'),
     ],
   };
 });

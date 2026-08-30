@@ -14,7 +14,7 @@ import { zeichneText, umbrechen } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { Auswahl } from '../ui/auswahl.js';
 import { spiel } from '../game/spielstand.js';
-import { GEGENSTAENDE, BEUTEL_REIHENFOLGE, ausserhalbNutzbar } from '../data/gegenstaende.js';
+import { GEGENSTAENDE, BEUTEL_REIHENFOLGE, ausserhalbNutzbar, anlegbar } from '../data/gegenstaende.js';
 import { schiebe, poppe } from './stapel.js';
 
 const GRUPPENNAMEN = {
@@ -22,7 +22,9 @@ const GRUPPENNAMEN = {
   heilung: 'HEILMITTEL',
   status: 'ZUSTAND',
   beleben: 'AUFWECKER',
+  levelauf: 'BOOST',
   kampfhilfe: 'KAMPFHILFEN',
+  anlege: 'ANLEGEN',
   schluessel: 'WICHTIGES',
 };
 
@@ -72,7 +74,7 @@ export class Beutelszene {
     if (antwort !== 'bestaetigt') return;
 
     const name = this.namen[this.auswahl.index];
-    if (!name || !ausserhalbNutzbar(name)) return;
+    if (!name || (!ausserhalbNutzbar(name) && !anlegbar(name))) return;
 
     import('./team.js').then(({ Teamszene }) => schiebe(new Teamszene({ gegenstand: name })));
   }

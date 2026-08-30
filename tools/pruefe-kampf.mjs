@@ -36,6 +36,11 @@ for (let i = 0; i < ANZAHL; i += 1) {
   const team = zufallsTeam(1 + Math.floor(Math.random() * 6), stufe);
   const istTrainer = Math.random() < 0.5;
 
+  // Gelegentlich trägt ein Bank-Mon den EP-Teiler – prüft den Erfahrungssplit mit.
+  if (team.length > 1 && Math.random() < 0.2) {
+    team[1 + Math.floor(Math.random() * (team.length - 1))].item = 'EP-Teiler';
+  }
+
   const kampf = istTrainer
     ? starteKampf({ art: 'trainer', team, gegnerTeam: zufallsTeam(1 + Math.floor(Math.random() * 4), stufe), trainer: { name: 'Prüfer' } })
     : starteKampf({ art: 'wild', team, wildesMon: erstelleHardtekkmon(zufallsArt(), stufe) });
@@ -55,9 +60,10 @@ for (let i = 0; i < ANZAHL; i += 1) {
     const wurf = Math.random();
     let aktion = { art: 'attacke', index: Math.floor(Math.random() * kampf.eigene.mon.attacken.length) };
     if (wurf < 0.06) aktion = { art: 'gegenstand', gegenstand: 'Samplepack' };
-    else if (wurf < 0.1) aktion = { art: 'gegenstand', gegenstand: 'Doppelmate', zielIndex: kampf.eigenesIndex };
-    else if (wurf < 0.13) aktion = { art: 'flucht' };
-    else if (wurf < 0.17) {
+    else if (wurf < 0.1) aktion = { art: 'gegenstand', gegenstand: 'Super-Mate', zielIndex: kampf.eigenesIndex };
+    else if (wurf < 0.12) aktion = { art: 'gegenstand', gegenstand: 'Roter Lolli', zielIndex: kampf.eigenesIndex };
+    else if (wurf < 0.15) aktion = { art: 'flucht' };
+    else if (wurf < 0.19) {
       const ersatz = kampf.team.findIndex((mon, index) => mon.kp > 0 && index !== kampf.eigenesIndex);
       if (ersatz >= 0) aktion = { art: 'wechsel', index: ersatz };
     }

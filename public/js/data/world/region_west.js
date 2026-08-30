@@ -22,10 +22,14 @@ function stelleSchild(bauer, liste, x, y, text) {
 }
 
 const KIOSK_KLEIN = ['Samplepack', 'Mate', 'Kaugummi', 'Kaffee', 'Kohletablette'];
-const KIOSK_MITTEL = ['Samplepack', 'Fettes Samplepack', 'Mate', 'Doppelmate', 'Allzweckreiniger', 'Erste-Hilfe-Riegel'];
+const KIOSK_MITTEL = [
+  'Samplepack', 'Super-Sample', 'Mate', 'Super-Mate',
+  'Allzweckreiniger', 'Defibrillator', 'Boxenkondensator', 'Subwoofer-Kern',
+];
 const KIOSK_GROSS = [
-  'Fettes Samplepack', 'Studio-Samplepack', 'Doppelmate', 'Turbo-Mate',
-  'Allzweckreiniger', 'Erste-Hilfe-Riegel', 'Anlaufhilfe', 'Ohrstöpsel', 'Turnschuh-Wachs',
+  'Super-Sample', 'Giga-Sample', 'Super-Mate', 'Giga-Mate',
+  'Allzweckreiniger', 'Defibrillator', 'Anlaufhilfe', 'Ohrstöpsel', 'Turnschuh-Wachs',
+  'Boxenkondensator', 'Subwoofer-Kern',
 ];
 
 // --- Bassdorf ----------------------------------------------------------------
@@ -273,9 +277,11 @@ baueKarte('plattenwald', {
       }),
     ],
     gegenstaende: [
-      fundstueck(28, 6, 'Fettes Samplepack'),
-      fundstueck(3, 30, 'Doppelmate'),
+      fundstueck(28, 6, 'Super-Sample'),
+      fundstueck(3, 30, 'Super-Mate'),
       fundstueck(17, 17, 'Kohletablette', 2),
+      // Gut versteckt im Labyrinth aus Bäumen – ein einzigartiges Anlegeitem.
+      fundstueck(23, 22, 'EP-Teiler'),
     ],
   };
 });
@@ -331,7 +337,7 @@ baueKarte('kellerstadt', {
         text: 'Der Lärm hört nie auf. Ich hör ihn schon gar nicht mehr. Was sagtest du?',
       }),
     ],
-    gegenstaende: [fundstueck(31, 3, 'Anlaufhilfe')],
+    gegenstaende: [fundstueck(31, 3, 'Anlaufhilfe'), fundstueck(9, 5, 'Boxenkondensator')],
   };
 });
 
@@ -367,7 +373,7 @@ baueKarte('route3', {
         text: 'Der Berg heißt Boxenberg, weil da mal jemand 200 Boxen reingeschleppt hat. Sie stehen noch da.',
       }),
     ],
-    gegenstaende: [fundstueck(20, 3, 'Fettes Samplepack'), fundstueck(35, 18, 'Taschenlampe')],
+    gegenstaende: [fundstueck(20, 3, 'Super-Sample'), fundstueck(35, 18, 'Taschenlampe')],
   };
 });
 
@@ -410,8 +416,8 @@ baueKarte('boxenberg', {
       kaempfer(5, 8, 'kumpel', 'unten', 'berg_achim'),
     ],
     gegenstaende: [
-      fundstueck(24, 24, 'Erste-Hilfe-Riegel'),
-      fundstueck(4, 4, 'Doppelmate'),
+      fundstueck(24, 24, 'Defibrillator'),
+      fundstueck(4, 4, 'Super-Mate'),
     ],
   };
 });
@@ -502,7 +508,7 @@ baueKarte('subwoofer_city', {
         text: 'Der See? Da ist mal eine ganze Anlage reingefallen. Sie brummt angeblich noch.',
       }),
     ],
-    gegenstaende: [fundstueck(35, 27, 'Studio-Samplepack')],
+    gegenstaende: [fundstueck(35, 27, 'Giga-Sample')],
   };
 });
 
@@ -531,7 +537,7 @@ baueKarte('route5', {
         text: 'Der Hafen unten ist voll mit Platten. Und mit Leuten, die keine Platten mehr abgeben wollen.',
       }),
     ],
-    gegenstaende: [fundstueck(19, 3, 'Turbo-Mate'), fundstueck(4, 30, 'Fettes Samplepack', 2)],
+    gegenstaende: [fundstueck(19, 3, 'Giga-Mate'), fundstueck(4, 30, 'Super-Sample', 2)],
   };
 });
 
