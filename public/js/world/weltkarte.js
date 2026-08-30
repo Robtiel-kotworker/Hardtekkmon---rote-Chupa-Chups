@@ -121,6 +121,20 @@ export class Weltkarte {
     return this.npcs.find((npc) => !npc.entfernt && !npc.unsichtbar && npc.x === x && npc.y === y) ?? null;
   }
 
+  /**
+   * Erste Kachel einer Sorte auf der Karte, oder null. Wird für Aufbauten
+   * gebraucht, die zur Laufzeit bespielt werden (Plattenspieler der Heilung).
+   * @returns {{ x: number, y: number }|null}
+   */
+  findeKachel(name) {
+    for (let y = 0; y < this.hoehe; y += 1) {
+      for (let x = 0; x < this.breite; x += 1) {
+        if (this.kachelAn(x, y) === name) return { x, y };
+      }
+    }
+    return null;
+  }
+
   warpAn(x, y) {
     return (this.daten.warps ?? []).find((w) => w.x === x && w.y === y) ?? null;
   }

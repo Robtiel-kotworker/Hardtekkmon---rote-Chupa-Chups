@@ -43,12 +43,16 @@ export function baueBoxenstopp(id, ort, rueck) {
   }, (bauer) => {
     const { matteX, matteY } = grundriss(bauer);
     bauer.rechteck(2, 3, 7, 1, 'tresen');
-    bauer.setze(10, 3, 'heilgeraet');
+    // Der silberne Plattenspieler steht direkt neben der Schwester – dort
+    // laufen während der Heilung die sechs goldenen Platten ein.
+    bauer.setze(7, 2, 'heilteller');
+    // Lagercomputer oben rechts neben der Pflanze, an der Stelle des früheren
+    // Heilgeräts.
+    bauer.setze(10, 3, 'computer');
     bauer.setze(11, 3, 'pflanze');
     bauer.setze(2, 7, 'tisch');
     bauer.setze(3, 7, 'tisch');
     bauer.setze(10, 7, 'plattenspieler');
-    bauer.setze(12, 7, 'computer');
 
     return {
       warps: ausgang(matteX, matteY, rueck),

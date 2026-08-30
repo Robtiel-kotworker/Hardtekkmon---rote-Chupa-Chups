@@ -503,7 +503,55 @@ export const KACHELN = {
       kasten(ctx, '#282838', 4, 7, 8, 1);
     },
   },
+  /**
+   * Silberner Plattenspieler neben der Schwester: sechs leere Mulden für die
+   * Mini-Schallplatten. Gefüllt wird er erst zur Laufzeit – während der
+   * Heilsequenz legt die Weltszene Platte für Platte eine goldene hinein
+   * (siehe TELLER_PLAETZE und zeichneHeilteller in scenes/welt.js).
+   */
+  heilteller: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, WELT.bodenInnen);
+      kasten(ctx, '#7a8090', 0, 1, 16, 14);
+      kasten(ctx, '#dce0ec', 1, 2, 14, 12);
+      kasten(ctx, '#aab0c0', 1, 12, 14, 2);
+      for (const [x, y] of TELLER_PLAETZE) {
+        kasten(ctx, '#6a7080', x, y, 4, 4);
+        kasten(ctx, '#31363f', x + 1, y + 1, 2, 2);
+      }
+    },
+  },
 };
+
+/**
+ * Lage der sechs Mulden im Plattenspieler, als Pixelversatz innerhalb der
+ * Kachel. Kachelbild und die zur Laufzeit eingelegten goldenen Platten teilen
+ * sich diese eine Liste, damit beides zwangsläufig deckungsgleich sitzt.
+ */
+export const TELLER_PLAETZE = [
+  [1, 3], [6, 3], [11, 3],
+  [1, 8], [6, 8], [11, 8],
+];
+
+/**
+ * Zeichnet eine eingelegte goldene Mini-Schallplatte an einer Mulde.
+ * @param {Ctx} ctx
+ * @param {number} x Pixelposition der Kachel-Ecke auf dem Bildschirm
+ */
+export function zeichneGoldPlatte(ctx, x, y, platz) {
+  const [versatzX, versatzY] = TELLER_PLAETZE[platz];
+  const px = x + versatzX;
+  const py = y + versatzY;
+  ctx.fillStyle = '#f0c040';
+  ctx.fillRect(px, py, 4, 4);
+  ctx.fillStyle = '#fff0a8';
+  ctx.fillRect(px, py, 3, 1);
+  ctx.fillStyle = '#8a6018';
+  ctx.fillRect(px + 1, py + 1, 2, 2);
+  ctx.fillStyle = '#fff8d8';
+  ctx.fillRect(px + 1, py + 1, 1, 1);
+}
 
 /** Dachkachel: versetzte Schindelreihen mit heller Oberkante. */
 function dach(ctx, hell, dunkel) {

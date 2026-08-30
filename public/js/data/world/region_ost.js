@@ -144,6 +144,11 @@ baueKarte('route9', {
     npcs: [
       person(6, 30, 'schrauber', 'oben', {
         text: 'Weiter nördlich wird es feucht. Und neblig. Und irgendwie unheimlich.',
+        aktion: {
+          art: 'gib', flagge: 'gib_r9_schrauber',
+          gegenstand: 'Allzweckreiniger', anzahl: 1,
+          nochmalText: 'Feucht bleibt es. Daran ändert auch das nichts.',
+        },
       }),
     ],
     gegenstaende: [fundstueck(20, 5, 'Giga-Sample'), fundstueck(3, 33, 'Mate-Mate')],
@@ -179,6 +184,11 @@ baueKarte('nebelmoor', {
     npcs: [
       person(22, 12, 'oma', 'unten', {
         text: 'Der Nebel kommt nicht aus einer Maschine. Der war schon vorher da.',
+        aktion: {
+          art: 'gib', flagge: 'gib_moor_oma',
+          gegenstand: 'Giga-Mate', anzahl: 1,
+          nochmalText: 'Der Nebel bleibt. Ich auch.',
+        },
       }),
       legende(31, 4, 'Nebelzar', 45, 'legende_nebelzar'),
     ],
@@ -282,6 +292,11 @@ baueKarte('route11', {
     npcs: [
       person(18, 30, 'techniker', 'links', {
         text: 'In Glitchstadt flackert alles. Auch die Leute. Das ist normal hier.',
+        aktion: {
+          art: 'gib', flagge: 'gib_r11_techniker',
+          gegenstand: 'Defibrillator', anzahl: 1,
+          nochmalText: 'Flackert immer noch. Ist wirklich normal.',
+        },
       }),
       legende(3, 3, 'Acidprophet', 52, 'legende_acidprophet'),
     ],
