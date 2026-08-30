@@ -545,7 +545,19 @@ export class Weltszene {
   // --- Ansprechen ------------------------------------------------------------
 
   interagiere() {
-    const ziel = blickfeld(this.figur);
+    let ziel = blickfeld(this.figur);
+
+    // Tresen und Tische blockieren das Laufen, aber nicht den Blick: Steht
+    // dort jemand oder etwas Ansprechbares direkt dahinter, zählt das als
+    // Ziel – man muss nicht drum herumlaufen, um z. B. die Schwester am
+    // Empfangstresen anzusprechen.
+    if (this.karte.reichweiteHindernis(ziel.x, ziel.y)) {
+      const dahinter = blickfeld(this.figur, 2);
+      if (this.karte.npcAn(dahinter.x, dahinter.y) || this.karte.schildAn(dahinter.x, dahinter.y)) {
+        ziel = dahinter;
+      }
+    }
+
     const npc = this.karte.npcAn(ziel.x, ziel.y);
     if (npc) {
       this.sprich(npc);
@@ -565,6 +577,12 @@ export class Weltszene {
     }
 
     const kachel = this.karte.kachelAn(ziel.x, ziel.y);
+    if (kachel === 'computer') {
+      effekt('bestaetigen');
+      import('./lager.js').then(({ Lagerszene }) => schiebe(new Lagerszene()));
+      return;
+    }
+
     const kachelText = {
       plattenspieler: 'Ein Plattenspieler. Die Nadel läuft noch, die Platte auch.',
       heilgeraet: 'Das Gerät summt zufrieden vor sich hin.',
@@ -574,6 +592,8 @@ export class Weltszene {
       tonne: 'Leere Dosen, so weit das Auge reicht.',
       bett: 'Dein Bett. Sieht verlockend aus.',
       gully: 'Von da unten kommt ein tiefes Wummern.',
+      tresen: 'Ein Tresen. Sauber gewischt.',
+      tisch: 'Ein Tisch. Nichts Interessantes drauf.',
     }[kachel];
     if (kachelText) this.zeigeText(kachelText);
   }

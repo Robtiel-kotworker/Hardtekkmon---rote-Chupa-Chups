@@ -22,6 +22,8 @@ export class Kartenbauer {
     this.kacheln = new Array(breite * hoehe).fill(grund);
     /** @type {{x: number, y: number, ziel: string, zx: number, zy: number}[]} */
     this.warps = [];
+    /** @type {{x: number, y: number, text: string}[]} */
+    this.schilder = [];
   }
 
   innen(x, y) {
@@ -197,8 +199,15 @@ export class Kartenbauer {
     return this;
   }
 
+  /** Setzt ein Schild als Kachel und als lesbaren Eintrag zugleich. */
+  schild(x, y, text) {
+    this.setze(x, y, 'schild');
+    this.schilder.push({ x, y, text });
+    return this;
+  }
+
   fertig() {
-    return { kacheln: this.kacheln, warps: this.warps };
+    return { kacheln: this.kacheln, warps: this.warps, schilder: this.schilder };
   }
 }
 

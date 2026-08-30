@@ -10,7 +10,13 @@
 // jedem Aufruf neu einloggen muss.
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+// Lokal gebündelt statt von der CDN geladen (public/js/vendor/, siehe
+// tools/aktualisiere-supabase-js.mjs) – ein CDN-Import wäre ein statischer
+// Modul-Import und würde beim Fehlen von Internet (z. B. iOS-App offline)
+// das Laden des gesamten main.js-Modulgraphen verhindern, nicht nur das
+// Login. Betrifft nur das Laden des SDK selbst; echte Netzwerkrufe
+// (Anmeldung, Cloud-Speicherstand) brauchen weiterhin eine Verbindung.
+import { createClient } from '../vendor/supabase-js.mjs';
 
 const SUPABASE_URL = 'https://smumsrwmaghmjwhcrmpq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_ASHiL5qAlHYWsioDV2Ymog_-b44GAXQ';

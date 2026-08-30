@@ -1,0 +1,21 @@
+{
+  "name": "hardtekkmon-rote-chupa-chups",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Hardtekkmon – Rote Chupa Chups: reines HTML/CSS/JS-Spiel (kein Build-Schritt), zusätzlich als eigenständige iOS-App über Capacitor.",
+  "scripts": {
+    "build": "node tools/pruefe-welt.mjs && node tools/pruefe-kampf.mjs && node tools/pruefe-quellen.mjs",
+    "ios:add": "cap add ios",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "ios": "npm run ios:sync && npm run ios:open"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.0"
+  }
+}

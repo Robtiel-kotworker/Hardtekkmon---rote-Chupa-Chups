@@ -139,6 +139,19 @@ export function gegenstandSymbol(ctx, symbol, x, y) {
 }
 
 /**
+ * Kleine Diskette als Fang-Symbol: markiert im Kampf ein wildes Hardtekkmon,
+ * das schon einmal gefangen wurde (Tekkdex-Eintrag vorhanden).
+ */
+export function fangSymbol(ctx, x, y) {
+  ctx.fillStyle = '#3858a8';
+  ctx.fillRect(x, y, 8, 8);
+  ctx.fillStyle = '#182848';
+  ctx.fillRect(x + 2, y + 1, 3, 3);
+  ctx.fillStyle = '#e8f0ff';
+  ctx.fillRect(x + 1, y + 5, 6, 2);
+}
+
+/**
  * Gig-Anstecker (die "Orden" dieses Spiels): eine kleine Backstage-Marke.
  * @param {number} nummer 0..7
  */

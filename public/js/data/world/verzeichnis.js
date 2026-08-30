@@ -39,7 +39,7 @@ export function baueKarte(id, einstellungen, aufbau) {
     kacheln: gelaende.kacheln,
     warps: [...gelaende.warps, ...(zusatz.warps ?? [])],
     npcs: zusatz.npcs ?? [],
-    schilder: zusatz.schilder ?? [],
+    schilder: [...gelaende.schilder, ...(zusatz.schilder ?? [])],
     gegenstaende: zusatz.gegenstaende ?? [],
   };
 

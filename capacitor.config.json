@@ -1,0 +1,11 @@
+{
+  "appId": "de.robtiel.hardtekkmon",
+  "appName": "Hardtekkmon",
+  "webDir": "public",
+  "backgroundColor": "#08070b",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#08070b",
+    "webContentsDebuggingEnabled": false
+  }
+}
