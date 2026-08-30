@@ -10,6 +10,7 @@
 import { neueFlaeche } from '../engine/screen.js';
 import { KACHEL, zeichneKachel, kachelInfo, baueKacheln } from '../gfx/tiles.js';
 import { karte as kartendaten } from '../data/world/karten.js';
+import { zeichneText, textBreite } from '../gfx/font.js';
 
 /** Streuwert für die Kachelvariante – gleiche Position, gleiche Variante. */
 function variante(x, y) {
@@ -53,7 +54,29 @@ export class Weltkarte {
         zeichneKachel(ctx, this.kachelAn(x, y), x * KACHEL, y * KACHEL, variante(x, y));
       }
     }
+    this.zeichneBeschriftungen(ctx);
     return canvas;
+  }
+
+  /**
+   * Feste Reklameschilder an Gebäuden. Sie gehen einmalig mit ins gerenderte
+   * Kartenbild ein und sind dadurch dauerhaft lesbar, ohne zur Laufzeit
+   * etwas zu kosten – kein Dialog, kein Anklicken.
+   */
+  zeichneBeschriftungen(ctx) {
+    for (const eintrag of this.daten.beschriftungen ?? []) {
+      const feldBreite = eintrag.breite * KACHEL;
+      const breite = textBreite(eintrag.text);
+      const x = eintrag.x * KACHEL + Math.round((feldBreite - breite) / 2);
+      const y = eintrag.y * KACHEL + 4;
+
+      // Schildplatte hinter der Schrift, damit sie sich von der Hauswand abhebt.
+      ctx.fillStyle = '#181820';
+      ctx.fillRect(x - 3, y - 2, breite + 6, 11);
+      ctx.fillStyle = '#f0e4cc';
+      ctx.fillRect(x - 2, y - 1, breite + 4, 9);
+      zeichneText(ctx, eintrag.text, x, y, { farbe: '#282838' });
+    }
   }
 
   sammleWasser() {

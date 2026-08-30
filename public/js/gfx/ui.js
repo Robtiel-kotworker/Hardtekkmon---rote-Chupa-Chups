@@ -50,7 +50,16 @@ export function balken(ctx, x, y, breite, anteil, farbe, hoehe = 3) {
   ctx.fillRect(x - 1, y - 1, breite + 2, hoehe + 2);
   ctx.fillStyle = '#606078';
   ctx.fillRect(x, y, breite, hoehe);
-  const gefuellt = Math.max(0, Math.min(breite, Math.round(breite * anteil)));
+
+  // Ein Rest über null bekommt immer mindestens einen sichtbaren Pixel:
+  // Bei hohen Höchstwerten (ab etwa 160 KP auf 76 Pixeln) rundet ein
+  // einzelner verbleibender Kraftpunkt sonst auf null Pixel ab. Der Balken
+  // sieht dann leer aus, obwohl das Hardtekkmon noch steht – es wirkt wie
+  // ein ausgebliebener K.o. Nur ein echter Nullwert lässt den Balken leer.
+  const roh = breite * anteil;
+  const gefuellt = anteil > 0
+    ? Math.max(1, Math.min(breite, Math.round(roh)))
+    : 0;
   ctx.fillStyle = farbe;
   ctx.fillRect(x, y, gefuellt, hoehe);
   ctx.fillStyle = 'rgba(255,255,255,0.35)';

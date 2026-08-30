@@ -33,7 +33,21 @@ function leererStand() {
     gefangen: new Set(),
     spielzeit: 0,
     startgewaehlt: false,
+    // Optionale Hilfen ("Cheaten" im Hauptmenü). Standardmäßig alles aus.
+    einstellungen: { typhilfe: false },
   };
+}
+
+/** Ist die Typenhilfe im Kampf eingeschaltet? */
+export function typhilfeAn() {
+  return Boolean(spiel?.einstellungen?.typhilfe);
+}
+
+/** Schaltet die Typenhilfe um und liefert den neuen Zustand. */
+export function schalteTyphilfe() {
+  if (!spiel.einstellungen) spiel.einstellungen = { typhilfe: false };
+  spiel.einstellungen.typhilfe = !spiel.einstellungen.typhilfe;
+  return spiel.einstellungen.typhilfe;
 }
 
 /** Beginnt ein neues Spiel. */

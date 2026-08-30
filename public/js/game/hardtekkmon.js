@@ -29,7 +29,7 @@ function wuerfleErbwerte() {
  * praktisch wie die klassische Kubikkurve weiter.
  */
 export function erfahrungFuerStufe(stufe) {
-  const rabatt = 1 - 0.55 * Math.exp(-stufe / 15);
+  const rabatt = 1 - 0.35 * Math.exp(-stufe / 12);
   return Math.round(stufe ** 3 * rabatt);
 }
 

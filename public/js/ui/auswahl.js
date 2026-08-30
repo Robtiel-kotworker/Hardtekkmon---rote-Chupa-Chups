@@ -83,7 +83,7 @@ export class Auswahl {
 
   /**
    * Zeichnet die Liste in ein Fenster.
-   * @param {{ zeilenhoehe?: number, rahmen?: boolean, zusatz?: (index: number) => string }} [optionen]
+   * @param {{ zeilenhoehe?: number, rahmen?: boolean, zusatz?: (index: number) => string, farbe?: (index: number) => string }} [optionen]
    */
   zeichnen(ctx, x, y, breite, hoehe, optionen = {}) {
     const zeilenhoehe = optionen.zeilenhoehe ?? 12;
@@ -102,7 +102,8 @@ export class Auswahl {
         const eintragY = y + 5 + zeile * zeilenhoehe;
 
         if (index === this.index) zeiger(ctx, eintragX, eintragY + 1, this.bildzaehler);
-        zeichneText(ctx, this.eintraege[index], eintragX + 7, eintragY, { farbe: UI.text });
+        const farbe = optionen.farbe?.(index) ?? UI.text;
+        zeichneText(ctx, this.eintraege[index], eintragX + 7, eintragY, { farbe });
 
         const zusatz = optionen.zusatz?.(index);
         if (zusatz) {
