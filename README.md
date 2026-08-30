@@ -1,7 +1,7 @@
 # Hardtekkmon – Rote Chupa Chups
 
 Ein Rollenspiel im Stil der klassischen Handheld-Ära: 240×160  Pixel,
-Kachelwelt, rundenbasierte Kämpfe, acht Bühnen und 151 Hardtekkmon. Statt
+Kachelwelt, rundenbasierte Kämpfe, acht Bühnen und 151 Hardtekkmon.  Statt
 Fangbällen fliegen **Samplepacks**, statt Orden sammelt man **Gig-Marken**,
 und die Trainer heißen wie Leute, denen man um vier Uhr morgens vor einer
 Halle begegnet.
