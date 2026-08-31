@@ -92,12 +92,62 @@ export function berechneSchaden(attacke, angreifer, verteidiger) {
   return { schaden, wirkung, volltreffer };
 }
 
-/** Wer ist zuerst dran? Bei Gleichstand entscheidet der Zufall. */
-export function istSchneller(a, b) {
-  const iniA = kampfwert(a, 'ini');
-  const iniB = kampfwert(b, 'ini');
-  if (iniA === iniB) return Math.random() < 0.5;
-  return iniA > iniB;
+/**
+ * Grundchance, dass der Spieler eine Attacke zuerst ausführt. Früher entschied
+ * allein der Initiative-Wert – wer schneller war, war jede Runde zuerst dran,
+ * und der Kampf lief immer gleich ab. Jetzt würfelt jede Attacke neu.
+ */
+export const INITIATIVE_GRUND = 0.6;
+/** Wie weit der Vergleich der Initiative-Werte die Chance höchstens verschiebt. */
+const INITIATIVE_SPANNE = 0.25;
+/** Verschiebung je Vorrangstufe der gewählten Attacke. */
+const VORRANG_GEWICHT = 0.15;
+/** Verschiebung für ein legendäres Hardtekkmon. */
+const LEGENDEN_GEWICHT = 0.08;
+/** Die Chance bleibt immer in diesem Fenster – nichts ist je garantiert. */
+const INITIATIVE_MIN = 0.1;
+const INITIATIVE_MAX = 0.9;
+
+/**
+ * Chance, dass der Spieler diese Attacke zuerst ausführt. Vier Regeln, die
+ * sich schlicht addieren – absichtlich überschaubar, damit im Kampf
+ * nachvollziehbar bleibt, warum wer zuerst dran war:
+ *
+ *   1. Grundchance 60 % für den Spieler, 40 % für den Gegner.
+ *   2. Der Vergleich der Initiative-Werte verschiebt um bis zu 25 Punkte.
+ *      Das schließt die Wertestufen mit ein, die Attacken wie Energydrink
+ *      oder Pitch Bend setzen (siehe kampfwert), und hält den Initiative-Wert
+ *      damit weiter wirksam, ohne dass er allein entscheidet.
+ *   3. Jede Vorrangstufe der gewählten Attacke verschiebt um 15 Punkte.
+ *      Vorrang haben ausschließlich schwache, schnelle Attacken – wer zuerst
+ *      dran sein will, schlägt dafür leichter zu (siehe VORRANG in
+ *      data/attacken.js).
+ *   4. Ein legendäres Hardtekkmon verschiebt um 8 Punkte.
+ *
+ * Das Ergebnis wird auf 10..90 % begrenzt: Auch der langsamste Außenseiter
+ * kommt gelegentlich zuerst dran, und keine Aufstellung ist je sicher.
+ *
+ * @param {object} eigene Kämpfer des Spielers
+ * @param {object} gegner Kämpfer des Gegners
+ * @param {number} vorrangEigen Vorrangstufe der Spielerattacke
+ * @param {number} vorrangGegner Vorrangstufe der Gegnerattacke
+ */
+export function initiativeChance(eigene, gegner, vorrangEigen = 0, vorrangGegner = 0) {
+  const iniEigen = kampfwert(eigene, 'ini');
+  const iniGegner = kampfwert(gegner, 'ini');
+
+  let chance = INITIATIVE_GRUND;
+  chance += INITIATIVE_SPANNE * ((iniEigen - iniGegner) / (iniEigen + iniGegner));
+  chance += VORRANG_GEWICHT * (vorrangEigen - vorrangGegner);
+  chance += LEGENDEN_GEWICHT
+    * ((artVon(eigene.mon).legende ? 1 : 0) - (artVon(gegner.mon).legende ? 1 : 0));
+
+  return Math.min(INITIATIVE_MAX, Math.max(INITIATIVE_MIN, chance));
+}
+
+/** Würfelt für eine einzelne Attacke aus, ob der Spieler zuerst dran ist. */
+export function spielerHatInitiative(eigene, gegner, vorrangEigen = 0, vorrangGegner = 0) {
+  return Math.random() < initiativeChance(eigene, gegner, vorrangEigen, vorrangGegner);
 }
 
 /**

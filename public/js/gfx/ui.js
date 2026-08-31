@@ -161,28 +161,40 @@ export function fangSymbol(ctx, x, y) {
 }
 
 /**
- * Eine Schallplatte der Gegnerübersicht im Trainerkampf. Belegte Plätze
- * bekommen eine silberne Platte, freie bleiben nur schwach angedeutet – so
- * ist auf einen Blick zu sehen, wie viele Hardtekkmon der Trainer hat.
- * @param {boolean} belegt
+ * Eine Schallplatte der Gegnerübersicht im Trainerkampf. Drei Zustände, damit
+ * auf einen Blick zu sehen ist, wie viele Hardtekkmon der Trainer hat und wie
+ * viele davon schon unten sind:
+ *
+ *   belegt und stehend – silberne Platte mit Glanzkante, voll deckend
+ *   belegt und besiegt – graue Platte ohne Glanz, halb durchscheinend
+ *   freier Platz       – nur schwach angedeutet
+ *
+ * @param {boolean} belegt Hat der Trainer auf diesem Platz ein Hardtekkmon?
+ * @param {boolean} besiegt Ist dieses Hardtekkmon bereits umgekippt?
  */
-export function teamPlatte(ctx, x, y, belegt) {
+export function teamPlatte(ctx, x, y, belegt, besiegt = false) {
   ctx.save();
   if (!belegt) ctx.globalAlpha = 0.25;
+  else if (besiegt) ctx.globalAlpha = 0.45;
 
-  ctx.fillStyle = belegt ? '#20242e' : '#5a6070';
+  const steht = belegt && !besiegt;
+  ctx.fillStyle = steht ? '#20242e' : '#5a6070';
   ctx.fillRect(x + 1, y, 6, 8);
   ctx.fillRect(x, y + 1, 8, 6);
 
-  ctx.fillStyle = belegt ? '#c8ccd8' : '#7a8090';
+  ctx.fillStyle = steht ? '#c8ccd8' : '#7a8090';
   ctx.fillRect(x + 2, y + 1, 4, 6);
   ctx.fillRect(x + 1, y + 2, 6, 4);
 
-  if (belegt) {
+  if (steht) {
     // Glanzkante und Mittelloch, damit die Platte als Platte lesbar bleibt.
     ctx.fillStyle = '#f0f4ff';
     ctx.fillRect(x + 2, y + 1, 2, 1);
     ctx.fillStyle = '#20242e';
+    ctx.fillRect(x + 3, y + 3, 2, 2);
+  } else if (belegt) {
+    // Besiegt: nur das Mittelloch, kein Glanz – die Platte wirkt erloschen.
+    ctx.fillStyle = '#4a5060';
     ctx.fillRect(x + 3, y + 3, 2, 2);
   }
   ctx.restore();
