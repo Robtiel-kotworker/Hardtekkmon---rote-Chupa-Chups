@@ -6,6 +6,12 @@
 // Zubehör. Gezeichnet wird zuerst in ein 28x28-Pixelraster; danach laufen zwei
 // automatische Durchgänge darüber – Schattierung (Licht von oben links) und
 // Umriss. Erst dann wird das Raster vergrößert ausgegeben.
+//
+// Eine Ausnahme: Roter Chupa Chups, das Maskottchen-Legendäre, hat ein
+// festes Bild statt einer prozeduralen Zeichnung (siehe CHUPA_CHUPS_BILD
+// unten). Das Referenzbild zeigt nur einen Blickwinkel, deshalb zeigen
+// front/rueck/klein notgedrungen alle dasselbe Bild – für die anderen 150
+// Arten unterscheidet sich die Rückenansicht sonst von der Vorderansicht.
 // ============================================================================
 
 import { neueFlaeche } from '../engine/screen.js';
@@ -415,6 +421,50 @@ function baueRaster(art, rueckseite) {
 /** @type {Map<string, HTMLCanvasElement>} */
 const zwischenspeicher = new Map();
 
+const CHUPA_CHUPS_NAME = 'Roter Chupa Chups';
+
+/**
+ * Das feste Bild von Roter Chupa Chups. Wird einmalig beim Modulstart
+ * angestoßen; bis es geladen ist, greift monSprite() für diese Art auf die
+ * prozedurale Zeichnung zurück (praktisch nie sichtbar, da das Bild lange vor
+ * dem ersten Aufruf fertig ist – aber ohne Sonderfall gäbe es hier eine
+ * Race Condition gegen das erste Zeichnen).
+ */
+let chupaChupsBild = null;
+/** Wird beim ersten Treffer auf den Namen gesetzt, siehe monSprite(). */
+let chupaChupsId = null;
+(() => {
+  const bild = new Image();
+  bild.onload = () => {
+    chupaChupsBild = bild;
+    // Vorher schon prozedural gezeichnete und zwischengespeicherte Sprites
+    // dieser Art verwerfen, damit der nächste Aufruf das echte Bild holt.
+    for (const schluessel of [...zwischenspeicher.keys()]) {
+      if (schluessel.startsWith(`${chupaChupsId}:`)) zwischenspeicher.delete(schluessel);
+    }
+  };
+  bild.src = 'sprites/roter-chupa-chups.png';
+})();
+
+/** Bettet das feste Bild seitenverhältnistreu und zentriert in die Zielgröße ein. */
+function zeichneChupaChupsBild(skala) {
+  const groesse = RASTER * skala;
+  const { canvas, ctx } = neueFlaeche(groesse, groesse);
+  ctx.imageSmoothingEnabled = true;
+  const passung = Math.min(groesse / chupaChupsBild.width, groesse / chupaChupsBild.height);
+  const breite = chupaChupsBild.width * passung;
+  const hoehe = chupaChupsBild.height * passung;
+  ctx.drawImage(chupaChupsBild, (groesse - breite) / 2, (groesse - hoehe) / 2, breite, hoehe);
+  return canvas;
+}
+
+function zeichneProzeduralesSprite(art, ansicht, skala) {
+  const raster = baueRaster(art, ansicht === 'rueck');
+  const { canvas, ctx } = neueFlaeche(RASTER * skala, RASTER * skala);
+  raster.male(ctx, skala);
+  return canvas;
+}
+
 /**
  * Liefert das fertige Sprite als Bildfläche.
  * @param {{ id: number, name: string, typen: string[] }} art
@@ -427,9 +477,13 @@ export function monSprite(art, ansicht = 'front') {
   if (vorhanden) return vorhanden;
 
   const skala = ansicht === 'klein' ? 1 : 2;
-  const raster = baueRaster(art, ansicht === 'rueck');
-  const { canvas, ctx } = neueFlaeche(RASTER * skala, RASTER * skala);
-  raster.male(ctx, skala);
+  let canvas;
+  if (art.name === CHUPA_CHUPS_NAME) {
+    chupaChupsId = art.id;
+    canvas = chupaChupsBild ? zeichneChupaChupsBild(skala) : zeichneProzeduralesSprite(art, ansicht, skala);
+  } else {
+    canvas = zeichneProzeduralesSprite(art, ansicht, skala);
+  }
 
   zwischenspeicher.set(schluessel, canvas);
   return canvas;
