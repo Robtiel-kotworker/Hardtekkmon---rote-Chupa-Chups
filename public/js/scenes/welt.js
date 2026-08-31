@@ -44,6 +44,7 @@ import {
   Saeulenlauf, saeulenStand, sperreRest, sperrText, briefText, startfelder,
   wuerfleAbfolge, BELOHNUNG, SPERRE_MS,
 } from '../game/saeulenraetsel.js';
+import { KLOPFTUER_ZIEL } from '../data/world/casino.js';
 import { starteKampf } from '../battle/kampf.js';
 import { schiebe } from './stapel.js';
 
@@ -235,6 +236,13 @@ export class Weltszene {
     this.raetsel = null;
     /** Läuft das Feuerwerk nach einer gelösten Säule? */
     this.feuerwerk = null;
+    /**
+     * Klopfzähler der Klopftür im Casino (siehe klopfeAnTuer): welche
+     * Kachelposition zuletzt beklopft wurde und wie oft hintereinander –
+     * jede andere Interaktion dazwischen setzt das zurück.
+     */
+    this.klopfZiel = null;
+    this.klopfAnzahl = 0;
   }
 
   betreten() {
@@ -256,6 +264,9 @@ export class Weltszene {
     // verlässt, fängt beim nächsten Mal wieder an der Säule an.
     this.briefsaeule = this.karte.findeKachel('briefsaeule');
     this.raetsel = null;
+    // Dieselbe Logik für die Klopftür: ein Kartenwechsel setzt den Zähler zurück.
+    this.klopfZiel = null;
+    this.klopfAnzahl = 0;
 
     for (const npc of this.karte.npcs) {
       // Einmal gefangene Legenden und abgehakte Wachen bleiben verschwunden.
@@ -877,6 +888,34 @@ export class Weltszene {
     }
   }
 
+  // --- Klopftür im Casino -----------------------------------------------------
+
+  /**
+   * Dreimal hintereinander an dieselbe Tür klopfen, dann geht sie auf. Bloß
+   * anlaufen oder einmal (bzw. zweimal) interagieren bleibt wirkungslos –
+   * genau das verlangt das Schild daneben. Jede andere Interaktion
+   * dazwischen setzt den Zähler zurück (siehe interagiere()).
+   */
+  klopfeAnTuer(ziel) {
+    const dieselbeTuer = this.klopfZiel && this.klopfZiel.x === ziel.x && this.klopfZiel.y === ziel.y;
+    this.klopfAnzahl = dieselbeTuer ? this.klopfAnzahl + 1 : 1;
+    this.klopfZiel = ziel;
+
+    if (this.klopfAnzahl < 3) {
+      effekt('auswahl');
+      return;
+    }
+
+    this.klopfZiel = null;
+    this.klopfAnzahl = 0;
+
+    const tuerZiel = KLOPFTUER_ZIEL[this.karte.id];
+    if (!tuerZiel) return;
+
+    effekt('bestaetigen');
+    this.starteBlende(() => this.wechsleKarte(tuerZiel.zielId, tuerZiel.x, tuerZiel.y));
+  }
+
   merkeBoxenstoppWennNoetig() {
     if (this.karte.id.startsWith('boxenstopp_')) {
       merkeBoxenstopp(this.karte.id, this.figur.x, this.figur.y);
@@ -1146,6 +1185,15 @@ export class Weltszene {
       }
     }
 
+    // Die Kachel steht schon hier fest (nicht erst unten), weil das Klopfen
+    // an der Tür zurückgesetzt werden muss, sobald irgendetwas anderes
+    // angesprochen wird – auch ein NPC, ein Schild oder ein Gegenstand.
+    const kachel = this.karte.kachelAn(ziel.x, ziel.y);
+    if (kachel !== 'klopftuer' && this.klopfZiel) {
+      this.klopfZiel = null;
+      this.klopfAnzahl = 0;
+    }
+
     const npc = this.karte.npcAn(ziel.x, ziel.y);
     if (npc) {
       this.sprich(npc);
@@ -1164,7 +1212,6 @@ export class Weltszene {
       return;
     }
 
-    const kachel = this.karte.kachelAn(ziel.x, ziel.y);
     if (kachel === 'computer') {
       effekt('bestaetigen');
       import('./lager.js').then(({ Lagerszene }) => schiebe(new Lagerszene()));
@@ -1172,6 +1219,15 @@ export class Weltszene {
     }
     if (kachel === 'briefsaeule') {
       this.spricheSaeule(ziel);
+      return;
+    }
+    if (kachel === 'klopftuer') {
+      this.klopfeAnTuer(ziel);
+      return;
+    }
+    if (kachel === 'djpult') {
+      effekt('bestaetigen');
+      import('./sequenzer.js').then(({ Sequenzerszene }) => schiebe(new Sequenzerszene()));
       return;
     }
 

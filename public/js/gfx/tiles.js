@@ -304,8 +304,14 @@ export const KACHELN = {
       kasten(ctx, '#1e4028', 2, 2, 12, 2);
     },
   },
+  /**
+   * `istSchild` markiert Kacheln, die einen `schilder`-Eintrag tragen dürfen
+   * (siehe die Prüfung in tools/pruefe-welt.mjs) – ein Schild-Text ohne eine
+   * dieser Kacheln darunter fällt beim Build als Fehler auf.
+   */
   schild: {
     fest: true,
+    istSchild: true,
     zeichne(ctx) {
       flaeche(ctx, WELT.gras);
       kasten(ctx, '#6a4828', 7, 9, 2, 6);
@@ -313,6 +319,23 @@ export const KACHELN = {
       kasten(ctx, '#c8a068', 2, 3, 12, 6);
       kasten(ctx, '#6a4828', 4, 5, 8, 1);
       kasten(ctx, '#6a4828', 4, 7, 6, 1);
+    },
+  },
+  /**
+   * Dieselbe Rolle wie `schild`, aber als kleine Plakette statt als Pfosten –
+   * für Hinweise an einer Innenwand, wo ein Schildpfosten auf grünem Grund
+   * (wie bei `schild`) nicht passt. Bewusst neutral gehalten (dunkler Rahmen,
+   * helle Fläche), damit sie auf jeder Wandfarbe funktioniert.
+   */
+  wandschild: {
+    fest: true,
+    istSchild: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#282018');
+      kasten(ctx, '#4a3828', 1, 4, 14, 8);
+      kasten(ctx, '#d8c8a0', 2, 5, 12, 6);
+      kasten(ctx, '#282018', 4, 7, 8, 1);
+      kasten(ctx, '#282018', 4, 9, 6, 1);
     },
   },
   laterne: {
@@ -622,6 +645,46 @@ export const KACHELN = {
         kasten(ctx, '#c04058', 3, y, 2, 3);
         kasten(ctx, '#4058c0', 7, y, 2, 3);
       }
+    },
+  },
+  /**
+   * Die unauffällige Tür zum Proberaum, mitten in der Goldwand des Casinos.
+   * Bleibt IMMER fest – anders als eine normale Tür öffnet sie sich nie durch
+   * bloßes Anlaufen, sondern nur über den Klopf-Mechanismus in welt.js
+   * (dreimal hintereinander interagieren). Deshalb steht ihr Ziel auch nicht
+   * in den regulären Warps der Karte (das würde die Weltprüfung als "Übergang
+   * auf fester Kachel" melden), sondern in KLOPFTUER_ZIEL in
+   * data/world/casino.js.
+   */
+  klopftuer: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#3a2018');
+      kasten(ctx, '#585858', 1, 1, 14, 15);
+      kasten(ctx, '#404048', 2, 2, 12, 13);
+      kasten(ctx, '#282828', 11, 8, 2, 2);
+    },
+  },
+  /**
+   * Das DJ-Pult im Proberaum: Interagieren öffnet den 16-Step-Sequenzer
+   * (siehe scenes/sequenzer.js).
+   */
+  djpult: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, WELT.bodenInnen);
+      kasten(ctx, '#1c1c24', 1, 5, 14, 10);
+      kasten(ctx, '#2e2e3a', 2, 6, 12, 8);
+      // Bunte Pads, wie an einem echten Step-Sequenzer.
+      kasten(ctx, '#e04058', 3, 8, 2, 2);
+      kasten(ctx, '#e8c860', 6, 8, 2, 2);
+      kasten(ctx, '#58d0e0', 9, 8, 2, 2);
+      kasten(ctx, '#58c868', 12, 8, 1, 2);
+      // Regler-Leiste darunter.
+      kasten(ctx, '#101014', 2, 11, 12, 2);
+      kasten(ctx, '#c8c8d0', 4, 11, 1, 2);
+      kasten(ctx, '#c8c8d0', 8, 11, 1, 2);
+      kasten(ctx, '#c8c8d0', 12, 11, 1, 2);
     },
   },
   tisch: {

@@ -1,7 +1,7 @@
 // ============================================================================
 // Bruchbude und Casino
 // ----------------------------------------------------------------------------
-// Drei Karten hintereinander, die zusammen den Weg nach unten erzählen:
+// Vier Karten hintereinander, die zusammen den Weg nach unten erzählen:
 //
 //   1. Bruchbude – ein winziger, vergammelter Keller mit Gerümpel. Sieht nach
 //      nichts aus. Hinten führt eine Treppe weiter runter.
@@ -9,6 +9,9 @@
 //      Funzel. Der Abstieg dauert bewusst spürbar lange (siehe SCHACHT_TIEFE).
 //   3. Casino – ein viel zu großer, viel zu prächtiger Saal: roter Teppich,
 //      Gold an den Wänden, Kronleuchter. Der Bruch zur Bude oben ist der Witz.
+//   4. Proberaum – hinter einer unauffälligen Klopftür ganz hinten im Saal:
+//      DJ-Pult und fette Boxen, der eigentliche Grund für den ganzen Bau
+//      (siehe KLOPFTUER_ZIEL und baueProberaum unten).
 //
 // Gebaut wird pro Stadt ein eigener Satz, damit der Rückweg wieder in der
 // richtigen Stadt herauskommt – genauso wie bei Boxenstopp und Kiosk. Jede
@@ -17,7 +20,9 @@
 // als bei Boxenstopp und Kiosk gibt es also keine feste Übergabeposition.
 // ============================================================================
 
-import { baueKarte, person, warp } from './verzeichnis.js';
+import {
+  baueKarte, person, warp, schild,
+} from './verzeichnis.js';
 import { generator, saatAusText } from '../../engine/rng.js';
 
 /**
@@ -33,13 +38,31 @@ const LAMPEN_ABSTAND = 7;
 const SAAL_BREITE = 26;
 const SAAL_HOEHE = 20;
 
+/** Innenmaße des Proberaums hinter der Klopftür. */
+const PROBERAUM_BREITE = 10;
+const PROBERAUM_HOEHE = 8;
+
 /** Startpunkte auf den erzeugten Karten. */
 const EINSTIEG = {
   bude: { x: 5, y: 8 },
   schachtOben: { x: 3, y: 2 },
   schachtUnten: { x: 3, y: SCHACHT_TIEFE - 2 },
   saalOben: { x: 13, y: 2 },
+  // Die Ausgangstür des Proberaums – unten mittig, wie in jedem Innenraum.
+  proberaum: { x: Math.floor(PROBERAUM_BREITE / 2), y: PROBERAUM_HOEHE - 1 },
 };
+
+/**
+ * Ziel einer Klopftür: Kartenkennung des Saals -> wohin sie nach dem dritten
+ * Klopfen führt. Anders als ein normaler Übergang steht das NICHT in den
+ * Warps der Kartendaten – die Klopftür bleibt immer 'fest' (siehe die
+ * Kachel in gfx/tiles.js), ein Übergang auf einer festen Kachel würde die
+ * Weltprüfung (tools/pruefe-welt.mjs) zu Recht als Fehler melden. Ausgelöst
+ * wird der Wechsel stattdessen direkt aus scenes/welt.js, sobald dort genug
+ * geklopft wurde.
+ * @type {Record<string, {zielId: string, x: number, y: number}>}
+ */
+export const KLOPFTUER_ZIEL = {};
 
 /**
  * Sprüche der Zocker im Saal. Durcheinander, abgerissen, halb vom Automaten
@@ -143,11 +166,44 @@ function baueSchacht(id, ortName, budeId, saalId) {
 }
 
 /**
+ * Der Proberaum hinter der Klopftür: ein schlichter Raum, roh im Vergleich
+ * zum protzigen Saal davor. DJ-Pult an der Rückwand, zwei sehr fette Boxen
+ * daneben. Interagieren mit dem Pult öffnet den 16-Step-Sequenzer (siehe
+ * scenes/sequenzer.js).
+ */
+function baueProberaum(id, ortName, rueck) {
+  return baueKarte(id, {
+    name: `Proberaum ${ortName}`, breite: PROBERAUM_BREITE, hoehe: PROBERAUM_HOEHE, drinnen: true,
+  }, (bauer) => {
+    bauer.rechteck(0, 0, PROBERAUM_BREITE, PROBERAUM_HOEHE, 'wandInnen');
+    bauer.rechteck(1, 1, PROBERAUM_BREITE - 2, PROBERAUM_HOEHE - 2, 'bodenInnen');
+
+    const mitte = Math.floor(PROBERAUM_BREITE / 2);
+    bauer.setze(2, 2, 'box');
+    bauer.setze(PROBERAUM_BREITE - 3, 2, 'box');
+    bauer.setze(mitte, 2, 'djpult');
+
+    bauer.setze(EINSTIEG.proberaum.x, EINSTIEG.proberaum.y, 'tuer');
+
+    return {
+      warps: [warp(EINSTIEG.proberaum.x, EINSTIEG.proberaum.y, rueck.karte, rueck.x, rueck.y)],
+      npcs: [
+        person(2, PROBERAUM_HOEHE - 3, 'schrauber', 'rechts', {
+          text: ['Klingt scheiße, aber laut. Reicht doch.',
+            'Wer angeklopft hat, darf bleiben. So läuft das hier.'],
+        }),
+      ],
+      schilder: [],
+    };
+  });
+}
+
+/**
  * Der Saal. Roter Teppich, goldene Lampen an allen Wänden, Säulen, und in der
  * Mitte die Tische. Die Automaten stehen an der linken Wand – dort hängen
  * auch die Zocker (siehe Bewegungsart 'zocker' in scenes/welt.js).
  */
-function baueCasinoSaal(id, ortName, schachtId, saat) {
+function baueCasinoSaal(id, ortName, schachtId, saat, stadtId) {
   const breite = SAAL_BREITE;
   const hoehe = SAAL_HOEHE;
 
@@ -197,6 +253,24 @@ function baueCasinoSaal(id, ortName, schachtId, saat) {
     // der Laufformation (siehe game/saeulenraetsel.js).
     bauer.setze(breite - 2, hoehe - 2, 'briefsaeule');
 
+    // --- Klopftür zum Proberaum ------------------------------------------------
+    // Unauffällig in der unteren Wand, weit weg vom Treppenfuß: eine
+    // schlichte graue Tür in der ganzen Pracht. Das Schild daneben nutzt die
+    // Plaketten-Variante (siehe wandschild in gfx/tiles.js) statt des
+    // üblichen Schildpfostens – der wäre auf grünem Grund gedacht und würde
+    // mitten in der Goldwand wie ein Fremdkörper wirken.
+    const klopfX = 5;
+    const klopfY = hoehe - 1;
+    const klopfRueck = { x: klopfX, y: hoehe - 2 };
+    bauer.setze(klopfX, klopfY, 'klopftuer');
+    bauer.setze(klopfX + 3, klopfY, 'wandschild');
+
+    const proberaumId = `proberaum_${stadtId}`;
+    baueProberaum(proberaumId, ortName, { karte: id, x: klopfRueck.x, y: klopfRueck.y });
+    KLOPFTUER_ZIEL[id] = {
+      zielId: proberaumId, x: EINSTIEG.proberaum.x, y: EINSTIEG.proberaum.y,
+    };
+
     // --- Personal ------------------------------------------------------------
     const npcs = [
       // Die drei Croupiers stehen hinter ihren Tischen und starten das Spiel.
@@ -242,6 +316,7 @@ function baueCasinoSaal(id, ortName, schachtId, saat) {
     return {
       warps: [warp(Math.floor(breite / 2), 1, schachtId, EINSTIEG.schachtUnten.x, EINSTIEG.schachtUnten.y)],
       npcs,
+      schilder: [schild(klopfX + 3, klopfY, 'Shitter. Proberaum. Privat. Bitte dreimal klopfen.')],
       beschriftungen: [],
     };
   });
@@ -287,7 +362,7 @@ function baueBruchbudenGebaeude(bauer, ax, ay, stadtId, ortName) {
 
   baueBruchbude(budeId, ortName, { karte: stadtId, x: tuerX, y: tuerY }, schachtId);
   baueSchacht(schachtId, ortName, budeId, saalId);
-  baueCasinoSaal(saalId, ortName, schachtId, saatAusText(`casino:${stadtId}`));
+  baueCasinoSaal(saalId, ortName, schachtId, saatAusText(`casino:${stadtId}`), stadtId);
 
   return { tuerX, tuerY };
 }
