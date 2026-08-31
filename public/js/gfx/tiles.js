@@ -477,6 +477,26 @@ export const KACHELN = {
       kasten(ctx, '#a8842a', 2, 14, 12, 2);
     },
   },
+  /**
+   * Dieselbe Säule, nur mit einem Nagel auf halber Höhe – die in der Ecke,
+   * an der der blaue Brief hängt. Der Brief selbst steckt bewusst nicht in
+   * der Kachel: Er wird abgenommen und taucht eine halbe Stunde später wieder
+   * auf, das gerenderte Kartenbild steht dagegen fest (siehe
+   * Weltkarte.rendere). Er kommt deshalb zur Laufzeit obendrauf – siehe
+   * zeichneBrief unten und zeichneSaeulenbrief in scenes/welt.js.
+   */
+  briefsaeule: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#a8842a', 3, 0, 10, 16);
+      kasten(ctx, '#e8c860', 4, 0, 7, 16);
+      kasten(ctx, '#fff0b0', 5, 0, 2, 16);
+      kasten(ctx, '#a8842a', 2, 0, 12, 2);
+      kasten(ctx, '#a8842a', 2, 14, 12, 2);
+      kasten(ctx, '#6a4a18', 7, 4, 2, 1);
+    },
+  },
   /** Einarmiger Bandit. Hier hängen die Zocker. */
   automat: {
     fest: true,
@@ -714,6 +734,23 @@ export function zeichneGoldPlatte(ctx, x, y, platz) {
   ctx.fillRect(px + 1, py + 1, 2, 2);
   ctx.fillStyle = '#fff8d8';
   ctx.fillRect(px + 1, py + 1, 1, 1);
+}
+
+/**
+ * Der blaue Brief am Nagel der Briefsäule. Liegt als Auflage über der Kachel,
+ * weil er kommt und geht (siehe die Kachel `briefsaeule` oben).
+ * @param {Ctx} ctx
+ * @param {number} x Pixelposition der Kachel-Ecke auf dem Bildschirm
+ * @param {number} y
+ */
+export function zeichneBrief(ctx, x, y) {
+  kasten(ctx, '#141c3c', x + 4, y + 3, 9, 8);
+  kasten(ctx, '#3858b8', x + 5, y + 4, 7, 6);
+  kasten(ctx, '#6a8ce8', x + 5, y + 4, 7, 1);
+  // Die beiden Falze des Umschlags treffen sich in der Mitte.
+  kasten(ctx, '#243a80', x + 6, y + 5, 5, 1);
+  kasten(ctx, '#243a80', x + 7, y + 6, 3, 1);
+  kasten(ctx, '#c02038', x + 8, y + 8, 2, 2);
 }
 
 /** Dachkachel: versetzte Schindelreihen mit heller Oberkante. */

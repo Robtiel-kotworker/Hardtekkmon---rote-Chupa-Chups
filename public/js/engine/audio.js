@@ -195,8 +195,34 @@ const DATEI_TRACKS = {
   casino: { dateien: ['audio/casino.mp3'] },
 };
 
+/**
+ * Einmalige Klänge aus einer Datei. Anders als die Stücke in DATEI_TRACKS
+ * laufen sie nicht in Schleife und lösen die Musik auch nicht ab: Sie legen
+ * sich einmal obendrauf und sind danach vorbei (siehe spieleKlang).
+ *
+ * `dauer` steht fest verdrahtet hier, weil Szenen die Länge schon beim Laden
+ * des Moduls brauchen – lange bevor die Datei dekodiert ist (siehe
+ * FEUERWERK_BILDER in scenes/welt.js). Der Wert ist an der Datei gemessen:
+ * 135659 Frames bei 44100 Hz.
+ *
+ * Die Datei bleibt wie die Heilmusik unkomprimiert (siehe Kopf der Datei).
+ * Sie ist mit gut drei Sekunden extrem kurz und kostet als WAV deshalb kaum
+ * etwas – und eine Kick, die über die volle Länge an der Aussteuerungsgrenze
+ * klebt (Spitzenpegel 0 dBFS, Mittelwert durchgehend rund -3 dBFS), ist genau
+ * das Material, bei dem ein verlustbehafteter Kodierer als Erstes hörbar wird.
+ */
+const KLANG_DATEIEN = {
+  belohnung: { datei: 'audio/belohnungskick.wav', dauer: 135659 / 44100 },
+};
+
+/** Wie weit die Musik unter einem einmaligen Klang abgesenkt wird. */
+const DUCK_PEGEL = 0.25;
+const MUSIK_PEGEL = 0.8;
+
 /** @type {Object<string, AudioBuffer[]>} Dekodierte Puffer je Track, nach dem Laden. */
 const dateiPuffer = {};
+/** @type {Object<string, AudioBuffer>} Dekodierte Puffer der einmaligen Klänge. */
+const klangPuffer = {};
 /** @type {AudioBufferSourceNode|null} Gerade laufende Audiodatei. */
 let dateiQuelle = null;
 /**
@@ -208,17 +234,24 @@ let dateiQuelle = null;
 let dateiStartZeit = 0;
 let dateiLaenge = 0;
 
+/** Lädt und dekodiert eine Audiodatei zu einem fertigen Puffer. */
+async function ladePuffer(pfad) {
+  const antwort = await fetch(pfad);
+  const rohdaten = await antwort.arrayBuffer();
+  return ctx.decodeAudioData(rohdaten);
+}
+
 /** Lädt und dekodiert alle Audiodateien einmalig im Hintergrund. */
 async function ladeDateien() {
   if (!ctx) return;
-  await Promise.all(Object.entries(DATEI_TRACKS).map(async ([name, eintrag]) => {
-    const puffer = await Promise.all(eintrag.dateien.map(async (pfad) => {
-      const antwort = await fetch(pfad);
-      const rohdaten = await antwort.arrayBuffer();
-      return ctx.decodeAudioData(rohdaten);
-    }));
-    dateiPuffer[name] = puffer;
-  }));
+  await Promise.all([
+    ...Object.entries(DATEI_TRACKS).map(async ([name, eintrag]) => {
+      dateiPuffer[name] = await Promise.all(eintrag.dateien.map(ladePuffer));
+    }),
+    ...Object.entries(KLANG_DATEIEN).map(async ([name, eintrag]) => {
+      klangPuffer[name] = await ladePuffer(eintrag.datei);
+    }),
+  ]);
   // Wurde währenddessen schon ein Datei-Track angefordert, jetzt nachstarten.
   if (DATEI_TRACKS[laufenderTrack] && !dateiQuelle) starteDateiTrack(laufenderTrack);
 }
@@ -332,7 +365,7 @@ export function starteAudio() {
   gabberAusgang.connect(summe);
 
   musikBus = ctx.createGain();
-  musikBus.gain.value = 0.8;
+  musikBus.gain.value = MUSIK_PEGEL;
   musikBus.connect(summe);
 
   summe.connect(ctx.destination);
@@ -625,6 +658,43 @@ const EFFEKTE = {
   // Ein Piep je Stroboskop-Blitz der Heilsequenz.
   heilPuls: { halbtoene: 26, dauer: 0.12, form: 'square', lautstaerke: 0.17 },
 };
+
+/**
+ * Länge eines einmaligen Klangs in Sekunden – siehe KLANG_DATEIEN. Damit
+ * können Szenen ihre Animation auf die Dauer des Klangs legen, ohne die Länge
+ * ein zweites Mal hinzuschreiben. Unbekannte Namen liefern 0.
+ * @param {keyof typeof KLANG_DATEIEN} name
+ */
+export function klangDauer(name) {
+  return KLANG_DATEIEN[name]?.dauer ?? 0;
+}
+
+/**
+ * Spielt einen einmaligen Klang aus einer Datei (siehe KLANG_DATEIEN) über
+ * die laufende Musik. Er hängt direkt an der Summe statt am Musikbus – er
+ * soll ja nicht Teil der Musik sein, sondern über ihr liegen. Damit er das
+ * auch hörbar tut, geht die Musik für seine Dauer zurück und kommt danach
+ * von selbst wieder hoch.
+ *
+ * Ist die Datei noch nicht dekodiert (das Laden läuft im Hintergrund, siehe
+ * ladeDateien), passiert still nichts – ein Belohnungsklang ist keinen
+ * Fehler wert.
+ * @param {keyof typeof KLANG_DATEIEN} name
+ */
+export function spieleKlang(name) {
+  const puffer = klangPuffer[name];
+  if (!ctx || !summe || !musikBus || !puffer) return;
+
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = puffer;
+  quelle.connect(summe);
+  quelle.start();
+
+  const jetzt = ctx.currentTime;
+  musikBus.gain.cancelScheduledValues(jetzt);
+  musikBus.gain.setTargetAtTime(DUCK_PEGEL, jetzt, 0.03);
+  musikBus.gain.setTargetAtTime(MUSIK_PEGEL, jetzt + puffer.duration, 0.25);
+}
 
 /** @param {keyof typeof EFFEKTE} name */
 export function effekt(name) {
