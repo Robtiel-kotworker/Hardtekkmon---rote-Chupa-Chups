@@ -9,10 +9,12 @@
 // Blinder und Stroboskop richten sich nach der Abspielposition des Stücks
 // (trackZeit), nicht nach dem Bildzähler. Der Bildzähler driftet gegenüber
 // der Audio-Uhr weg, sobald einmal ein Bild ausfällt; die Abspielposition
-// nicht. Nach dem ersten Drop läuft einmal ein Roter Chupa Chups durchs Bild.
+// nicht. Alle 20 Sekunden läuft außerdem der Rote Chupa Chups durchs Bild –
+// jedes Mal mit einer anderen Nummer (siehe GAST_AUFTRITTE).
 // ============================================================================
 
 import { BREITE, HOEHE } from '../engine/screen.js';
+import { BILDER_PRO_SEKUNDE } from '../engine/loop.js';
 import { irgendeineGedrueckt } from '../engine/input.js';
 import {
   starteAudio, spieleTrack, effekt, aktuellerTrack,
@@ -30,18 +32,139 @@ import { Weltszene } from './welt.js';
 import { Namensszene } from './namenswahl.js';
 
 /**
- * Der Gastauftritt nach dem ersten Drop, gerechnet in Vierteln ab dem Drop.
- * Bei 168 BPM ist ein Viertel 0,357 s und ein Takt 1,43 s lang.
- *
- *   ab  2 – kommt von links ins Bild gelaufen (2 Takte)
- *   ab 10 – bleibt stehen (1 Takt)
- *   ab 14 – dreht sich um und guckt verdutzt in die Kamera (1,5 Takte)
- *   ab 20 – wippt zum Beat nach rechts aus dem Bild (3 Takte)
+ * Höhe, auf der der Gast läuft (Unterkante des Sprites), und seine Größe.
  */
-const GAST = { start: 2, stehen: 10, gucken: 14, weiter: 20, ende: 32 };
-/** Höhe, auf der der Gast läuft (Unterkante des Sprites). */
 const GAST_BODEN = 104;
 const GAST_GROESSE = 44;
+/** Sekunden zwischen zwei Auftritten. */
+const GAST_ABSTAND = 20;
+
+/** Auf- und Abwippen im Takt der Musik. */
+function wippen(viertel, staerke) {
+  return Math.abs(Math.sin(Math.PI * viertel)) * staerke;
+}
+
+/**
+ * Die Nummern des Gastes. Jede bekommt die Sekunden seit ihrem Beginn und die
+ * laufende Viertelzählung der Musik und liefert zurück, wo und wie er gerade
+ * steht – oder null, wenn die Nummer vorbei ist.
+ *
+ * Rückgabe: { x, hebe, drehung, skala, alpha, frage }
+ */
+
+/** Lustig: läuft rein, stutzt, guckt verdutzt, wippt weiter. */
+function gastVerdutzt(t, viertel) {
+  if (t > 9) return null;
+  const halt = BREITE * 0.2;
+  if (t < 2.4) {
+    return { x: -GAST_GROESSE + (halt + GAST_GROESSE) * (t / 2.4), hebe: wippen(viertel, 3) };
+  }
+  if (t < 3.6) return { x: halt, hebe: wippen(viertel, 0.8) };
+  if (t < 5.8) {
+    // Schreckmoment, danach steht er da und guckt.
+    const seit = t - 3.6;
+    const zucken = seit < 0.5 ? Math.sin(Math.PI * seit * 2) : 0;
+    return { x: halt, hebe: zucken * 5, drehung: zucken * 0.18 + 0.1, frage: Math.min(1, seit / 0.4) };
+  }
+  const anteil = (t - 5.8) / 3.2;
+  return {
+    x: halt + (BREITE + 4 - halt) * anteil,
+    hebe: wippen(viertel, 5),
+    drehung: Math.sin(Math.PI * viertel) * 0.09,
+  };
+}
+
+/**
+ * Verstörend: gleitet herein, ohne einen Schritt zu machen, bleibt stehen,
+ * legt den Kopf immer weiter zur Seite und kommt dabei unmerklich näher.
+ * Kein Wippen – genau das macht es unangenehm.
+ */
+function gastStarren(t) {
+  if (t > 10) return null;
+  const halt = BREITE * 0.42;
+  if (t < 2.5) return { x: -GAST_GROESSE + (halt + GAST_GROESSE) * (t / 2.5) };
+  if (t < 8) {
+    const seit = t - 2.5;
+    return { x: halt, drehung: Math.min(0.55, seit * 0.1), skala: 1 + Math.min(0.35, seit * 0.06) };
+  }
+  return { x: halt + (BREITE + 4 - halt) * ((t - 8) / 2), drehung: 0.55, skala: 1.35 };
+}
+
+/** Ehm, okay: kommt herein, steht da, passiert nichts, geht wieder zurück. */
+function gastNichts(t, viertel) {
+  if (t > 8) return null;
+  const halt = BREITE * 0.26;
+  if (t < 2.2) {
+    return { x: -GAST_GROESSE + (halt + GAST_GROESSE) * (t / 2.2), hebe: wippen(viertel, 3) };
+  }
+  if (t < 5.4) return { x: halt, hebe: wippen(viertel, 1.2) };
+  return { x: halt - (halt + GAST_GROESSE) * ((t - 5.4) / 2.6), hebe: wippen(viertel, 3) };
+}
+
+/** Lustig: schießt viel zu schnell durchs Bild, rutscht zurück, stutzt, weg. */
+function gastSprint(t, viertel) {
+  if (t > 4.2) return null;
+  const mitte = BREITE * 0.36;
+  if (t < 0.7) {
+    return {
+      x: -GAST_GROESSE + (BREITE + GAST_GROESSE * 2) * (t / 0.7),
+      hebe: wippen(viertel * 2, 4),
+      drehung: 0.12,
+    };
+  }
+  if (t < 1.2) {
+    // Bremst draußen und rutscht rückwärts wieder ins Bild.
+    return { x: BREITE + 4 - (BREITE + 4 - mitte) * ((t - 0.7) / 0.5), drehung: -0.1 };
+  }
+  if (t < 2.6) {
+    return { x: mitte, hebe: wippen(viertel, 1.5), frage: Math.min(1, (t - 1.2) / 0.3) };
+  }
+  return {
+    x: mitte + (BREITE + 4 - mitte) * ((t - 2.6) / 1.6),
+    hebe: wippen(viertel * 2, 4),
+    drehung: 0.12,
+  };
+}
+
+/**
+ * Verstörend: steht ohne Vorwarnung mitten im Bild, zuckt, flackert – und ist
+ * genauso unvermittelt wieder weg. Das Zittern kommt aus Sinuswerten der Zeit
+ * statt aus Zufallszahlen, damit es bei jeder Bildrate gleich aussieht.
+ */
+function gastZucken(t) {
+  if (t > 5) return null;
+  const zittern = Math.sin(t * 47) * Math.sin(t * 13.3);
+  return {
+    x: BREITE * 0.5 - GAST_GROESSE / 2 + zittern * 3 + (Math.sin(t * 91) > 0.86 ? 6 : 0),
+    hebe: Math.sin(t * 61) * 2,
+    drehung: zittern * 0.09,
+    alpha: Math.sin(t * 23) > 0.93 ? 0.25 : 1,
+  };
+}
+
+/** Ehm, okay: läuft kopfüber durchs Bild, als wäre das völlig normal. */
+function gastKopfueber(t, viertel) {
+  if (t > 7) return null;
+  return {
+    x: -GAST_GROESSE + (BREITE + GAST_GROESSE * 2) * (t / 7),
+    hebe: wippen(viertel, 3),
+    drehung: Math.PI,
+  };
+}
+
+/**
+ * Der Reihe nach, danach wieder von vorn. Bewusst gemischt: etwas Albernes,
+ * etwas Unheimliches und etwas, bei dem schlicht nichts passiert – damit der
+ * Titelbildschirm nicht in eine Masche verfällt.
+ */
+const GAST_AUFTRITTE = [
+  gastVerdutzt,   // lustig
+  gastStarren,    // verstörend
+  gastNichts,     // ehm, okay
+  gastSprint,     // lustig
+  gastZucken,     // verstörend
+  gastKopfueber,  // ehm, okay
+];
 
 /** Farben der Moving Heads, die pro Takt weitergeschaltet werden. */
 const KOPF_FARBEN = ['64, 208, 240', '224, 64, 88', '240, 192, 64', '160, 96, 240'];
@@ -53,6 +176,12 @@ export class Titelszene {
     this.auswahl = null;
     /** Sprite-Art des Gastes, beim ersten Auftritt einmal geholt. */
     this.gastArt = null;
+    /**
+     * Sekunden, seit die Titelmusik läuft. Läuft im Gegensatz zur
+     * Abspielposition durch, statt bei jeder Schleife des Stücks wieder von
+     * vorn zu beginnen – daran hängt der Takt der Gastauftritte.
+     */
+    this.musikZeit = 0;
   }
 
   betreten() {
@@ -61,6 +190,7 @@ export class Titelszene {
 
   aktualisieren() {
     this.bildzaehler += 1;
+    if (this.zustand !== 'warten') this.musikZeit += 1 / BILDER_PRO_SEKUNDE;
 
     if (this.zustand === 'warten') {
       if (irgendeineGedrueckt()) {
@@ -254,74 +384,46 @@ export class Titelszene {
   }
 
   /**
-   * Der Gastauftritt: Nach dem ersten Drop läuft ein Roter Chupa Chups –
-   * das legendäre Hardtekkmon – von links ins Bild, bleibt stehen, guckt
-   * verdutzt in die Kamera und wippt dann zum Beat weiter nach rechts.
+   * Der Gastauftritt: Alle 20 Sekunden läuft der Rote Chupa Chups – das
+   * legendäre Haupt-Hardtekkmon – einmal durchs Bild, jedes Mal mit einer
+   * anderen Nummer aus GAST_AUFTRITTE. Der erste Auftritt fällt auf den
+   * ersten Drop, danach geht es im festen Abstand weiter.
    *
-   * Beim Laufen zeigt er die Rückansicht (er zieht an uns vorbei), zum
-   * Gucken dreht er sich in die Frontansicht. Der Auftritt hängt allein an
-   * der Abspielposition, läuft mit jeder Schleife des Stücks also erneut.
+   * Gezählt wird in musikZeit, nicht in der Abspielposition: Die läuft bei
+   * 110 s wieder von vorn los, und dann käme in jeder Schleife dieselbe
+   * Nummer an derselben Stelle. Das Wippen hängt dagegen weiter am Takt.
+   *
+   * Es wird durchweg die Frontansicht gezeichnet – das feste Bild dieser Art
+   * zeigt ohnehin nur einen Blickwinkel (siehe gfx/monsprites.js).
    */
   zeichneGast(ctx, takt) {
-    const seitDrop = (takt.zeit - vorlauf('titel')) / takt.schlag;
-    if (seitDrop < GAST.start || seitDrop > GAST.ende) return;
+    const seit = this.musikZeit - vorlauf('titel');
+    if (seit < 0) return;
 
     if (!this.gastArt) this.gastArt = artNachName('Roter Chupa Chups');
     if (!this.gastArt) return;
 
-    const t = seitDrop;
-    const vonLinks = -GAST_GROESSE;
-    const nachRechts = BREITE + 4;
-    // Weit genug links, dass der Lolli beim Stehenbleiben frei bleibt – dort
-    // guckt der Gast in die Kamera, da soll das Logo lesbar bleiben.
-    const halt = BREITE * 0.2;
+    const nummer = Math.floor(seit / GAST_ABSTAND);
+    const auftritt = GAST_AUFTRITTE[nummer % GAST_AUFTRITTE.length];
+    const stand = auftritt(seit - nummer * GAST_ABSTAND, takt.viertel);
+    if (!stand) return;
 
-    let x;
-    let blick = 'rueck';
-    let wippe = 0;
-    let neigung = 0;
-    let frage = 0;
-
-    if (t < GAST.stehen) {
-      // Hereinlaufen, im Takt wippend.
-      const anteil = (t - GAST.start) / (GAST.stehen - GAST.start);
-      x = vonLinks + (halt - vonLinks) * anteil;
-      wippe = Math.abs(Math.sin(Math.PI * t)) * 3;
-    } else if (t < GAST.gucken) {
-      // Kurz stehen bleiben.
-      x = halt;
-      wippe = Math.abs(Math.sin(Math.PI * t)) * 0.8;
-    } else if (t < GAST.weiter) {
-      // Umdrehen und verdutzt gucken: ein kleiner Schreckmoment auf dem
-      // ersten Viertel, danach steht er da und schaut.
-      x = halt;
-      blick = 'front';
-      const seit = t - GAST.gucken;
-      wippe = seit < 1 ? Math.sin(Math.PI * seit) * 5 : 0;
-      neigung = seit < 1 ? Math.sin(Math.PI * seit) * 0.18 : 0.1;
-      frage = Math.min(1, seit / 0.5);
-    } else {
-      // Wippend weiterlaufen.
-      const anteil = (t - GAST.weiter) / (GAST.ende - GAST.weiter);
-      x = halt + (nachRechts - halt) * anteil;
-      wippe = Math.abs(Math.sin(Math.PI * t)) * 5;
-      neigung = Math.sin(Math.PI * t) * 0.09;
-    }
-
-    const y = GAST_BODEN - GAST_GROESSE - wippe;
-    const sprite = monSprite(this.gastArt, blick);
+    const groesse = GAST_GROESSE * (stand.skala ?? 1);
+    // Der Boden bleibt der Boden, auch wenn die Nummer den Gast größer macht.
+    const y = GAST_BODEN - groesse - (stand.hebe ?? 0);
 
     ctx.save();
-    ctx.translate(x + GAST_GROESSE / 2, y + GAST_GROESSE / 2);
-    ctx.rotate(neigung);
-    ctx.drawImage(sprite, -GAST_GROESSE / 2, -GAST_GROESSE / 2, GAST_GROESSE, GAST_GROESSE);
+    ctx.globalAlpha = stand.alpha ?? 1;
+    ctx.translate(stand.x + groesse / 2, y + groesse / 2);
+    if (stand.drehung) ctx.rotate(stand.drehung);
+    ctx.drawImage(monSprite(this.gastArt, 'front'), -groesse / 2, -groesse / 2, groesse, groesse);
     ctx.restore();
 
-    if (frage > 0) {
-      // Fragezeichen über dem Kopf, damit das Verdutztsein auch auf
-      // 240x160 Pixeln ankommt.
-      const fx = x + GAST_GROESSE - 6;
-      const fy = y - 10 + (1 - frage) * 6;
+    if (stand.frage) {
+      // Fragezeichen über dem Kopf, damit das Stutzen auch auf 240x160
+      // Pixeln ankommt.
+      const fx = stand.x + groesse - 6;
+      const fy = y - 10 + (1 - stand.frage) * 6;
       ctx.fillStyle = '#181820';
       ctx.fillRect(fx - 2, fy - 2, 11, 14);
       ctx.fillStyle = UI.gold;

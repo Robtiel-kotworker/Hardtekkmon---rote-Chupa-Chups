@@ -33,8 +33,16 @@ const verwirren = (chance = 1) => ({ art: 'verwirren', chance });
 /** @type {Record<string, object>} */
 export const ATTACKEN = {};
 
-function attacke(name, typ, kategorie, staerke, genauigkeit, ap, effekt, text) {
-  ATTACKEN[name] = { name, typ, kategorie, staerke, genauigkeit, ap, effekt: effekt ?? null, text };
+/**
+ * Vorrang-Attacken kommen bevorzugt zuerst dran: Jede Stufe verschiebt die
+ * Initiative-Chance um 15 Punkte (siehe initiativeChance in battle/formeln.js).
+ * Das ist bewusst nur für schwache, schnelle Attacken vergeben – Vorrang
+ * kostet Durchschlagskraft. Die stärkste Stufe hat entsprechend die
+ * schwächste Attacke im Spiel.
+ * @param {number} vorrang 0 = keiner, sonst die Stufe
+ */
+function attacke(name, typ, kategorie, staerke, genauigkeit, ap, effekt, text, vorrang = 0) {
+  ATTACKEN[name] = { name, typ, kategorie, staerke, genauigkeit, ap, effekt: effekt ?? null, text, vorrang };
 }
 
 // --- KICK -------------------------------------------------------------------
@@ -43,7 +51,7 @@ attacke('Doppelkick', 'KICK', 'physisch', 35, 95, 25, doppelschlag(), 'Zwei Trit
 attacke('Kickdrum', 'KICK', 'physisch', 70, 100, 20, null, 'Ein Schlag mit der Wucht einer Bassdrum.');
 attacke('Vollgas', 'KICK', 'physisch', 90, 90, 15, werte('selbst', { ini: -1 }), 'Alles raus, danach fehlt der Speed.');
 attacke('Bretterwand', 'KICK', 'physisch', 110, 80, 10, rueckstoss(0.25), 'Volle Kanne gegen den Gegner – tut selbst weh.');
-attacke('Kopfnicker', 'KICK', 'physisch', 45, 100, 25, zucken(0.3), 'Nickt so hart, dass der Gegner den Takt verliert.');
+attacke('Kopfnicker', 'KICK', 'physisch', 45, 100, 25, zucken(0.3), 'Nickt so hart, dass der Gegner den Takt verliert.', 1);
 attacke('Stampfer', 'KICK', 'physisch', 65, 95, 20, zucken(0.15), 'Ein Stampfen, das den Boden vibrieren lässt.');
 attacke('Kesselschlacht', 'KICK', 'physisch', 120, 75, 5, rueckstoss(0.33), 'Die letzte Eskalation der Nacht.');
 attacke('Anlauf nehmen', 'KICK', 'status', 0, 100, 20, werte('selbst', { ang: 1, ini: 1 }), 'Kurz Schwung holen, dann geht es los.');
@@ -64,7 +72,7 @@ attacke('Säurelinie', 'ACID', 'spezial', 60, 100, 25, status('verkatert', 0.2),
 attacke('Filterfahrt', 'ACID', 'spezial', 70, 100, 20, werte('gegner', { spv: -1 }, 0.25), 'Der Filter fährt hoch – die Deckung fällt.');
 attacke('Resonanz', 'ACID', 'spezial', 85, 90, 15, verwirren(0.2), 'Eine Resonanz, die im Schädel weiterschwingt.');
 attacke('Acid Bad', 'ACID', 'spezial', 100, 85, 10, werte('gegner', { ver: -1 }, 0.3), 'Ein ätzender Klangteppich.');
-attacke('Tröpfchen', 'ACID', 'spezial', 40, 100, 30, status('verkatert', 0.3), 'Kleine Menge, große Wirkung.');
+attacke('Tröpfchen', 'ACID', 'spezial', 40, 100, 30, status('verkatert', 0.3), 'Kleine Menge, große Wirkung.', 1);
 attacke('Schleichende Dosis', 'ACID', 'status', 0, 85, 15, status('verkatert'), 'Merkt man erst später. Dann aber richtig.');
 attacke('Ätzriff', 'ACID', 'physisch', 75, 95, 15, null, 'Ein Riff mit Widerhaken.');
 attacke('Pupillentanz', 'ACID', 'status', 0, 100, 20, verwirren(), 'Der Blick geht in zwei Richtungen gleichzeitig.');
@@ -158,20 +166,20 @@ attacke('Scratch', 'VINYL', 'physisch', 55, 100, 30, null, 'Kurz, kratzig, effek
 attacke('Plattenwurf', 'VINYL', 'physisch', 70, 95, 20, krit(), 'Zwölf Zoll, scharfe Kante.');
 attacke('Crossfade', 'VINYL', 'status', 0, 100, 20, werte('gegner', { ang: -1, spa: -1 }), 'Blendet die Kraft des Gegners einfach weg.');
 attacke('Beatmatch', 'VINYL', 'status', 0, 100, 15, werte('selbst', { gen: 1, ini: 1 }), 'Wer im Takt liegt, trifft auch besser.');
-attacke('Nadelstich', 'VINYL', 'physisch', 40, 100, 30, status('verkatert', 0.25), 'Die Nadel geht tief in die Rille.');
+attacke('Nadelstich', 'VINYL', 'physisch', 40, 100, 30, status('verkatert', 0.25), 'Die Nadel geht tief in die Rille.', 1);
 attacke('Rillenriss', 'VINYL', 'physisch', 90, 90, 15, null, 'Ein Riss quer über die ganze Platte.');
 attacke('B-Seite', 'VINYL', 'spezial', 80, 95, 15, verwirren(0.2), 'Niemand weiß, was da drauf ist.');
 attacke('Vinyl Vollbrett', 'VINYL', 'physisch', 115, 80, 5, rueckstoss(0.25), 'Das ganze Regal auf einmal.');
 attacke('Staubwischen', 'VINYL', 'status', 0, 100, 10, heilung(0.5), 'Einmal sauber machen, alles läuft wieder.');
 
 // --- Allgemeine Attacken (jedes Hardtekkmon kann sie erlernen) ---------------
-attacke('Rempler', 'KICK', 'physisch', 40, 100, 35, null, 'Ein simpler Schubser.');
+attacke('Rempler', 'KICK', 'physisch', 40, 100, 35, null, 'Ein simpler Schubser.', 1);
 attacke('Anschreien', 'SCHRANZ', 'status', 0, 100, 30, werte('gegner', { ang: -1 }), 'Laut genug, um jeden kleinlaut zu machen.');
-attacke('Zappeln', 'RAVE', 'physisch', 35, 100, 35, null, 'Wildes Gezappel mit Zufallstreffern.');
+attacke('Zappeln', 'RAVE', 'physisch', 35, 100, 35, null, 'Wildes Gezappel mit Zufallstreffern.', 2);
 attacke('Augenringe', 'NEBEL', 'status', 0, 100, 20, werte('gegner', { gen: -1 }), 'Wer so aussieht, macht anderen Angst.');
 attacke('Durchhalten', 'CHEMIE', 'status', 0, 100, 10, werte('selbst', { ver: 1, spv: 1 }), 'Zähne zusammenbeißen und weiter.');
 attacke('Powernap', 'CHEMIE', 'status', 0, 100, 10, heilung(0.5), 'Zwanzig Minuten reichen völlig.');
-attacke('Schulterstoß', 'DONK', 'physisch', 50, 100, 30, null, 'Kurzer Rempler mit der Schulter.');
+attacke('Schulterstoß', 'DONK', 'physisch', 50, 100, 30, null, 'Kurzer Rempler mit der Schulter.', 1);
 attacke('Kaltgetränk', 'CHEMIE', 'status', 0, 100, 10, heilung(0.35), 'Erfrischt und macht den Kopf frei.');
 
 /**

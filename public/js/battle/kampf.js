@@ -15,7 +15,7 @@ import {
 } from '../game/hardtekkmon.js';
 import { gegenstandInfo } from '../data/gegenstaende.js';
 import {
-  berechneSchaden, trifft, istSchneller, erfahrungFuerSieg, fangversuch,
+  berechneSchaden, trifft, spielerHatInitiative, erfahrungFuerSieg, fangversuch,
   fluchtGelingt, zustandsschaden, STUFEN_GRENZE,
 } from './formeln.js';
 import { waehleGegnerAttacke } from './gegner.js';
@@ -433,6 +433,23 @@ function pruefeUmgekippt(kampf, ereignisse) {
 }
 
 /**
+ * Vorrangstufe der Attacke, die dieser Kämpfer gleich ausführt. Greift auf
+ * dieselbe Ersatzwahl zurück wie fuehreAttacke(): Ist die gewählte Attacke
+ * ohne AP, zählt der Vorrang der Attacke, die stattdessen kommt – sonst
+ * würde die Reihenfolge nach einer Attacke ausgerechnet, die gar nicht
+ * ausgeführt wird.
+ */
+function vorrangVon(kaempfer, attackenIndex) {
+  const eintrag = kaempfer.mon.attacken[attackenIndex];
+  let attacke = eintrag && eintrag.ap > 0 ? findeAttacke(eintrag.name) : null;
+  if (!attacke) {
+    const ersatz = kaempfer.mon.attacken.find((a) => a.ap > 0 && findeAttacke(a.name));
+    attacke = ersatz ? findeAttacke(ersatz.name) : null;
+  }
+  return attacke?.vorrang ?? 0;
+}
+
+/**
  * Rechnet eine komplette Runde.
  * @param {object} kampf
  * @param {{ art: 'attacke'|'gegenstand'|'wechsel'|'flucht', index?: number, gegenstand?: string, zielIndex?: number }} aktion
@@ -470,13 +487,18 @@ export function fuehreRunde(kampf, aktion) {
 
   const gegnerIndex = waehleGegnerAttacke(kampf.gegner, kampf.eigene);
   const spielerFaengtAn = spielerZugOffen
-    ? istSchneller(kampf.eigene, kampf.gegner)
+    ? spielerHatInitiative(
+      kampf.eigene, kampf.gegner,
+      vorrangVon(kampf.eigene, aktion.index),
+      vorrangVon(kampf.gegner, gegnerIndex),
+    )
     : false;
 
   const zuege = [];
   if (spielerZugOffen) zuege.push({ seite: 'spieler', index: aktion.index });
   zuege.push({ seite: 'gegner', index: gegnerIndex });
-  // Beide greifen an: Der Schnellere kommt zuerst.
+  // Beide greifen an: Die ausgewürfelte Initiative entscheidet (siehe
+  // initiativeChance in battle/formeln.js).
   if (zuege.length === 2 && !spielerFaengtAn) zuege.reverse();
 
   for (const zug of zuege) {

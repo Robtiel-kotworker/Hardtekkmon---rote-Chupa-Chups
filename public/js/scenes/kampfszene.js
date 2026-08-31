@@ -40,6 +40,15 @@ const SPRITE = 56;
 const WARTE = { text: 24, treffer: 20, wechsel: 26, wurf: 34, kurz: 12 };
 
 /**
+ * Was in der Infobox neben dem Namen belegt ist: 5 Pixel Rand links, die
+ * Stufenangabe rechts (26) und 4 Pixel Luft dazwischen. Was darüber
+ * hinausgeht, lässt den Kasten mitwachsen (siehe zeichneInfobox).
+ */
+const NAMENSPLATZ_ABZUG = 35;
+/** Breite des Fang-Symbols samt Abstand, falls es neben dem Namen steht. */
+const FANGSYMBOL_PLATZ = 11;
+
+/**
  * Kampfmusik nach Gegnerart. Es gibt genau diese beiden Kampfarten – wild
  * und trainer, vergeben in starteWildkampf() und starteTrainerkampf() der
  * Weltszene –, damit deckt die Tabelle alle Kämpfe ab:
@@ -643,9 +652,10 @@ export class Kampfszene {
    * schwach angedeutet.
    */
   zeichneGegnerTeam(ctx) {
-    const anzahl = this.kampf.gegnerTeam.length;
+    const team = this.kampf.gegnerTeam;
     for (let i = 0; i < 6; i += 1) {
-      teamPlatte(ctx, 8 + i * 11, 1, i < anzahl);
+      const belegt = i < team.length;
+      teamPlatte(ctx, 8 + i * 11, 1, belegt, belegt && istUmgekippt(team[i]));
     }
   }
 
@@ -698,16 +708,31 @@ export class Kampfszene {
    * Anzeige über ein Hardtekkmon.
    * @param {boolean} eigenes zeigt zusätzlich Kraftpunkte und Erfahrung
    */
-  zeichneInfobox(ctx, mon, x, y, eigenes) {
-    const breite = eigenes ? 108 : 104;
+  zeichneInfobox(ctx, mon, ankerX, y, eigenes) {
+    const name = anzeigename(mon);
+    const zeigtFang = !eigenes && this.kampf.art === 'wild' && spiel.gefangen.has(mon.artId);
+
+    // Lange Namen (die längste Art heißt "Schranzgeneral Siegfried") liefen
+    // bisher in die Stufenangabe hinein und wirkten im Kasten gequetscht.
+    // Passt der Name nicht in den Grundkasten, wächst der Kasten um genau so
+    // viel mit, wie fehlt – kurze Namen sehen also aus wie bisher.
+    const grundBreite = eigenes ? 108 : 104;
+    const namensPlatz = grundBreite - NAMENSPLATZ_ABZUG;
+    const gebraucht = textBreite(name) + (zeigtFang ? FANGSYMBOL_PLATZ : 0);
+    const ueberhang = Math.max(0, gebraucht - namensPlatz);
+    const breite = grundBreite + ueberhang;
+    // Die eigene Anzeige steht rechts am Bildrand und wächst deshalb nach
+    // links, die des Gegners steht links und wächst nach rechts – so bleibt
+    // der Kasten in beiden Fällen vollständig im Bild.
+    const x = eigenes ? ankerX - ueberhang : ankerX;
+
     const hoehe = eigenes ? 40 : 30;
     fenster(ctx, x, y, breite, hoehe);
 
-    const name = anzeigename(mon);
     zeichneText(ctx, name, x + 5, y + 4, { farbe: UI.text });
     // Wildes, schon einmal gefangenes Hardtekkmon: kleines Fang-Symbol neben
     // dem Namen, wie im Tekkdex.
-    if (!eigenes && this.kampf.art === 'wild' && spiel.gefangen.has(mon.artId)) {
+    if (zeigtFang) {
       fangSymbol(ctx, x + 5 + textBreite(name) + 3, y + 3);
     }
     zeichneText(ctx, `St.${mon.stufe}`, x + breite - 26, y + 4, { farbe: UI.text });
