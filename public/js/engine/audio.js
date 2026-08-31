@@ -88,20 +88,11 @@ function hz(halbtoene) {
  *                   nicht nur lauter, sondern hörbar dreckiger; Werte unter 1
  *                   halten sie drinnen-tauglich rund.
  *
- * Titel, Boxenstopp und Sieg sind die einzigen noch synthetisch erzeugten
- * Stücke – alle Orts- und Kampf-Tracks laufen als Audiodateien (siehe
- * DATEI_TRACKS unten).
+ * Boxenstopp und Sieg sind die einzigen noch synthetisch erzeugten Stücke –
+ * Titel-, Orts- und Kampfmusik laufen als Audiodateien (siehe DATEI_TRACKS
+ * unten).
  */
 const TRACKS = {
-  titel: {
-    bpm: 136,
-    kick: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-    hat: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
-    bass: [-24, null, null, null, -24, null, -19, null, -22, null, null, null, -22, null, -17, null],
-    // Aufsteigendes Dur-Arpeggio und zurück – die Art kurzer, singbarer
-    // Fanfare, mit der viele Titelmelodien im Genre öffnen.
-    lead: [0, null, 4, null, 7, null, 12, null, 12, null, 7, null, 4, null, null, null],
-  },
   // --- Boxenstopp (Heilungscenter, außerhalb der Heilsequenz) ---------------
   // Bleibt der Ruhepol, ist aber nicht mehr so karg: durchgehender halber
   // Puls, weiche Kick und eine vollständig ausgespielte, tröstliche Linie.
@@ -158,6 +149,28 @@ const HEILUNG_KICK_S = 129764 / 44100;
  * dem sich das ableiten ließe.
  */
 const DATEI_TRACKS = {
+  /**
+   * Titelmusik. Die Werte sind am Stück gemessen (siehe unten) und treiben
+   * die Beat-Synchronität des Titelbilds in scenes/titel.js:
+   *
+   *   schlagDauer – ein Viertel. Das Stück läuft auf exakt 168 BPM: bei
+   *                 110,000 s Länge sind das genau 308 Viertel bzw. 77 Takte,
+   *                 und ein Kammfilter über die Tiefband-Hüllkurve zeigt bei
+   *                 168 BPM einen um den Faktor 4 höheren Ausschlag als bei
+   *                 allen Nachbartempi.
+   *   phase       – Versatz des Viertelrasters gegenüber dem Dateianfang.
+   *                 Auf diesen Punkten liegt gut das Doppelte der mittleren
+   *                 Tiefbandenergie, das Raster sitzt also auf der Kick.
+   *   vorlauf     – der erste Drop bei 4,999 s. Davor baut das Stück über
+   *                 zwei Riser auf (dazwischen ein kurzer Einschub bei
+   *                 3,95-4,32 s); ab hier läuft es dann durch.
+   */
+  titel: {
+    dateien: ['audio/titel.mp3'],
+    schlagDauer: 60 / 168,
+    phase: 0.131,
+    vorlauf: 4.999,
+  },
   welt: { dateien: ['audio/stadt.mp3'] },
   route: { dateien: ['audio/route.mp3'] },
   gebaeude: { dateien: ['audio/gebaeude.mp3'] },
@@ -183,6 +196,14 @@ const DATEI_TRACKS = {
 const dateiPuffer = {};
 /** @type {AudioBufferSourceNode|null} Gerade laufende Audiodatei. */
 let dateiQuelle = null;
+/**
+ * Uhrzeit des Audiokontexts, zu der die laufende Datei angefangen hat, und
+ * ihre Länge. Daraus liest trackZeit() die Abspielposition – die Grundlage
+ * für alles, was sich im Bild nach der Musik richten soll (siehe
+ * Beat-Synchronität des Titelbilds in scenes/titel.js).
+ */
+let dateiStartZeit = 0;
+let dateiLaenge = 0;
 
 /** Lädt und dekodiert alle Audiodateien einmalig im Hintergrund. */
 async function ladeDateien() {
@@ -210,7 +231,7 @@ function stoppeDateiQuelle() {
   dateiQuelle = null;
 }
 
-/** Einzelne Datei in Dauerschleife (Stadt, Route, Gebäude, Gig, Heilung). */
+/** Einzelne Datei in Dauerschleife (Titel, Stadt, Route, Gebäude, Gig, Heilung). */
 function starteEinzelschleife(name) {
   const puffer = dateiPuffer[name]?.[0];
   if (!ctx || !musikBus || !puffer) return;
@@ -220,6 +241,8 @@ function starteEinzelschleife(name) {
   quelle.connect(musikBus);
   quelle.start();
   dateiQuelle = quelle;
+  dateiStartZeit = ctx.currentTime;
+  dateiLaenge = puffer.duration;
 }
 
 /**
@@ -375,6 +398,33 @@ export function schlagDauer(name) {
  */
 export function vorlauf(name) {
   return DATEI_TRACKS[name]?.vorlauf ?? 0;
+}
+
+/**
+ * Versatz des Viertelrasters gegenüber dem Dateianfang in Sekunden. Die
+ * Schläge eines Stücks liegen bei beatPhase + n * schlagDauer.
+ * @param {keyof typeof DATEI_TRACKS} name
+ */
+export function beatPhase(name) {
+  return DATEI_TRACKS[name]?.phase ?? 0;
+}
+
+/**
+ * Abspielposition des laufenden Datei-Tracks in Sekunden, auf die Länge des
+ * Stücks umgebrochen (die Dateien laufen in Dauerschleife). Damit lassen sich
+ * Animationen an der Musik ausrichten, statt am Bildzähler zu hängen – der
+ * driftet gegenüber der Audio-Uhr weg, sobald ein Bild ausfällt.
+ *
+ * Liefert null, solange keine Datei läuft: vor der ersten Eingabe gibt es
+ * noch keinen Audiokontext, und die synthetischen Stücke (Boxenstopp, Sieg)
+ * haben keine Datei. Aufrufer müssen diesen Fall abfangen.
+ * @returns {number|null}
+ */
+export function trackZeit() {
+  if (!ctx || !dateiQuelle || dateiLaenge <= 0) return null;
+  const seit = ctx.currentTime - dateiStartZeit;
+  if (seit < 0) return 0;
+  return seit % dateiLaenge;
 }
 
 /** Kick: kurzer Sinus mit fallender Tonhöhe, danach in den Verzerrer. */
