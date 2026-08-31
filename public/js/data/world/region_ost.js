@@ -11,6 +11,7 @@ import { baueKarte, person, kaempfer, schild, fundstueck, warp } from './verzeic
 import {
   setzeBoxenstopp, setzeKiosk, setzeGigHalle, setzeWohnhaus, baueBackstageRaum,
 } from './innenraeume.js';
+import { setzeBruchbude } from './casino.js';
 
 const mitteX = (breite) => Math.floor(breite / 2) - 1;
 const mitteY = (hoehe) => Math.floor(hoehe / 2) - 1;
@@ -85,6 +86,9 @@ baueKarte('schranzheim', {
 
   setzeBoxenstopp(bauer, 4, 8, 'schranzheim', 'Schranzheim');
   setzeKiosk(bauer, 30, 8, 'schranzheim', 'Schranzheim', KIOSK_GROSS);
+  // Unscheinbare Bruchbude oberhalb des Einkaufszentrums – unten drunter
+  // liegt das Casino (siehe world/casino.js).
+  setzeBruchbude(bauer, 30, 3, 'schranzheim', 'Schranzheim');
   setzeGigHalle(bauer, 24, 22, 'schranzheim', {
     id: 'gig4', ort: 'Schranzheim', leiter: 'gig4', marke: 3,
     trainer: [[4, 11, 'raver', 'schranz_dennis'], [12, 11, 'maedchen', 'schranz_sina'],
@@ -320,6 +324,7 @@ baueKarte('glitchstadt', {
 
   setzeBoxenstopp(bauer, 4, 6, 'glitchstadt', 'Glitchstadt');
   setzeKiosk(bauer, 28, 6, 'glitchstadt', 'Glitchstadt', KIOSK_GROSS);
+  setzeBruchbude(bauer, 28, 2, 'glitchstadt', 'Glitchstadt');
   setzeGigHalle(bauer, 22, 20, 'glitchstadt', {
     id: 'gig7', ort: 'Glitchstadt', leiter: 'gig7', marke: 6,
     trainer: [[4, 11, 'wache', 'glitch_tom'], [12, 11, 'maedchen', 'glitch_bea'],

@@ -10,6 +10,7 @@ import { baueKarte, person, kaempfer, schild, fundstueck, warp } from './verzeic
 import {
   baueSpielerzimmer, baueLabor, setzeBoxenstopp, setzeKiosk, setzeGigHalle, setzeWohnhaus,
 } from './innenraeume.js';
+import { setzeBruchbude } from './casino.js';
 
 /** Hauptweg-Position: immer mittig, damit die Karten sauber anschließen. */
 const mitteX = (breite) => Math.floor(breite / 2) - 1;
@@ -500,6 +501,7 @@ baueKarte('subwoofer_city', {
 
   setzeBoxenstopp(bauer, 4, 8, 'subwoofer_city', 'Subwoofer City');
   setzeKiosk(bauer, 12, 8, 'subwoofer_city', 'Subwoofer City', KIOSK_MITTEL);
+  setzeBruchbude(bauer, 12, 3, 'subwoofer_city', 'Subwoofer City');
   setzeGigHalle(bauer, 22, 20, 'subwoofer_city', {
     id: 'gig2', ort: 'Subwoofer City', leiter: 'gig2', marke: 1,
     trainer: [[4, 11, 'raver', 'sub_basti'], [12, 11, 'schrauber', 'sub_bodo'],

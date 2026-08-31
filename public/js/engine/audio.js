@@ -190,6 +190,9 @@ const DATEI_TRACKS = {
   kampf: {
     dateien: ['audio/kampf_v1.mp3', 'audio/kampf_v2.mp3', 'audio/kampf_v3.mp3', 'audio/kampf_v4.mp3'],
   },
+  // Nur im Casinosaal unten (siehe data/world/casino.js) – Bruchbude und
+  // Treppenschacht darüber laufen weiterhin unter 'gebaeude'.
+  casino: { dateien: ['audio/casino.mp3'] },
 };
 
 /** @type {Object<string, AudioBuffer[]>} Dekodierte Puffer je Track, nach dem Laden. */

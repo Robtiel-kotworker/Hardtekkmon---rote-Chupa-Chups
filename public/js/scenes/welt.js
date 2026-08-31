@@ -101,6 +101,63 @@ const HEIL_BLITZ_BILDER = Math.max(1, Math.round(HEIL_TICK_BILDER / HEIL_BLITZE_
 /** Deckkraft des hellsten Stroboskop-Blitzes. */
 const HEIL_BLITZ = 0.72;
 
+/**
+ * Die Zocker im Casino (Bewegungsart 'zocker'). Sie hängen am Automaten,
+ * schrecken hoch, rennen wirr umher und drehen nach einem Gewinn Runden.
+ */
+const ZOCKER_RICHTUNGEN = ['oben', 'unten', 'links', 'rechts'];
+/**
+ * Lauftempo je Zustand in Pixeln pro Bild. Beim wirren Rennen und erst recht
+ * bei den Ehrenrunden sind sie schneller unterwegs als der Spieler – anders
+ * wäre eine Runde durch den ganzen Saal eine halbe Minute lang.
+ */
+const ZOCKER_TEMPO = { wirr: 3, jubel: 4, zurueck: 2 };
+/**
+ * Wie lange am Automaten gewartet wird, bevor wieder etwas passiert. Bewusst
+ * lang: Die Zocker sollen primär am Automaten hängen, alles andere ist die
+ * Ausnahme.
+ */
+const ZOCKER_WARTEZEIT = { zocken: 420, schreck: 26, wirr: 0, jubel: 0, zurueck: 60 * 20 };
+/** Zusätzliche zufällige Wartezeit am Automaten. */
+const ZOCKER_WARTE_STREUUNG = 600;
+/** Wie oft ein Aufschrecken stattdessen ein Gewinn ist – selten. */
+const ZOCKER_GEWINN_CHANCE = 0.1;
+/** Ehrenrunden nach einem Gewinn. */
+const ZOCKER_RUNDEN = 5;
+/**
+ * Wie nah an einer Ecke sie als erreicht gilt. Exakt drauftreten scheitert,
+ * wenn dort dauerhaft jemand steht – und im Saal steht an einer Ecke ein
+ * Automat samt Bedienung.
+ */
+const ZOCKER_ECKE_NAH = 2;
+/** Notbremse: So viele Bilder darf eine Jubelrunde höchstens dauern. */
+const ZOCKER_JUBEL_HOECHSTDAUER = 60 * 90;
+
+/** Kacheln, die auf dunklen Karten selbst Licht abgeben. */
+const LEUCHTKACHELN = new Set(['schachtlampe', 'laterne']);
+/** Reichweite eines solchen Lichtkreises in Pixeln. */
+const LAMPEN_RADIUS = 34;
+
+/**
+ * Richtungen zu einem Ziel, in der Reihenfolge, in der sie probiert werden
+ * sollen: erst die längere Achse, dann die kürzere, dann die beiden
+ * Gegenrichtungen als Ausweichmöglichkeit.
+ *
+ * Die Ausweichrichtungen sind der Grund, warum das hier eine Liste ist und
+ * keine einzelne Richtung: Wer stur nur auf die Hauptachse zuläuft, bleibt an
+ * der ersten Säule oder dem ersten Tisch für immer hängen.
+ */
+function richtungenZu(figur, ziel) {
+  const dx = ziel.x - figur.x;
+  const dy = ziel.y - figur.y;
+  const waagerecht = dx >= 0 ? 'rechts' : 'links';
+  const senkrecht = dy >= 0 ? 'unten' : 'oben';
+  const zuerst = Math.abs(dx) >= Math.abs(dy)
+    ? [waagerecht, senkrecht]
+    : [senkrecht, waagerecht];
+  return [...zuerst, GEGENRICHTUNG[zuerst[1]], GEGENRICHTUNG[zuerst[0]]];
+}
+
 /** Die drei Anfänger im Labor. */
 const STARTER = { 1: 'Kickolaus', 2: 'Bassbert', 3: 'Acidchen' };
 
@@ -690,7 +747,14 @@ export class Weltszene {
 
   aktualisiereFiguren() {
     for (const npc of this.karte?.npcs ?? []) {
-      if (npc.entfernt || npc.laeuft) continue;
+      if (npc.entfernt) continue;
+
+      if (npc.bewegung === 'zocker') {
+        this.aktualisiereZocker(npc);
+        continue;
+      }
+
+      if (npc.laeuft) continue;
       if (npc.bewegung !== 'drehen') continue;
 
       npc.wartezeit -= 1;
@@ -700,6 +764,141 @@ export class Weltszene {
         npc.richtung = richtungen[Math.floor(Math.random() * richtungen.length)];
       }
     }
+  }
+
+  /**
+   * Die Zocker im Casino. Vier Zustände, die ineinander übergehen:
+   *
+   *   zocken  – kleben am Automaten, starren ihn an. Der Normalzustand.
+   *             Ab und zu schrecken sie hoch (-> schreck) und ganz selten
+   *             gewinnen sie etwas (-> jubel).
+   *   schreck – zucken kurz zusammen und sehen sich um.
+   *   wirr    – rennen ein paar Schritte völlig planlos umher.
+   *   jubel   – nach einem Gewinn fünf Runden quer durch den Saal.
+   *
+   * Nach wirr und jubel geht es immer zurück an den eigenen Automaten.
+   */
+  aktualisiereZocker(npc) {
+    if (npc.zustand === undefined) this.setzeZockerZustand(npc, 'zocken');
+    // Die Notbremse laeuft in echten Bildern, auch waehrend eines Schritts.
+    if (npc.zustand === 'jubel') npc.jubelRest -= 1;
+
+    // Ein begonnener Schritt wird immer zu Ende gelaufen.
+    if (npc.laeuft) {
+      if (!bewegeFigur(npc, ZOCKER_TEMPO[npc.zustand] ?? 2)) return;
+      if (npc.zustand === 'zurueck' && npc.x === npc.platz.x && npc.y === npc.platz.y) {
+        this.setzeZockerZustand(npc, 'zocken');
+      }
+      return;
+    }
+
+    npc.wartezeit -= 1;
+
+    switch (npc.zustand) {
+      case 'zocken': {
+        npc.richtung = 'links';
+        if (npc.wartezeit > 0) return;
+        // Selten ein Gewinn, sonst nur ein Schreck.
+        if (Math.random() < ZOCKER_GEWINN_CHANCE) {
+          npc.runden = ZOCKER_RUNDEN;
+          npc.jubelRest = ZOCKER_JUBEL_HOECHSTDAUER;
+          this.setzeZockerZustand(npc, 'jubel');
+        } else {
+          this.setzeZockerZustand(npc, 'schreck');
+        }
+        return;
+      }
+
+      case 'schreck': {
+        // Zusammenzucken: dreht sich hektisch um, läuft aber noch nicht.
+        npc.richtung = ZOCKER_RICHTUNGEN[Math.floor(Math.random() * 4)];
+        if (npc.wartezeit > 0) return;
+        npc.schritte = 3 + Math.floor(Math.random() * 5);
+        this.setzeZockerZustand(npc, 'wirr');
+        return;
+      }
+
+      case 'wirr': {
+        if (npc.schritte <= 0) { this.setzeZockerZustand(npc, 'zurueck'); return; }
+        npc.schritte -= 1;
+        this.laufeZockerSchritt(npc, ZOCKER_RICHTUNGEN[Math.floor(Math.random() * 4)]);
+        return;
+      }
+
+      case 'jubel': {
+        // Fünf Runden quer durch den Saal: immer die nächste Ecke ansteuern.
+        // Die Notbremse über wartezeit stellt sicher, dass ein Zocker auch
+        // dann irgendwann zurückkehrt, wenn ihm der Weg dauerhaft verstellt
+        // ist – sonst würde er bis zum Kartenwechsel im Saal kreisen.
+        if (npc.runden <= 0 || npc.jubelRest <= 0) {
+          this.setzeZockerZustand(npc, 'zurueck');
+          return;
+        }
+        const ziel = this.zockerEcke(npc);
+        if (Math.abs(npc.x - ziel.x) + Math.abs(npc.y - ziel.y) <= ZOCKER_ECKE_NAH) {
+          npc.ecke = (npc.ecke + 1) % 4;
+          // Eine volle Runde ist herum, wenn wieder die erste Ecke ansteht.
+          if (npc.ecke === 0) npc.runden -= 1;
+          return;
+        }
+        this.laufeZockerSchritt(npc, richtungenZu(npc, ziel));
+        return;
+      }
+
+      case 'zurueck':
+      default: {
+        // Angekommen – oder lange genug unterwegs. Der Zeitpuffer ist die
+        // Absicherung gegen zwei Zocker, die sich gegenseitig den eigenen
+        // Automaten verstellen: Dann setzt sich eben jeder an den, vor dem
+        // er gerade steht, statt bis in alle Ewigkeit hin und her zu laufen.
+        if ((npc.x === npc.platz.x && npc.y === npc.platz.y) || npc.wartezeit <= 0) {
+          this.setzeZockerZustand(npc, 'zocken');
+          return;
+        }
+        this.laufeZockerSchritt(npc, richtungenZu(npc, npc.platz));
+        return;
+      }
+    }
+  }
+
+  setzeZockerZustand(npc, zustand) {
+    npc.zustand = zustand;
+    npc.ecke = npc.ecke ?? 0;
+    npc.wartezeit = ZOCKER_WARTEZEIT[zustand] ?? 60;
+    if (zustand === 'zocken') npc.wartezeit += Math.floor(Math.random() * ZOCKER_WARTE_STREUUNG);
+  }
+
+  /** Die vier Ecken des Saals, die beim Jubel abgeklappert werden. */
+  zockerEcke(npc) {
+    const ecken = [
+      { x: 3, y: 3 },
+      { x: this.karte.breite - 4, y: 3 },
+      { x: this.karte.breite - 4, y: this.karte.hoehe - 4 },
+      { x: 3, y: this.karte.hoehe - 4 },
+    ];
+    return ecken[npc.ecke % ecken.length];
+  }
+
+  /**
+   * Setzt den Zocker einen Schritt in Bewegung – aber nur, wenn das Ziel frei
+   * ist. Sonst bleibt er stehen und dreht sich nur; der nächste Durchlauf
+   * versucht es erneut. Dadurch laufen die Zocker nie in Wände, in Automaten
+   * oder in den Spieler.
+   */
+  laufeZockerSchritt(npc, richtungen) {
+    const liste = Array.isArray(richtungen) ? richtungen : [richtungen];
+    npc.richtung = liste[0];
+    for (const richtung of liste) {
+      const vektor = RICHTUNGS_VEKTOR[richtung];
+      const zielX = npc.x + vektor.x;
+      const zielY = npc.y + vektor.y;
+      if (!this.karte.istBegehbar(zielX, zielY)) continue;
+      if (this.figur.x === zielX && this.figur.y === zielY) continue;
+      npc.richtung = richtung;
+      starteSchritt(npc);
+      return;
+    }
+    // Alles dicht: stehen bleiben und es im nächsten Bild erneut versuchen.
   }
 
   // --- Ansprechen ------------------------------------------------------------
@@ -839,6 +1038,14 @@ export class Weltszene {
         });
         break;
 
+      case 'casino':
+        this.zeigeText(npc.text, () => {
+          import('./casino.js').then(({ Casinoszene }) => {
+            schiebe(new Casinoszene(aktion.spiel));
+          });
+        });
+        break;
+
       case 'professor':
         this.zeigeText(spiel.startgewaehlt
           ? 'Prof. Wummer: "Na, {name}, läuft die Anlage? Dann raus mit dir, die Welt wartet."'
@@ -963,6 +1170,38 @@ export class Weltszene {
 
     ctx.fillStyle = verlauf;
     ctx.fillRect(0, 0, BREITE, HOEHE);
+
+    this.zeichneLampenlicht(ctx, kamera);
+  }
+
+  /**
+   * Lampen an der Wand reißen kleine Löcher in die Dunkelheit. Gezeichnet
+   * wird additiv über die schwarze Schicht: ein warmer Lichtkreis je Lampe,
+   * die gerade im Bild ist. Ohne das wäre der Treppenschacht auf ganzer
+   * Länge gleich schwarz und die Funzeln nur Deko.
+   */
+  zeichneLampenlicht(ctx, kamera) {
+    const vonX = Math.floor(kamera.x / KACHEL) - 1;
+    const bisX = Math.ceil((kamera.x + BREITE) / KACHEL) + 1;
+    const vonY = Math.floor(kamera.y / KACHEL) - 1;
+    const bisY = Math.ceil((kamera.y + HOEHE) / KACHEL) + 1;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let y = vonY; y <= bisY; y += 1) {
+      for (let x = vonX; x <= bisX; x += 1) {
+        if (!LEUCHTKACHELN.has(this.karte.kachelAn(x, y))) continue;
+        const mx = x * KACHEL - kamera.x + KACHEL / 2;
+        const my = y * KACHEL - kamera.y + KACHEL / 2;
+        const verlauf = ctx.createRadialGradient(mx, my, 1, mx, my, LAMPEN_RADIUS);
+        verlauf.addColorStop(0, 'rgba(255, 232, 154, 0.55)');
+        verlauf.addColorStop(0.5, 'rgba(255, 216, 120, 0.20)');
+        verlauf.addColorStop(1, 'rgba(255, 200, 90, 0)');
+        ctx.fillStyle = verlauf;
+        ctx.fillRect(mx - LAMPEN_RADIUS, my - LAMPEN_RADIUS, LAMPEN_RADIUS * 2, LAMPEN_RADIUS * 2);
+      }
+    }
+    ctx.restore();
   }
 
   /**
