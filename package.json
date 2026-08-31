@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Hardtekkmon – Rote Chupa Chups: reines HTML/CSS/JS-Spiel (kein Build-Schritt), zusätzlich als eigenständige iOS-App über Capacitor.",
   "scripts": {
-    "build": "node tools/pruefe-welt.mjs && node tools/pruefe-kampf.mjs && node tools/pruefe-quellen.mjs",
+    "build": "node tools/pruefe-welt.mjs && node tools/pruefe-kampf.mjs && node tools/pruefe-quellen.mjs && node tools/pruefe-casino.mjs",
     "ios:add": "cap add ios",
     "ios:sync": "npm run build && cap sync ios",
     "ios:open": "cap open ios",

@@ -416,6 +416,169 @@ export const KACHELN = {
       kasten(ctx, '#902838', 4, 4, 8, 8);
     },
   },
+
+  // --- Casino ---------------------------------------------------------------
+  // Der Saal unter der Bruchbude: tiefroter Teppich, Gold, Samt. Bewusst
+  // satter als alles andere im Spiel – der Kontrast zum Treppenschacht
+  // darüber ist der ganze Witz.
+  teppichRot: {
+    varianten: 2,
+    zeichne(ctx, rnd) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#a81c30', 1, 1, 14, 14);
+      // Eingewebtes Rautenmuster, damit die Fläche nicht tot wirkt.
+      kasten(ctx, '#7a1020', 7, 3, 2, 2);
+      kasten(ctx, '#7a1020', 3, 7, 2, 2);
+      kasten(ctx, '#7a1020', 11, 7, 2, 2);
+      kasten(ctx, '#7a1020', 7, 11, 2, 2);
+      sprenkeln(ctx, rnd, '#c02840', 4);
+    },
+  },
+  /** Goldener Läufer: die Bahn vom Treppenfuß bis zu den Tischen. */
+  teppichGold: {
+    zeichne(ctx) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#c8a032', 0, 2, 16, 12);
+      kasten(ctx, '#e8c860', 0, 3, 16, 9);
+      kasten(ctx, '#a8842a', 0, 12, 16, 2);
+    },
+  },
+  goldwand: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#3a2018');
+      kasten(ctx, '#5a3020', 0, 0, 16, 14);
+      kasten(ctx, '#c8a032', 0, 14, 16, 2);
+      kasten(ctx, '#7a4428', 2, 2, 12, 10);
+      kasten(ctx, '#e8c860', 3, 3, 10, 1);
+    },
+  },
+  /** Goldene Lampe an der Wand – der Casino-Saal ist voll davon. */
+  goldlampe: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#3a2018');
+      kasten(ctx, '#5a3020', 0, 0, 16, 14);
+      kasten(ctx, '#c8a032', 0, 14, 16, 2);
+      kasten(ctx, '#8a6420', 6, 2, 4, 3);
+      kasten(ctx, '#e8c860', 4, 5, 8, 5);
+      kasten(ctx, '#fff0b0', 5, 6, 6, 3);
+      kasten(ctx, '#fffce0', 6, 7, 4, 1);
+    },
+  },
+  goldsaeule: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#a8842a', 3, 0, 10, 16);
+      kasten(ctx, '#e8c860', 4, 0, 7, 16);
+      kasten(ctx, '#fff0b0', 5, 0, 2, 16);
+      kasten(ctx, '#a8842a', 2, 0, 12, 2);
+      kasten(ctx, '#a8842a', 2, 14, 12, 2);
+    },
+  },
+  /** Einarmiger Bandit. Hier hängen die Zocker. */
+  automat: {
+    fest: true,
+    reichweite: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#2a2a34', 1, 1, 14, 14);
+      kasten(ctx, '#c02038', 2, 2, 12, 4);
+      kasten(ctx, '#f0f0f8', 3, 7, 10, 4);
+      kasten(ctx, '#e8c860', 4, 8, 2, 2);
+      kasten(ctx, '#40c058', 7, 8, 2, 2);
+      kasten(ctx, '#4098e0', 10, 8, 2, 2);
+      kasten(ctx, '#8a8a98', 14, 6, 2, 5);
+      kasten(ctx, '#e04058', 14, 5, 2, 2);
+    },
+  },
+  roulettetisch: {
+    fest: true,
+    reichweite: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#5a3020', 0, 1, 16, 14);
+      kasten(ctx, '#1e6a34', 1, 2, 14, 12);
+      // Kessel mit rotem und schwarzem Fach.
+      kasten(ctx, '#2a2a34', 4, 4, 8, 8);
+      kasten(ctx, '#c02038', 6, 6, 4, 4);
+      kasten(ctx, '#e8c860', 7, 7, 2, 2);
+    },
+  },
+  kartentisch: {
+    fest: true,
+    reichweite: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#5a3020', 0, 1, 16, 14);
+      kasten(ctx, '#1e6a34', 1, 2, 14, 12);
+      // Zwei ausgelegte Karten.
+      kasten(ctx, '#f0f0f8', 3, 5, 4, 6);
+      kasten(ctx, '#f0f0f8', 9, 5, 4, 6);
+      kasten(ctx, '#c02038', 4, 6, 2, 2);
+      kasten(ctx, '#2a2a34', 10, 6, 2, 2);
+    },
+  },
+  /** Der Extra-Tisch: alles oder nichts. Schwarz und Gold, keine Deko. */
+  risikotisch: {
+    fest: true,
+    reichweite: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#8c1526');
+      kasten(ctx, '#c8a032', 0, 1, 16, 14);
+      kasten(ctx, '#12121a', 1, 2, 14, 12);
+      kasten(ctx, '#e8c860', 3, 6, 4, 4);
+      kasten(ctx, '#12121a', 4, 7, 2, 2);
+      kasten(ctx, '#c02038', 9, 6, 4, 4);
+    },
+  },
+
+  // --- Bruchbude und Treppenschacht ------------------------------------------
+  /** Begehbare Stufe im Schacht: von oben gesehen eine Kante nach der anderen. */
+  stufen: {
+    zeichne(ctx) {
+      flaeche(ctx, '#3a3742');
+      kasten(ctx, '#4a4756', 0, 0, 16, 5);
+      kasten(ctx, '#2a2833', 0, 5, 16, 2);
+      kasten(ctx, '#454252', 0, 7, 16, 5);
+      kasten(ctx, '#232029', 0, 12, 16, 2);
+      kasten(ctx, '#403d4c', 0, 14, 16, 2);
+    },
+  },
+  schachtwand: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#221f28');
+      kasten(ctx, '#2c2934', 1, 1, 14, 14);
+      kasten(ctx, '#1a1820', 3, 4, 4, 1);
+      kasten(ctx, '#1a1820', 9, 10, 5, 1);
+    },
+  },
+  /** Nackte Funzel im Schacht – alle paar Meter eine, mehr Licht gibt es nicht. */
+  schachtlampe: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#221f28');
+      kasten(ctx, '#2c2934', 1, 1, 14, 14);
+      kasten(ctx, '#4a4756', 7, 0, 2, 5);
+      kasten(ctx, '#8a7a40', 5, 5, 6, 3);
+      kasten(ctx, '#ffe89a', 6, 6, 4, 2);
+      kasten(ctx, '#fffbe0', 7, 6, 2, 1);
+    },
+  },
+  /** Gerümpel im Keller der Bruchbude. */
+  geruempel: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, WELT.bodenInnen);
+      kasten(ctx, '#6a5a48', 1, 6, 7, 8);
+      kasten(ctx, '#8a7a60', 2, 7, 5, 3);
+      kasten(ctx, '#4a4a58', 8, 3, 7, 11);
+      kasten(ctx, '#5e5e70', 9, 4, 5, 4);
+      kasten(ctx, '#c02038', 10, 9, 3, 2);
+    },
+  },
   tresen: {
     fest: true,
     // Reicht über den Tresen hinweg: Wer davorsteht, kann die Person direkt
