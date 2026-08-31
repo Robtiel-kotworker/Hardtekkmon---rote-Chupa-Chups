@@ -11,7 +11,7 @@ import { baueKarte, person, kaempfer, schild, fundstueck, warp } from './verzeic
 import {
   setzeBoxenstopp, setzeKiosk, setzeGigHalle, setzeWohnhaus, baueBackstageRaum,
 } from './innenraeume.js';
-import { setzeBruchbude } from './casino.js';
+import { platziereBruchbude } from './casino.js';
 
 const mitteX = (breite) => Math.floor(breite / 2) - 1;
 const mitteY = (hoehe) => Math.floor(hoehe / 2) - 1;
@@ -86,9 +86,6 @@ baueKarte('schranzheim', {
 
   setzeBoxenstopp(bauer, 4, 8, 'schranzheim', 'Schranzheim');
   setzeKiosk(bauer, 30, 8, 'schranzheim', 'Schranzheim', KIOSK_GROSS);
-  // Unscheinbare Bruchbude oberhalb des Einkaufszentrums – unten drunter
-  // liegt das Casino (siehe world/casino.js).
-  setzeBruchbude(bauer, 30, 3, 'schranzheim', 'Schranzheim');
   setzeGigHalle(bauer, 24, 22, 'schranzheim', {
     id: 'gig4', ort: 'Schranzheim', leiter: 'gig4', marke: 3,
     trainer: [[4, 11, 'raver', 'schranz_dennis'], [12, 11, 'maedchen', 'schranz_sina'],
@@ -105,6 +102,15 @@ baueKarte('schranzheim', {
   bauer.setze(35, 20, 'box');
   bauer.setze(34, 19, 'verstaerker');
   bauer.wiese(30, 25, 6, 5);
+
+  // Unscheinbare Bruchbude irgendwo in der Stadt – unten drunter liegt das
+  // Casino (siehe world/casino.js). Vor dem Bewuchs platziert, damit die
+  // Suche nur echte Gebäude, Wege und Wasser meidet; der Bewuchs direkt
+  // danach lässt ihre Fläche automatisch aus, weil sie dann keine
+  // 'gras'-Kachel mehr ist.
+  platziereBruchbude(bauer, 'schranzheim', 'Schranzheim', [
+    { x: 26, y: quer + 1 }, { x: 20, y: quer + 4 }, { x: 12, y: 20 },
+  ]);
 
   // Was nach Wegen und Gebäuden noch Wiese ist, bekommt Bewuchs.
   bauer.streuenAuf('gras', 'blume', 0.10, 233);
@@ -254,6 +260,10 @@ baueKarte('donkhausen', {
   bauer.setze(31, 24, 'box');
   bauer.wiese(28, 12, 5, 5);
 
+  platziereBruchbude(bauer, 'donkhausen', 'Donkhausen', [
+    { x: 18, y: quer + 4 },
+  ]);
+
   // Was nach Wegen und Gebäuden noch Wiese ist, bekommt Bewuchs.
   bauer.streuenAuf('gras', 'blume', 0.10, 241);
   bauer.streuenAuf('gras', 'baum', 0.06, 242);
@@ -324,7 +334,6 @@ baueKarte('glitchstadt', {
 
   setzeBoxenstopp(bauer, 4, 6, 'glitchstadt', 'Glitchstadt');
   setzeKiosk(bauer, 28, 6, 'glitchstadt', 'Glitchstadt', KIOSK_GROSS);
-  setzeBruchbude(bauer, 28, 2, 'glitchstadt', 'Glitchstadt');
   setzeGigHalle(bauer, 22, 20, 'glitchstadt', {
     id: 'gig7', ort: 'Glitchstadt', leiter: 'gig7', marke: 6,
     trainer: [[4, 11, 'wache', 'glitch_tom'], [12, 11, 'maedchen', 'glitch_bea'],
@@ -339,6 +348,10 @@ baueKarte('glitchstadt', {
   bauer.setze(14, 8, 'laterne');
   bauer.setze(22, 8, 'laterne');
   bauer.setze(16, 26, 'gully');
+
+  platziereBruchbude(bauer, 'glitchstadt', 'Glitchstadt', [
+    { x: weg + 1, y: 4 }, { x: 12, y: quer + 4 },
+  ]);
 
   // Was nach Wegen und Gebäuden noch Wiese ist, bekommt Bewuchs.
   bauer.streuenAuf('gras', 'blume', 0.10, 251);

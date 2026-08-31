@@ -11,7 +11,10 @@
 //      Gold an den Wänden, Kronleuchter. Der Bruch zur Bude oben ist der Witz.
 //
 // Gebaut wird pro Stadt ein eigener Satz, damit der Rückweg wieder in der
-// richtigen Stadt herauskommt – genauso wie bei Boxenstopp und Kiosk.
+// richtigen Stadt herauskommt – genauso wie bei Boxenstopp und Kiosk. Jede
+// Stadt bekommt eine; wo genau die Bruchbude in der jeweiligen Stadt
+// auftaucht, sucht sich platziereBruchbude() selbst (siehe dort) – anders
+// als bei Boxenstopp und Kiosk gibt es also keine feste Übergabeposition.
 // ============================================================================
 
 import { baueKarte, person, warp } from './verzeichnis.js';
@@ -240,18 +243,38 @@ function baueCasinoSaal(id, ortName, schachtId, saat) {
 }
 
 /**
- * Setzt die Bruchbude auf die Stadtkarte und legt die drei Innenkarten an.
- * Von außen ist das Häuschen bewusst unauffällig: klein, graues Dach, kein
- * Reklameschild – nur ein Schild daneben, das gar nichts verrät.
- *
- * @param {import('./bauplan.js').Kartenbauer} bauer
+ * Betonfläche um das Häuschen. Anders als bei Boxenstopp und Kiosk gibt es
+ * rechts keinen Rand (nur links/oben/unten je 1 Kachel) – so passt die Bude
+ * auch noch in schmalere Lücken zwischen Straße und Nachbargebäude.
  */
-export function setzeBruchbude(bauer, x, y, stadtId, ortName) {
+const BUDE_BREITE = 5;
+const BUDE_HOEHE = 5;
+/**
+ * Nur Felder, die noch genau diese unberührte Grundkachel tragen, kommen als
+ * Standort infrage. Jede Stadt füllt sich zu Beginn komplett mit 'gras'
+ * (siehe die baueKarte-Aufrufe in region_ost.js/region_west.js); alles, was
+ * inzwischen ein Weg, ein anderes Gebäude, Wasser, hohes Gras oder ein
+ * gestreuter Baum ist, hat also eine andere Kachel und fällt automatisch
+ * raus. Der Kartenrand selbst ist 'baum' (siehe rahmen()), zählt also auch
+ * nicht als frei.
+ */
+const FREIE_KACHEL = 'gras';
+
+/**
+ * Baut die Bruchbude an einer festen Stelle: Betonfläche, das kleine graue
+ * Häuschen, ein Schild, das nichts verrät – und dahinter die drei
+ * Innenkarten (Keller, Schacht, Saal).
+ *
+ * @param {number} ax linke obere Ecke der Betonfläche
+ */
+function baueBruchbudenGebaeude(bauer, ax, ay, stadtId, ortName) {
   const budeId = `bruchbude_${stadtId}`;
   const schachtId = `casinoschacht_${stadtId}`;
   const saalId = `casino_${stadtId}`;
+  const x = ax + 1;
+  const y = ay + 1;
 
-  bauer.rechteck(x - 1, y - 1, 6, 5, 'beton');
+  bauer.rechteck(ax, ay, BUDE_BREITE, BUDE_HOEHE, 'beton');
   const { tuerX, tuerY } = bauer.haus(x, y, 4, 3, {
     dach: 'dachGrau', ziel: budeId, zx: EINSTIEG.bude.x, zy: EINSTIEG.bude.y,
   });
@@ -265,19 +288,60 @@ export function setzeBruchbude(bauer, x, y, stadtId, ortName) {
 }
 
 /**
- * Welche Städte eine Bruchbude bekommen. Ausgewürfelt, aber mit fester
- * Aussaat – die Auswahl muss über Neustarts hinweg dieselbe bleiben, sonst
- * zeigt ein Spielstand im Casino beim nächsten Laden ins Leere.
+ * Sucht einen freien Fleck für die Bruchbude und baut sie dort hin – in
+ * jeder Stadt woanders, aber mit fester, aus dem Stadtnamen abgeleiteter
+ * Aussaat immer an derselben Stelle (sonst zeigt ein gespeicherter Rückweg
+ * beim nächsten Laden ins Leere).
  *
- * @param {string[]} staedte alle Städte, die grundsätzlich in Frage kommen
- * @param {number} anzahl wie viele davon eine bekommen
+ * Aufgerufen wird das, nachdem Wege und alle anderen Gebäude stehen, aber
+ * VOR dem gestreuten Bewuchs (bauer.streuenAuf(...) für Blumen und Bäume).
+ * Das hat einen konkreten Grund: streuenAuf() setzt zufällig auf jede
+ * `gras`-Kachel im ganzen Stadtgebiet, unabhängig von einer Größe – bei den
+ * üblichen Dichten (10 % Blumen, 6 % Bäume) übersteht ein zusammenhängender
+ * 6x5-Fleck das im Mittel nur zu unter 1 %. Perfekt freie Flächen dieser
+ * Größe wären danach also praktisch nie mehr zu finden. Läuft die Suche
+ * dagegen vorher, muss sie nur echte Gebäude, Wege und Wasser meiden; die
+ * Bruchbude belegt ihre Fläche dann selbst mit eigenen Kacheln (Beton,
+ * Hauswand …), sodass der Bewuchs direkt danach automatisch außen vor
+ * bleibt – er streut ja ausdrücklich nur auf noch unberührtes 'gras'.
+ *
+ * @param {import('./bauplan.js').Kartenbauer} bauer
+ * @param {string} stadtId
+ * @param {string} ortName
+ * @param {{x: number, y: number}[]} meiden Zusätzlich zu meidende Punkte –
+ *   die Stellen, an denen in dieser Stadt Figuren herumstehen. Die Kachel
+ *   unter einer Figur bleibt 'gras', eine reine Kachelprüfung würde sie
+ *   also übersehen.
  */
-export function waehleCasinoStaedte(staedte, anzahl) {
-  const rnd = generator(saatAusText('bruchbuden'));
-  const uebrig = [...staedte];
-  const gewaehlt = [];
-  for (let i = 0; i < anzahl && uebrig.length > 0; i += 1) {
-    gewaehlt.push(uebrig.splice(Math.floor(rnd() * uebrig.length), 1)[0]);
+export function platziereBruchbude(bauer, stadtId, ortName, meiden = []) {
+  const rnd = generator(saatAusText(`bruchbude:${stadtId}`));
+
+  const kandidaten = [];
+  for (let ay = 1; ay <= bauer.hoehe - 1 - BUDE_HOEHE; ay += 1) {
+    for (let ax = 1; ax <= bauer.breite - 1 - BUDE_BREITE; ax += 1) {
+      kandidaten.push({ ax, ay });
+    }
   }
-  return new Set(gewaehlt);
+  // Fisher-Yates mit der Stadt-Aussaat: Reihenfolge steht fest, ist aber von
+  // Stadt zu Stadt unterschiedlich.
+  for (let i = kandidaten.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rnd() * (i + 1));
+    [kandidaten[i], kandidaten[j]] = [kandidaten[j], kandidaten[i]];
+  }
+
+  const passt = ({ ax, ay }) => {
+    for (let dy = 0; dy < BUDE_HOEHE; dy += 1) {
+      for (let dx = 0; dx < BUDE_BREITE; dx += 1) {
+        if (bauer.hole(ax + dx, ay + dy) !== FREIE_KACHEL) return false;
+      }
+    }
+    return meiden.every((p) => (
+      p.x < ax || p.x >= ax + BUDE_BREITE || p.y < ay || p.y >= ay + BUDE_HOEHE
+    ));
+  };
+
+  const treffer = kandidaten.find(passt);
+  if (!treffer) throw new Error(`Kein Platz für die Bruchbude in ${stadtId} gefunden.`);
+
+  return baueBruchbudenGebaeude(bauer, treffer.ax, treffer.ay, stadtId, ortName);
 }
