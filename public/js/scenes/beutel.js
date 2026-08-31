@@ -13,7 +13,7 @@ import { fenster, gegenstandSymbol } from '../gfx/ui.js';
 import { zeichneText, umbrechen } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { Auswahl } from '../ui/auswahl.js';
-import { spiel } from '../game/spielstand.js';
+import { spiel, legeAufSelect, selectGegenstand } from '../game/spielstand.js';
 import { GEGENSTAENDE, BEUTEL_REIHENFOLGE, ausserhalbNutzbar, anlegbar } from '../data/gegenstaende.js';
 import { schiebe, poppe } from './stapel.js';
 
@@ -33,6 +33,10 @@ export class Beutelszene {
     this.gruppe = 0;
     this.auswahl = new Auswahl({ eintraege: [], sichtbar: 7 });
     this.aktualisiereListe();
+    // Kleines Untermenü "Auf SELECT legen" für Schlüsselgegenstände; null,
+    // solange es zu ist (siehe oeffneSelectMenue()).
+    this.selectMenue = null;
+    this.selectName = null;
   }
 
   get gruppenname() {
@@ -53,6 +57,11 @@ export class Beutelszene {
   }
 
   aktualisieren() {
+    if (this.selectMenue) {
+      this.aktualisiereSelectMenue();
+      return;
+    }
+
     if (gedrueckt('LEFT')) {
       this.gruppe = (this.gruppe - 1 + BEUTEL_REIHENFOLGE.length) % BEUTEL_REIHENFOLGE.length;
       this.aktualisiereListe();
@@ -74,9 +83,41 @@ export class Beutelszene {
     if (antwort !== 'bestaetigt') return;
 
     const name = this.namen[this.auswahl.index];
-    if (!name || (!ausserhalbNutzbar(name) && !anlegbar(name))) return;
+    if (!name) return;
+
+    if (GEGENSTAENDE[name]?.art === 'schluessel') {
+      this.oeffneSelectMenue(name);
+      return;
+    }
+    if (!ausserhalbNutzbar(name) && !anlegbar(name)) return;
 
     import('./team.js').then(({ Teamszene }) => schiebe(new Teamszene({ gegenstand: name })));
+  }
+
+  /** "Auf SELECT legen" (bzw. "entfernen", ist er es schon) für den markierten Schlüsselgegenstand. */
+  oeffneSelectMenue(name) {
+    this.selectName = name;
+    const gebunden = selectGegenstand() === name;
+    this.selectMenue = new Auswahl({
+      eintraege: [gebunden ? 'Von SELECT entfernen' : 'Auf SELECT legen', 'Abbrechen'],
+    });
+    effekt('bestaetigen');
+  }
+
+  aktualisiereSelectMenue() {
+    const antwort = this.selectMenue.aktualisieren();
+    if (antwort === 'abbruch') {
+      this.selectMenue = null;
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    if (this.selectMenue.index === 0) {
+      const gebunden = selectGegenstand() === this.selectName;
+      legeAufSelect(gebunden ? null : this.selectName);
+      effekt('bestaetigen');
+    }
+    this.selectMenue = null;
   }
 
   zeichnen(ctx) {
@@ -89,9 +130,13 @@ export class Beutelszene {
 
     this.auswahl.zeichnen(ctx, 4, 14, 150, 92, {
       zeilenhoehe: 12,
-      zusatz: (index) => (
-        GEGENSTAENDE[this.namen[index]]?.art === 'schluessel' ? '' : `×${spiel.beutel[this.namen[index]]}`
-      ),
+      zusatz: (index) => {
+        const eintragName = this.namen[index];
+        if (GEGENSTAENDE[eintragName]?.art === 'schluessel') {
+          return selectGegenstand() === eintragName ? 'SELECT' : '';
+        }
+        return `×${spiel.beutel[eintragName]}`;
+      },
     });
 
     fenster(ctx, 158, 14, 78, 92);
@@ -100,7 +145,8 @@ export class Beutelszene {
 
     const name = this.namen[this.auswahl.index];
     if (name) gegenstandSymbol(ctx, GEGENSTAENDE[name].symbol, 188, 52);
-    zeichneText(ctx, 'A: benutzen', 164, 76, { farbe: UI.text });
+    const istSchluessel = name && GEGENSTAENDE[name].art === 'schluessel';
+    zeichneText(ctx, istSchluessel ? 'A: auf SELECT' : 'A: benutzen', 164, 76, { farbe: UI.text });
     zeichneText(ctx, 'B: zurück', 164, 88, { farbe: UI.text });
 
     fenster(ctx, 4, 108, BREITE - 8, 40);
@@ -108,5 +154,16 @@ export class Beutelszene {
     umbrechen(beschreibung, BREITE - 24).slice(0, 3).forEach((zeile, i) => {
       zeichneText(ctx, zeile, 12, 114 + i * 11, { farbe: UI.text });
     });
+
+    if (this.selectMenue) this.zeichneSelectMenue(ctx);
+  }
+
+  zeichneSelectMenue(ctx) {
+    const breite = 128;
+    const x = (BREITE - breite) / 2;
+    const y = 56;
+    fenster(ctx, x, y, breite, 40);
+    zeichneText(ctx, this.selectName, x + 6, y + 5, { farbe: UI.text });
+    this.selectMenue.zeichnen(ctx, x, y + 14, breite, 26, { rahmen: false });
   }
 }
