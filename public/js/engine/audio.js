@@ -642,6 +642,197 @@ export function audioSchritt() {
   }
 }
 
+// ============================================================================
+// Sequenzer (Proberaum-Minigame)
+// ----------------------------------------------------------------------------
+// Eigener kleiner Schrittsequenzer für das DJ-Pult im Proberaum (siehe
+// scenes/sequenzer.js): vier Zeilen (Kick, Clap, HiHat, Melodie), 16 Schritte,
+// jede Zeile mit drei wählbaren Klängen. Läuft nach demselben Vorlaufprinzip
+// wie audioSchritt() oben, aber komplett unabhängig davon – eigenes Tempo,
+// eigener Zähler, eigene Klänge. Das Muster (welche Schritte an sind, welche
+// Klänge gewählt) gehört der Szene; hier drin steckt nur, WIE es klingt und
+// WANN es dran ist.
+// ============================================================================
+
+const SEQ_SCHRITTE = 16;
+const SEQ_BPM = 170;
+
+let seqAktiv = false;
+let seqZaehler = 0;
+let seqNaechsteZeit = 0;
+/** Position im gewählten Melodie-Riff, siehe MELODIE_PRESETS. */
+let seqMelodiePos = 0;
+
+/** Weicherer, unverzerrter Kick – bleibt rund statt hart zu clippen. */
+function subKick(zeit) {
+  if (!ctx || !musikBus) return;
+  const oszillator = ctx.createOscillator();
+  const huellkurve = ctx.createGain();
+  oszillator.type = 'sine';
+  oszillator.frequency.setValueAtTime(140, zeit);
+  oszillator.frequency.exponentialRampToValueAtTime(45, zeit + 0.16);
+  huellkurve.gain.setValueAtTime(0.0001, zeit);
+  huellkurve.gain.exponentialRampToValueAtTime(0.9, zeit + 0.006);
+  huellkurve.gain.exponentialRampToValueAtTime(0.0001, zeit + 0.34);
+  oszillator.connect(huellkurve);
+  huellkurve.connect(musikBus);
+  oszillator.start(zeit);
+  oszillator.stop(zeit + 0.36);
+}
+
+/**
+ * Klatscher: mehrere kurze, bandpassgefilterte Rauschstöße dicht
+ * hintereinander – genau das Stottern, das einen Clap von einem einzelnen
+ * Rauschstoß (Snare, HiHat) unterscheidet.
+ */
+function klatscher(zeit, mitte, guete, versaetze, lautstaerke) {
+  if (!ctx || !musikBus) return;
+  for (const versatz of versaetze) {
+    const quelle = rauschQuelle(0.09);
+    if (!quelle) continue;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = mitte;
+    filter.Q.value = guete;
+    const huellkurve = ctx.createGain();
+    const t = zeit + versatz;
+    huellkurve.gain.setValueAtTime(0.0001, t);
+    huellkurve.gain.exponentialRampToValueAtTime(lautstaerke, t + 0.004);
+    huellkurve.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    quelle.connect(filter);
+    filter.connect(huellkurve);
+    huellkurve.connect(musikBus);
+    quelle.start(t);
+    quelle.stop(t + 0.1);
+  }
+}
+
+/** Parametrisierte HiHat – dieselbe Kette wie hihat() oben, nur einstellbar. */
+function hatKlang(zeit, dauer, grenzfrequenz, lautstaerke) {
+  if (!ctx || !musikBus) return;
+  const quelle = rauschQuelle(dauer);
+  if (!quelle) return;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = grenzfrequenz;
+  const huellkurve = ctx.createGain();
+  huellkurve.gain.setValueAtTime(lautstaerke, zeit);
+  huellkurve.gain.exponentialRampToValueAtTime(0.0001, zeit + dauer - 0.005);
+  quelle.connect(filter);
+  filter.connect(huellkurve);
+  huellkurve.connect(musikBus);
+  quelle.start(zeit);
+  quelle.stop(zeit + dauer + 0.01);
+}
+
+const KICK_VARIANTEN = [
+  (zeit) => kick(zeit, 1),
+  (zeit) => subKick(zeit),
+  (zeit) => gabberKick(zeit),
+];
+const CLAP_VARIANTEN = [
+  (zeit) => klatscher(zeit, 1500, 3, [0, 0.012, 0.024], 0.22),
+  (zeit) => klatscher(zeit, 2600, 5, [0], 0.24),
+  (zeit) => klatscher(zeit, 900, 1.5, [0, 0.015, 0.03, 0.045], 0.2),
+];
+const HIHAT_VARIANTEN = [
+  (zeit) => hatKlang(zeit, 0.05, 7000, 0.11),
+  (zeit) => hatKlang(zeit, 0.22, 5500, 0.09),
+  (zeit) => hatKlang(zeit, 0.035, 9500, 0.13),
+];
+/** Kurze Riffs in Halbtonabständen zu A4 – jeder aktive Schritt spielt die nächste Note. */
+const MELODIE_PRESETS = [
+  [0, 0, 7, 5, 3, 5, 7, 12],
+  [0, 4, 7, 12, 7, 4, 0, -5],
+  [12, 9, 7, 4, 0, -3, -5, -8],
+];
+
+/**
+ * Vier Zeilen des Sequenzers, in fester Reihenfolge. Jede trägt ihre
+ * Anzeigefarbe und die Namen ihrer drei wählbaren Klänge – scenes/sequenzer.js
+ * braucht nichts davon selbst zu kennen.
+ */
+export const SEQUENZER_REIHEN = [
+  { kurz: 'KICK', varianten: ['Kick', 'Sub', 'Gabber'], farbe: '#e0483c' },
+  { kurz: 'CLAP', varianten: ['Clap', 'Snap', 'Breitband'], farbe: '#e8c860' },
+  { kurz: 'HAT', varianten: ['Hat', 'Open Hat', 'Zisch'], farbe: '#58d0e0' },
+  { kurz: 'MEL', varianten: ['Riff A', 'Riff B', 'Riff C'], farbe: '#58c868' },
+];
+export { SEQ_SCHRITTE as SEQUENZER_SCHRITTE };
+
+/** Startet die Wiedergabe wieder bei Schritt 0 – für einen sauberen Einstieg. */
+export function sequenzerStarten() {
+  seqAktiv = true;
+  seqZaehler = 0;
+  seqMelodiePos = 0;
+  if (ctx) seqNaechsteZeit = ctx.currentTime;
+}
+
+export function sequenzerStoppen() {
+  seqAktiv = false;
+}
+
+export function sequenzerLaeuft() {
+  return seqAktiv;
+}
+
+/** Schritt, der zuletzt ausgelöst wurde – für das Playhead-Rechteck in der Anzeige. */
+export function sequenzerAnzeigeSchritt() {
+  return (seqZaehler - 1 + SEQ_SCHRITTE) % SEQ_SCHRITTE;
+}
+
+/**
+ * Hört eine einzelne Zeile sofort an, unabhängig vom laufenden Muster –
+ * beim Antippen eines Schritts oder beim Durchschalten der Klänge (siehe
+ * scenes/sequenzer.js), damit man hört, was man gerade einbaut.
+ * @param {number} zeile Index in SEQUENZER_REIHEN
+ * @param {number} variante Index in SEQUENZER_REIHEN[zeile].varianten
+ */
+export function sequenzerVorhoeren(zeile, variante) {
+  if (!ctx) return;
+  const zeit = ctx.currentTime;
+  if (zeile === 0) KICK_VARIANTEN[variante]?.(zeit);
+  else if (zeile === 1) CLAP_VARIANTEN[variante]?.(zeit);
+  else if (zeile === 2) HIHAT_VARIANTEN[variante]?.(zeit);
+  else if (zeile === 3) {
+    const riff = MELODIE_PRESETS[variante];
+    if (riff) ton(zeit, riff[0], 0.15, 'sawtooth', 0.09);
+  }
+}
+
+/**
+ * Plant alle Schritte, die innerhalb des Vorlauffensters liegen. Aus
+ * scenes/sequenzer.js einmal je Bild aufzurufen, solange der Sequenzer läuft.
+ *
+ * @param {boolean[][]} muster vier Zeilen zu je 16 Schritten (siehe
+ *   SEQUENZER_REIHEN für die Reihenfolge) – true heißt: hier klingt die Zeile.
+ * @param {number[]} varianten gewählte Variante je Zeile (Index in
+ *   SEQUENZER_REIHEN[i].varianten bzw. MELODIE_PRESETS für die Melodie-Zeile)
+ */
+export function sequenzerAktualisieren(muster, varianten) {
+  if (!ctx || !seqAktiv) return;
+  const schrittDauer = 60 / SEQ_BPM / 4;
+  if (seqNaechsteZeit < ctx.currentTime) seqNaechsteZeit = ctx.currentTime;
+
+  while (seqNaechsteZeit < ctx.currentTime + VORLAUF_S) {
+    const i = seqZaehler % SEQ_SCHRITTE;
+    const zeit = seqNaechsteZeit;
+    if (i === 0) seqMelodiePos = 0;
+
+    if (muster[0][i]) KICK_VARIANTEN[varianten[0]](zeit);
+    if (muster[1][i]) CLAP_VARIANTEN[varianten[1]](zeit);
+    if (muster[2][i]) HIHAT_VARIANTEN[varianten[2]](zeit);
+    if (muster[3][i]) {
+      const riff = MELODIE_PRESETS[varianten[3]];
+      ton(zeit, riff[seqMelodiePos % riff.length], schrittDauer * 0.85, 'sawtooth', 0.09);
+      seqMelodiePos += 1;
+    }
+
+    seqNaechsteZeit += schrittDauer;
+    seqZaehler += 1;
+  }
+}
+
 /** Kurze Effekte. Unbekannte Namen werden still ignoriert. */
 const EFFEKTE = {
   auswahl: { halbtoene: 12, dauer: 0.06, form: 'square', lautstaerke: 0.14 },

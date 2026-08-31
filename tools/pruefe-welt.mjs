@@ -65,7 +65,7 @@ for (const k of Object.values(KARTEN)) {
   }
 
   for (const s of k.schilder ?? []) {
-    if (kachelAn(k, s.x, s.y) !== 'schild') melde(`${k.id}: Schild bei ${s.x},${s.y} ohne Schildkachel`);
+    if (!KACHELN[kachelAn(k, s.x, s.y)]?.istSchild) melde(`${k.id}: Schild bei ${s.x},${s.y} ohne Schildkachel`);
   }
 
   const gegenrichtung = { norden: 'sueden', sueden: 'norden', westen: 'osten', osten: 'westen' };
