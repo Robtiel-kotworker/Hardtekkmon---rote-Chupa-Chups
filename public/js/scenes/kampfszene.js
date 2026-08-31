@@ -36,6 +36,49 @@ const GEGNER_POS = { x: 152, y: 14 };
 const EIGENE_POS = { x: 26, y: 58 };
 const SPRITE = 56;
 
+/** Kurzform der Wertenamen für den engen Vergleichskasten beim Attackenlernen. */
+const WERT_ABK = { ang: 'Ang', ver: 'Ver', spa: 'SpA', spv: 'SpV', ini: 'Ini', gen: 'Gen' };
+
+/**
+ * Kurzer, deutscher Text zum Zusatzeffekt einer Attacke – für den
+ * Vergleichskasten beim Attackenlernen (siehe zeichneAttackenStatsbox unten).
+ * Deckt alle Effektarten aus data/attacken.js ab; unbekannte oder keine
+ * liefern null.
+ */
+function effektKurztext(daten) {
+  const e = daten?.effekt;
+  if (!e) return null;
+  const chance = e.chance ?? 1;
+  const proz = chance < 1 ? ` (${Math.round(chance * 100)}%)` : '';
+
+  switch (e.art) {
+    case 'status':
+      return `${e.status.charAt(0).toUpperCase()}${e.status.slice(1)}${proz}`;
+    case 'werte': {
+      const teile = Object.entries(e.aenderungen)
+        .map(([schluessel, stufen]) => `${stufen > 0 ? '+' : ''}${stufen} ${WERT_ABK[schluessel] ?? schluessel}`);
+      const wem = e.ziel === 'selbst' ? 'Selbst' : 'Gegner';
+      return `${wem}: ${teile.join(', ')}${proz}`;
+    }
+    case 'zucken':
+      return `Zucken${proz}`;
+    case 'verwirren':
+      return `Verwirrung${proz}`;
+    case 'rueckstoss':
+      return `Rückstoß ${Math.round(e.anteil * 100)}%`;
+    case 'saugen':
+      return `Saugt ${Math.round(e.anteil * 100)}%`;
+    case 'heilung':
+      return `Heilt ${Math.round(e.anteil * 100)}%`;
+    case 'mehrfach':
+      return e.min === e.max ? `${e.min} Treffer` : `${e.min}-${e.max} Treffer`;
+    case 'krit':
+      return 'Oft kritisch';
+    default:
+      return null;
+  }
+}
+
 /** Wartezeiten in Bildern. */
 const WARTE = { text: 24, treffer: 20, wechsel: 26, wurf: 34, kurz: 12 };
 
@@ -115,6 +158,11 @@ export class Kampfszene {
     this.rueckkehrTrack = aktuellerTrack();
     this.blendenwert = 1;
     this.entwicklungen = [];
+    // Name der Attacke, die gerade zur Entscheidung ansteht (siehe
+    // oeffneAttackenLernen), und das Menü mit den vier aktuellen Attacken
+    // plus "Nicht lernen". Beides nur gesetzt, während zustand === 'attackeLernen'.
+    this.lernName = null;
+    this.lernMenue = null;
   }
 
   betreten() {
@@ -151,6 +199,9 @@ export class Kampfszene {
         break;
       case 'team':
         this.aktualisiereTeam();
+        break;
+      case 'attackeLernen':
+        this.aktualisiereAttackeLernen();
         break;
       case 'verarbeitung':
         this.verarbeiteEreignisse();
@@ -503,7 +554,16 @@ export class Kampfszene {
         break;
 
       case 'lernen':
-        this.lerneNeueAttacke(ereignis.attacke);
+        // Ist noch Platz, lernt es die Attacke sofort dazu. Sind schon alle
+        // vier belegt, muss der Spieler entscheiden – dafür pausiert die
+        // Ereignisverarbeitung (siehe oeffneAttackenLernen), der Rest der
+        // Runde (weitere Texte, ein zweiter Aufstieg, eine Entwicklung …)
+        // läuft danach in derselben Warteschlange weiter.
+        if (this.kampf.eigene.mon.attacken.length < MAX_ATTACKEN) {
+          this.lerneNeueAttacke(ereignis.attacke);
+        } else {
+          this.oeffneAttackenLernen(ereignis.attacke);
+        }
         break;
 
       case 'entwicklung':
@@ -523,22 +583,69 @@ export class Kampfszene {
     }
   }
 
-  /**
-   * Neue Attacke einsortieren. Sind schon vier vorhanden, fliegt die erste
-   * raus – das hält den Ablauf im Kampf kurz.
-   */
+  /** Neue Attacke einsortieren – nur der Fall, in dem noch Platz frei ist. */
   lerneNeueAttacke(name) {
     const mon = this.kampf.eigene.mon;
-    if (mon.attacken.length < MAX_ATTACKEN) {
-      lerneAttacke(mon, name);
-      this.textfenster.zeige(`${anzeigename(mon)} lernt ${name}!`);
-    } else {
-      const ersetzt = mon.attacken[0].name;
-      lerneAttacke(mon, name, 0);
-      this.textfenster.zeige(`${anzeigename(mon)} vergisst ${ersetzt} und lernt ${name}!`);
-    }
+    lerneAttacke(mon, name);
+    this.textfenster.zeige(`${anzeigename(mon)} lernt ${name}!`);
     effekt('aufstieg');
     this.wartezeit = WARTE.text;
+  }
+
+  /**
+   * Alle vier Plätze sind belegt: Statt automatisch die erste Attacke zu
+   * verdrängen, entscheidet jetzt der Spieler. Die kurze Ankündigung steht
+   * sofort fertig da (wie das Befehlsmenü auch) – das Attackenmenü darunter
+   * wartet dann auf die Auswahl.
+   */
+  oeffneAttackenLernen(name) {
+    const mon = this.kampf.eigene.mon;
+    this.lernName = name;
+    this.textfenster.zeige([
+      `${anzeigename(mon)} will ${name} lernen!`,
+      'Doch es kennt schon vier Attacken.',
+    ]);
+    this.textfenster.ueberspringe();
+
+    this.lernMenue = new Auswahl({
+      eintraege: [...mon.attacken.map((eintrag) => eintrag.name), 'Nicht lernen'],
+    });
+    this.zustand = 'attackeLernen';
+  }
+
+  aktualisiereAttackeLernen() {
+    const antwort = this.lernMenue.aktualisieren();
+    if (antwort === 'abbruch') {
+      this.verzichteAufAttacke();
+      return;
+    }
+    if (antwort !== 'bestaetigt') return;
+
+    const mon = this.kampf.eigene.mon;
+    const index = this.lernMenue.index;
+    if (index >= mon.attacken.length) {
+      this.verzichteAufAttacke();
+      return;
+    }
+
+    const ersetzt = mon.attacken[index].name;
+    lerneAttacke(mon, this.lernName, index);
+    this.textfenster.zeige(`${anzeigename(mon)} vergisst ${ersetzt} und lernt ${this.lernName}!`);
+    effekt('aufstieg');
+    this.beendeAttackeLernen();
+  }
+
+  /** "Nicht lernen" oder mit B abgebrochen: die Attacke bleibt ungelernt. */
+  verzichteAufAttacke() {
+    this.textfenster.zeige(`${anzeigename(this.kampf.eigene.mon)} lernt ${this.lernName} nicht.`);
+    this.beendeAttackeLernen();
+  }
+
+  beendeAttackeLernen() {
+    this.lernMenue = null;
+    this.lernName = null;
+    this.wartezeit = WARTE.text;
+    this.zustand = 'verarbeitung';
   }
 
   /** Nach dem Abspielen aller Ereignisse: weiter im Kampf oder Ende. */
@@ -837,5 +944,51 @@ export class Kampfszene {
         farbe: (index) => this.teamFarbe(index),
       });
     }
+
+    if (this.zustand === 'attackeLernen') this.zeichneAttackenLernen(ctx);
+  }
+
+  /**
+   * Die vier aktuellen Attacken links, rechts daneben zwei übereinander
+   * gestapelte Vergleichskästen: oben die gerade markierte Attacke (wechselt
+   * mit dem Zeiger), darunter fest die neue Attacke – so lassen sich beide
+   * jederzeit nebeneinander lesen, ohne zwischen zwei Ansichten zu wechseln.
+   */
+  zeichneAttackenLernen(ctx) {
+    const mon = this.kampf.eigene.mon;
+    const index = this.lernMenue.index;
+
+    this.lernMenue.zeichnen(ctx, 4, HOEHE - 86, 108, 82, { zeilenhoehe: 14 });
+
+    const markiert = index < mon.attacken.length ? mon.attacken[index] : null;
+    this.zeichneAttackenStatsbox(ctx, 116, HOEHE - 86, 120, 39, markiert);
+
+    const neu = findeAttacke(this.lernName);
+    this.zeichneAttackenStatsbox(ctx, 116, HOEHE - 43, 120, 39, neu ? {
+      name: this.lernName, ap: neu.ap, maxAp: neu.ap,
+    } : null);
+  }
+
+  /**
+   * Ein Vergleichskasten: Name, AP, Typ, Stärke (bzw. "Status") und eine
+   * kurze Zusammenfassung des Zusatzeffekts. `eintrag` ist entweder eine
+   * echte Attacke im Team (mit laufenden AP) oder – für die neue Attacke –
+   * ein Platzhalter mit vollen AP; null steht für "Nicht lernen" markiert.
+   */
+  zeichneAttackenStatsbox(ctx, x, y, breite, hoehe, eintrag) {
+    fenster(ctx, x, y, breite, hoehe);
+    if (!eintrag) return;
+
+    const daten = findeAttacke(eintrag.name);
+    if (!daten) return;
+
+    zeichneText(ctx, eintrag.name, x + 4, y + 3, { farbe: UI.text });
+    zeichneText(ctx, `AP ${eintrag.ap}/${eintrag.maxAp}`, x + 4, y + 11, { farbe: UI.text });
+
+    const badgeBreite = typSchild(ctx, daten.typ, x + 4, y + 19);
+    const staerkeText = daten.staerke > 0 ? `St ${daten.staerke}` : 'Status';
+    zeichneText(ctx, staerkeText, x + 4 + badgeBreite + 4, y + 20, { farbe: UI.text });
+
+    zeichneText(ctx, effektKurztext(daten) ?? '–', x + 4, y + 29, { farbe: UI.text });
   }
 }
