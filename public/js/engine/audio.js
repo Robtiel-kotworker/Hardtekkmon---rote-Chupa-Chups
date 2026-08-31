@@ -646,22 +646,30 @@ export function audioSchritt() {
 // Sequenzer (Proberaum-Minigame)
 // ----------------------------------------------------------------------------
 // Eigener kleiner Schrittsequenzer für das DJ-Pult im Proberaum (siehe
-// scenes/sequenzer.js): vier Zeilen (Kick, Clap, HiHat, Melodie), 16 Schritte,
-// jede Zeile mit drei wählbaren Klängen. Läuft nach demselben Vorlaufprinzip
-// wie audioSchritt() oben, aber komplett unabhängig davon – eigenes Tempo,
-// eigener Zähler, eigene Klänge. Das Muster (welche Schritte an sind, welche
-// Klänge gewählt) gehört der Szene; hier drin steckt nur, WIE es klingt und
-// WANN es dran ist.
+// scenes/sequenzer.js): drei Schlagzeug-Zeilen (Kick, Clap, HiHat) mit je drei
+// wählbaren Klängen, eine Melodie-Zeile mit frei gesetzten Noten (Klavierrolle,
+// siehe scenes/sequenzer.js) und beliebig viele aufgenommene Vocal-Samples mit
+// eigenen Effekten. 8 Takte zu je 4 Schritten = 32 Schritte insgesamt. Läuft
+// nach demselben Vorlaufprinzip wie audioSchritt() oben, aber komplett
+// unabhängig davon – eigenes Tempo (einstellbar), eigener Zähler, eigene
+// Klänge. Das Muster (welche Schritte an sind, welche Klänge gewählt, welche
+// Zeile stummgeschaltet ist) gehört der Szene; hier drin steckt nur, WIE es
+// klingt und WANN es dran ist.
 // ============================================================================
 
-const SEQ_SCHRITTE = 16;
-const SEQ_BPM = 170;
+/** 8 Takte zu je 4 Schritten – doppelt so viel Platz wie ein einzelner Durchlauf vorher. */
+export const SEQUENZER_TAKTE = 8;
+const SEQ_SCHRITTE_PRO_TAKT = 4;
+export const SEQUENZER_SCHRITTE = SEQUENZER_TAKTE * SEQ_SCHRITTE_PRO_TAKT;
+
+export const SEQUENZER_BPM_MIN = 90;
+export const SEQUENZER_BPM_MAX = 220;
+const SEQ_BPM_STANDARD = 170;
 
 let seqAktiv = false;
 let seqZaehler = 0;
 let seqNaechsteZeit = 0;
-/** Position im gewählten Melodie-Riff, siehe MELODIE_PRESETS. */
-let seqMelodiePos = 0;
+let seqBpm = SEQ_BPM_STANDARD;
 
 /** Weicherer, unverzerrter Kick – bleibt rund statt hart zu clippen. */
 function subKick(zeit) {
@@ -740,31 +748,28 @@ const HIHAT_VARIANTEN = [
   (zeit) => hatKlang(zeit, 0.22, 5500, 0.09),
   (zeit) => hatKlang(zeit, 0.035, 9500, 0.13),
 ];
-/** Kurze Riffs in Halbtonabständen zu A4 – jeder aktive Schritt spielt die nächste Note. */
-const MELODIE_PRESETS = [
-  [0, 0, 7, 5, 3, 5, 7, 12],
-  [0, 4, 7, 12, 7, 4, 0, -5],
-  [12, 9, 7, 4, 0, -3, -5, -8],
-];
+const SCHLAGZEUG_KLAENGE = [KICK_VARIANTEN, CLAP_VARIANTEN, HIHAT_VARIANTEN];
 
 /**
- * Vier Zeilen des Sequenzers, in fester Reihenfolge. Jede trägt ihre
- * Anzeigefarbe und die Namen ihrer drei wählbaren Klänge – scenes/sequenzer.js
- * braucht nichts davon selbst zu kennen.
+ * Die drei Schlagzeug-Zeilen des Sequenzers, in fester Reihenfolge. Jede
+ * trägt ihre Anzeigefarbe und die Namen ihrer drei wählbaren Klänge –
+ * scenes/sequenzer.js braucht nichts davon selbst zu kennen. Die Melodie-Zeile
+ * ist separat (eigene Klavierrolle statt Klangvarianten, siehe
+ * MELODIE_FARBE/sequenzerMelodieKlang), Vocal-Samples kommen zur Laufzeit dazu
+ * (siehe sequenzerSampleRegistrieren).
  */
 export const SEQUENZER_REIHEN = [
   { kurz: 'KICK', varianten: ['Kick', 'Sub', 'Gabber'], farbe: '#e0483c' },
   { kurz: 'CLAP', varianten: ['Clap', 'Snap', 'Breitband'], farbe: '#e8c860' },
   { kurz: 'HAT', varianten: ['Hat', 'Open Hat', 'Zisch'], farbe: '#58d0e0' },
-  { kurz: 'MEL', varianten: ['Riff A', 'Riff B', 'Riff C'], farbe: '#58c868' },
 ];
-export { SEQ_SCHRITTE as SEQUENZER_SCHRITTE };
+export const MELODIE_FARBE = '#58c868';
+export const SAMPLE_FARBE = '#c860e0';
 
 /** Startet die Wiedergabe wieder bei Schritt 0 – für einen sauberen Einstieg. */
 export function sequenzerStarten() {
   seqAktiv = true;
   seqZaehler = 0;
-  seqMelodiePos = 0;
   if (ctx) seqNaechsteZeit = ctx.currentTime;
 }
 
@@ -776,56 +781,231 @@ export function sequenzerLaeuft() {
   return seqAktiv;
 }
 
-/** Schritt, der zuletzt ausgelöst wurde – für das Playhead-Rechteck in der Anzeige. */
-export function sequenzerAnzeigeSchritt() {
-  return (seqZaehler - 1 + SEQ_SCHRITTE) % SEQ_SCHRITTE;
+/** Aktuelles Tempo in BPM. */
+export function sequenzerBpm() {
+  return seqBpm;
 }
 
 /**
- * Hört eine einzelne Zeile sofort an, unabhängig vom laufenden Muster –
- * beim Antippen eines Schritts oder beim Durchschalten der Klänge (siehe
- * scenes/sequenzer.js), damit man hört, was man gerade einbaut.
+ * Setzt das Tempo, geklemmt auf einen sinnvollen Bereich. Wirkt sofort auf den
+ * nächsten noch nicht verplanten Schritt – ein Wechsel mitten in der
+ * Wiedergabe reißt nichts ab, der Takt zieht einfach glatt an oder ab.
+ * @returns {number} das tatsächlich gesetzte Tempo
+ */
+export function sequenzerBpmSetzen(bpm) {
+  seqBpm = Math.max(SEQUENZER_BPM_MIN, Math.min(SEQUENZER_BPM_MAX, Math.round(bpm)));
+  return seqBpm;
+}
+
+/** Schritt, der zuletzt ausgelöst wurde – für das Playhead-Rechteck in der Anzeige. */
+export function sequenzerAnzeigeSchritt() {
+  return (seqZaehler - 1 + SEQUENZER_SCHRITTE) % SEQUENZER_SCHRITTE;
+}
+
+/**
+ * Hört eine einzelne Schlagzeug-Zeile sofort an, unabhängig vom laufenden
+ * Muster – beim Antippen eines Schritts oder beim Durchschalten der Klänge
+ * (siehe scenes/sequenzer.js), damit man hört, was man gerade einbaut.
  * @param {number} zeile Index in SEQUENZER_REIHEN
  * @param {number} variante Index in SEQUENZER_REIHEN[zeile].varianten
  */
 export function sequenzerVorhoeren(zeile, variante) {
   if (!ctx) return;
-  const zeit = ctx.currentTime;
-  if (zeile === 0) KICK_VARIANTEN[variante]?.(zeit);
-  else if (zeile === 1) CLAP_VARIANTEN[variante]?.(zeit);
-  else if (zeile === 2) HIHAT_VARIANTEN[variante]?.(zeit);
-  else if (zeile === 3) {
-    const riff = MELODIE_PRESETS[variante];
-    if (riff) ton(zeit, riff[0], 0.15, 'sawtooth', 0.09);
+  SCHLAGZEUG_KLAENGE[zeile]?.[variante]?.(ctx.currentTime);
+}
+
+/** Länge eines Schritts in Sekunden beim aktuellen Tempo – für Anzeige und Beat-Grid. */
+export function sequenzerSchrittDauer() {
+  return 60 / seqBpm / 4;
+}
+
+/**
+ * Eine einzelne Note der Melodie-Zeile sofort anhören (Klavierrolle, siehe
+ * scenes/sequenzer.js).
+ * @param {number} halbtoene Abstand zu A4
+ */
+export function sequenzerMelodieVorhoeren(halbtoene) {
+  if (!ctx) return;
+  ton(ctx.currentTime, halbtoene, sequenzerSchrittDauer() * 0.85, 'sawtooth', 0.09);
+}
+
+// --- Vocal-Samples -----------------------------------------------------------
+// Aufgenommene Häppchen (siehe scenes/sequenzer.js: "+ Sample" nimmt kurz über
+// das Mikrofon auf). Registriert wird nur der fertig dekodierte AudioBuffer;
+// alles Musterbezogene (welche Schritte, welche Effekte an sind) bleibt bei
+// der Szene, genau wie bei den Schlagzeug-Zeilen.
+
+/** @type {Map<string, AudioBuffer>} */
+const seqSamplePuffer = new Map();
+let seqSampleZaehler = 0;
+
+/**
+ * Merkt einen aufgenommenen Puffer unter einer neuen Kennung.
+ * @returns {string} die Kennung, die scenes/sequenzer.js ab jetzt benutzt
+ */
+export function sequenzerSampleRegistrieren(buffer) {
+  const id = `sample_${seqSampleZaehler}`;
+  seqSampleZaehler += 1;
+  seqSamplePuffer.set(id, buffer);
+  return id;
+}
+
+export function sequenzerSampleEntfernen(id) {
+  seqSamplePuffer.delete(id);
+}
+
+/**
+ * Dekodiert eine frisch aufgenommene Vocal-Sample-Aufnahme (siehe
+ * scenes/sequenzer.js: "+ Sample" nimmt über das Mikrofon auf) und registriert
+ * sie. `ctx` bleibt dabei vollständig in diesem Modul – die Szene reicht nur
+ * die rohen Bytes rein und bekommt eine Kennung zurück.
+ * @param {ArrayBuffer} rohdaten
+ * @returns {Promise<string|null>} die Kennung, oder null bei einem Dekodierfehler
+ */
+export async function sequenzerSampleAusAufnahme(rohdaten) {
+  if (!ctx) return null;
+  try {
+    const puffer = await ctx.decodeAudioData(rohdaten);
+    return sequenzerSampleRegistrieren(puffer);
+  } catch {
+    return null;
   }
+}
+
+/** Nachhall-Impulsantwort: einmal künstlich erzeugtes, abklingendes Rauschen statt einer Audiodatei. */
+let seqImpulsantwort = null;
+function impulsantwort() {
+  if (seqImpulsantwort || !ctx) return seqImpulsantwort;
+  const dauer = 1.1;
+  const laenge = Math.floor(ctx.sampleRate * dauer);
+  const puffer = ctx.createBuffer(2, laenge, ctx.sampleRate);
+  for (let kanal = 0; kanal < 2; kanal += 1) {
+    const daten = puffer.getChannelData(kanal);
+    for (let i = 0; i < laenge; i += 1) {
+      daten[i] = (Math.random() * 2 - 1) * (1 - i / laenge) ** 3;
+    }
+  }
+  seqImpulsantwort = puffer;
+  return seqImpulsantwort;
+}
+
+/**
+ * Spielt ein Vocal-Sample durch die gewählten Effekte. Baut die Kette bei
+ * jedem Treffer frisch auf – genau wie jeder andere Klang hier, kein
+ * dauerhafter Kanal nötig, nichts, was aufgeräumt werden müsste.
+ * @param {number} zeit
+ * @param {AudioBuffer} puffer
+ * @param {{echo?: boolean, hall?: boolean, verzerrt?: boolean, beatGrid?: boolean}} fx
+ */
+function spieleSample(zeit, puffer, fx) {
+  if (!ctx || !musikBus || !puffer) return;
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = puffer;
+
+  // Beat-Grid: das Sample auf eine Schrittlänge kürzen, statt in den
+  // nächsten Schritt hineinklingen zu lassen – dafür fährt die Hüllkurve
+  // kurz vor Schrittende sanft auf null statt hart abzuschneiden.
+  const huellkurve = ctx.createGain();
+  huellkurve.gain.setValueAtTime(1, zeit);
+  if (fx.beatGrid) {
+    const schrittDauer = sequenzerSchrittDauer();
+    const auslauf = Math.min(0.02, schrittDauer * 0.3);
+    huellkurve.gain.setValueAtTime(1, zeit + Math.max(0, schrittDauer - auslauf));
+    huellkurve.gain.linearRampToValueAtTime(0.0001, zeit + schrittDauer);
+  }
+  quelle.connect(huellkurve);
+  let ende = huellkurve;
+
+  if (fx.verzerrt) {
+    const shaper = ctx.createWaveShaper();
+    shaper.curve = verzerrerKurve(9);
+    shaper.oversample = '2x';
+    ende.connect(shaper);
+    ende = shaper;
+  }
+
+  if (fx.echo) {
+    const trocken = ctx.createGain();
+    trocken.gain.value = 0.8;
+    ende.connect(trocken);
+    trocken.connect(musikBus);
+
+    const verzoegerung = ctx.createDelay(1);
+    verzoegerung.delayTime.value = sequenzerSchrittDauer() * 2;
+    const rueckkopplung = ctx.createGain();
+    rueckkopplung.gain.value = 0.38;
+    const echoPegel = ctx.createGain();
+    echoPegel.gain.value = 0.5;
+
+    ende.connect(verzoegerung);
+    verzoegerung.connect(echoPegel);
+    echoPegel.connect(musikBus);
+    verzoegerung.connect(rueckkopplung);
+    rueckkopplung.connect(verzoegerung);
+  } else {
+    ende.connect(musikBus);
+  }
+
+  if (fx.hall) {
+    const antwort = impulsantwort();
+    if (antwort) {
+      const faltung = ctx.createConvolver();
+      faltung.buffer = antwort;
+      const hallPegel = ctx.createGain();
+      hallPegel.gain.value = 0.35;
+      ende.connect(faltung);
+      faltung.connect(hallPegel);
+      hallPegel.connect(musikBus);
+    }
+  }
+
+  quelle.start(zeit);
+  quelle.stop(zeit + puffer.duration + 1.5);
+}
+
+/** Ein Vocal-Sample sofort anhören, mit denselben Effekten wie im Muster. */
+export function sequenzerSampleVorhoeren(id, fx) {
+  if (!ctx) return;
+  const puffer = seqSamplePuffer.get(id);
+  if (puffer) spieleSample(ctx.currentTime, puffer, fx);
 }
 
 /**
  * Plant alle Schritte, die innerhalb des Vorlauffensters liegen. Aus
  * scenes/sequenzer.js einmal je Bild aufzurufen, solange der Sequenzer läuft.
  *
- * @param {boolean[][]} muster vier Zeilen zu je 16 Schritten (siehe
- *   SEQUENZER_REIHEN für die Reihenfolge) – true heißt: hier klingt die Zeile.
- * @param {number[]} varianten gewählte Variante je Zeile (Index in
- *   SEQUENZER_REIHEN[i].varianten bzw. MELODIE_PRESETS für die Melodie-Zeile)
+ * @param {{
+ *   schlagzeug: { muster: boolean[][], varianten: number[], stumm: boolean[] },
+ *   melodie: { noten: (number|null)[], stumm: boolean },
+ *   samples: { id: string, muster: boolean[], stumm: boolean,
+ *     fx: {echo: boolean, hall: boolean, verzerrt: boolean, beatGrid: boolean} }[],
+ * }} zustand
  */
-export function sequenzerAktualisieren(muster, varianten) {
+export function sequenzerAktualisieren(zustand) {
   if (!ctx || !seqAktiv) return;
-  const schrittDauer = 60 / SEQ_BPM / 4;
   if (seqNaechsteZeit < ctx.currentTime) seqNaechsteZeit = ctx.currentTime;
 
   while (seqNaechsteZeit < ctx.currentTime + VORLAUF_S) {
-    const i = seqZaehler % SEQ_SCHRITTE;
+    const schrittDauer = 60 / seqBpm / 4;
+    const i = seqZaehler % SEQUENZER_SCHRITTE;
     const zeit = seqNaechsteZeit;
-    if (i === 0) seqMelodiePos = 0;
 
-    if (muster[0][i]) KICK_VARIANTEN[varianten[0]](zeit);
-    if (muster[1][i]) CLAP_VARIANTEN[varianten[1]](zeit);
-    if (muster[2][i]) HIHAT_VARIANTEN[varianten[2]](zeit);
-    if (muster[3][i]) {
-      const riff = MELODIE_PRESETS[varianten[3]];
-      ton(zeit, riff[seqMelodiePos % riff.length], schrittDauer * 0.85, 'sawtooth', 0.09);
-      seqMelodiePos += 1;
+    const { schlagzeug, melodie, samples } = zustand;
+    schlagzeug.muster.forEach((zeile, reihe) => {
+      if (!schlagzeug.stumm[reihe] && zeile[i]) {
+        SCHLAGZEUG_KLAENGE[reihe][schlagzeug.varianten[reihe]](zeit);
+      }
+    });
+
+    if (!melodie.stumm && melodie.noten[i] !== null && melodie.noten[i] !== undefined) {
+      ton(zeit, melodie.noten[i], schrittDauer * 0.85, 'sawtooth', 0.09);
+    }
+
+    for (const spur of samples) {
+      if (!spur.stumm && spur.muster[i]) {
+        const puffer = seqSamplePuffer.get(spur.id);
+        if (puffer) spieleSample(zeit, puffer, spur.fx);
+      }
     }
 
     seqNaechsteZeit += schrittDauer;
