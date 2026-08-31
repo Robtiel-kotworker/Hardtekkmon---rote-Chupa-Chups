@@ -149,7 +149,7 @@ function baueCasinoSaal(id, ortName, schachtId, saat) {
   const hoehe = SAAL_HOEHE;
 
   return baueKarte(id, {
-    name: `Casino ${ortName}`, breite, hoehe, drinnen: true, musik: 'gig',
+    name: `Casino ${ortName}`, breite, hoehe, drinnen: true, musik: 'casino',
   }, (bauer) => {
     bauer.rechteck(0, 0, breite, hoehe, 'goldwand');
     bauer.rechteck(1, 2, breite - 2, hoehe - 3, 'teppichRot');
