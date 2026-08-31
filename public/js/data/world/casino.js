@@ -192,6 +192,11 @@ function baueCasinoSaal(id, ortName, schachtId, saat) {
     bauer.setze(breite - 3, hoehe - 4, 'pflanze');
     bauer.setze(2, hoehe - 4, 'tonne');
 
+    // Die Briefsäule, ganz hinten in der rechten Ecke – so weit weg vom
+    // Treppenfuß, wie der Saal es hergibt. An ihr hängt der blaue Brief mit
+    // der Laufformation (siehe game/saeulenraetsel.js).
+    bauer.setze(breite - 2, hoehe - 2, 'briefsaeule');
+
     // --- Personal ------------------------------------------------------------
     const npcs = [
       // Die drei Croupiers stehen hinter ihren Tischen und starten das Spiel.

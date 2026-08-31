@@ -9,9 +9,13 @@
 
 import { BREITE, HOEHE } from '../engine/screen.js';
 import { gedrueckt, gehalten, richtung as eingaberichtung } from '../engine/input.js';
-import { spieleTrack, effekt, schlagDauer, vorlauf } from '../engine/audio.js';
+import {
+  spieleTrack, effekt, schlagDauer, vorlauf, spieleKlang, klangDauer,
+} from '../engine/audio.js';
 import { BILDER_PRO_SEKUNDE } from '../engine/loop.js';
-import { KACHEL, kachelInfo, TELLER_PLAETZE, zeichneGoldPlatte } from '../gfx/tiles.js';
+import {
+  KACHEL, kachelInfo, TELLER_PLAETZE, zeichneGoldPlatte, zeichneBrief,
+} from '../gfx/tiles.js';
 import { zeichneMensch } from '../gfx/menschen.js';
 import { monSprite } from '../gfx/monsprites.js';
 import { blende as zeichneBlende, fenster, gegenstandSymbol } from '../gfx/ui.js';
@@ -34,8 +38,12 @@ import {
   spiel, hatGegenstand, gibGegenstand, merkeAufgesammelt, schonAufgesammelt,
   trainerBesiegt, merkeTrainerBesiegt, gigErhalten, anzahlGigs, heileTeam,
   merkeBoxenstopp, waehleStarter, merkeGesehen, setzeFlagge, hatFlagge,
-  ersterKaempfer, speichereSpiel,
+  ersterKaempfer, speichereSpiel, aendereGeld,
 } from '../game/spielstand.js';
+import {
+  Saeulenlauf, saeulenStand, sperreRest, sperrText, briefText, startfelder,
+  wuerfleAbfolge, BELOHNUNG, SPERRE_MS,
+} from '../game/saeulenraetsel.js';
 import { starteKampf } from '../battle/kampf.js';
 import { schiebe } from './stapel.js';
 
@@ -133,6 +141,30 @@ const ZOCKER_ECKE_NAH = 2;
 /** Notbremse: So viele Bilder darf eine Jubelrunde höchstens dauern. */
 const ZOCKER_JUBEL_HOECHSTDAUER = 60 * 90;
 
+/**
+ * Feuerwerk, wenn die Briefsäule im Casino aufgibt (siehe
+ * game/saeulenraetsel.js). Es läuft genau so lange wie die Belohnungskick,
+ * die dazu abgefeuert wird – die Länge kommt aus der Datei selbst (siehe
+ * klangDauer in engine/audio.js), damit Bild und Ton gemeinsam enden.
+ */
+const FEUERWERK_BILDER = Math.max(1, Math.round(BILDER_PRO_SEKUNDE * klangDauer('belohnung')));
+const FEUERWERK_RAKETEN = 11;
+const FEUERWERK_FUNKEN = 20;
+/** Steiggeschwindigkeit einer Rakete in Pixeln je Bild. */
+const RAKETEN_TEMPO = 3.2;
+/**
+ * Wie lange eine Rakete höchstens braucht, bis sie platzt: vom unteren
+ * Bildrand bis zur höchsten Zündhöhe. Zusammen mit der Brenndauer der Funken
+ * legt das fest, wann die letzte Rakete spätestens starten muss, damit das
+ * Feuerwerk nicht mitten in der Luft abgeschnitten wird.
+ */
+const RAKETEN_STEIGZEIT = Math.ceil((HOEHE + 4) / RAKETEN_TEMPO);
+/** Brenndauer eines Funkens in Bildern. */
+const FUNKEN_LEBEN = 42;
+/** Schwerkraft auf die Funken, Pixel je Bild und Bild. */
+const FUNKEN_SCHWERE = 0.055;
+const FEUERWERK_FARBEN = ['#ffe07a', '#ff5a6e', '#7ad0ff', '#8cff9a', '#fff8e0', '#ffb04a'];
+
 /** Kacheln, die auf dunklen Karten selbst Licht abgeben. */
 const LEUCHTKACHELN = new Set(['schachtlampe', 'laterne']);
 /** Reichweite eines solchen Lichtkreises in Pixeln. */
@@ -197,6 +229,12 @@ export class Weltszene {
     this.kampfNachBlende = null;
     /** Läuft die Heilsequenz? { tick, rest, blitz } – sonst null. */
     this.heilung = null;
+    /** Lage der Briefsäule auf dieser Karte – nur im Casinosaal besetzt. */
+    this.briefsaeule = null;
+    /** Laufender Versuch an der Briefsäule (siehe game/saeulenraetsel.js). */
+    this.raetsel = null;
+    /** Läuft das Feuerwerk nach einer gelösten Säule? */
+    this.feuerwerk = null;
   }
 
   betreten() {
@@ -213,6 +251,11 @@ export class Weltszene {
     this.karte = new Weltkarte(id);
     spiel.position.karte = id;
     spieleTrack(this.karte.daten.musik);
+
+    // Ein Versuch an der Säule gilt nur innerhalb ihres Saals: Wer die Karte
+    // verlässt, fängt beim nächsten Mal wieder an der Säule an.
+    this.briefsaeule = this.karte.findeKachel('briefsaeule');
+    this.raetsel = null;
 
     for (const npc of this.karte.npcs) {
       // Einmal gefangene Legenden und abgehakte Wachen bleiben verschwunden.
@@ -425,6 +468,10 @@ export class Weltszene {
         this.aktualisiereHeilung();
         break;
 
+      case 'feuerwerk':
+        this.aktualisiereFeuerwerk();
+        break;
+
       case 'frei':
       default:
         this.aktualisiereFrei();
@@ -445,6 +492,19 @@ export class Weltszene {
       import('./menue.js').then(({ Menueszene }) => schiebe(new Menueszene(this)));
       return;
     }
+
+    // Steht der Spieler nach dem sechsten Anschlag der Laufformation, warten
+    // A und B auf die Schlussfolge und tun nichts von dem, was sie sonst tun
+    // (ansprechen bzw. rennen) – siehe game/saeulenraetsel.js.
+    if (this.saeulenTastenBereit()) {
+      for (const taste of ['A', 'B']) {
+        if (gedrueckt(taste)) {
+          this.saeulenTaste(taste);
+          return;
+        }
+      }
+    }
+
     if (gedrueckt('A')) {
       this.interagiere();
       return;
@@ -553,6 +613,7 @@ export class Weltszene {
   nachSchritt() {
     this.merkePosition();
     this.warpSperre = false;
+    this.verfolgeSaeulenlauf();
 
     const warp = this.karte.warpAn(this.figur.x, this.figur.y);
     if (warp) {
@@ -646,6 +707,174 @@ export class Weltszene {
     stand.blitz = 1;
     stand.blitzRest = HEIL_BLITZ_BILDER;
     effekt('heilPuls');
+  }
+
+  // --- Briefsäule im Casino ----------------------------------------------------
+
+  /** Geht es von diesem Feld aus in diese Richtung nicht mehr weiter? */
+  istAnschlag(feld, richtung) {
+    const vektor = RICHTUNGS_VEKTOR[richtung];
+    return !this.karte.istBegehbar(feld.x + vektor.x, feld.y + vektor.y);
+  }
+
+  /**
+   * Die Säule ansprechen. Drei Fälle: Sie ist nach einer Belohnung noch
+   * gesperrt, es hängt ein frischer Brief dran, oder man hat ihn schon in der
+   * Hand und liest ihn eben noch mal.
+   *
+   * Gelesen wird immer an der Säule – jedes Lesen setzt den Versuch damit
+   * zugleich auf Anfang, und genau deshalb kann man beliebig oft neu
+   * ansetzen, ohne dass es einen Brief mehr kostet.
+   * @param {{x: number, y: number}} saeule
+   */
+  spricheSaeule(saeule) {
+    const stand = saeulenStand(this.karte.id);
+
+    const rest = sperreRest(stand);
+    if (rest > 0) {
+      effekt('zurueck');
+      this.zeigeText(sperrText(rest));
+      return;
+    }
+
+    const schonAbgenommen = Boolean(stand.abfolge);
+    if (!schonAbgenommen) {
+      // Ausgewürfelt wird nur gegen den Saal selbst, nicht gegen die Leute
+      // darin: Der Brief ist ein Zettel und darf nicht davon abhängen, wo
+      // gerade ein Zocker steht. Beim Laufen zählt eine Figur dagegen sehr
+      // wohl als Anschlag – da geht es ja tatsächlich nicht weiter.
+      const frei = (x, y) => !this.karte.istFest(x, y);
+      const abfolge = wuerfleAbfolge(startfelder(saeule, frei), frei);
+      if (!abfolge) {
+        this.zeigeText('Am Nagel hängt ein blauer Brief. Innen ist er leer.');
+        return;
+      }
+      stand.abfolge = abfolge;
+      speichereSpiel();
+    }
+
+    this.raetsel = new Saeulenlauf(stand.abfolge);
+    effekt('item');
+    this.zeigeText(briefText(stand.abfolge, schonAbgenommen));
+  }
+
+  /** Schreibt den gerade gemachten Schritt in den laufenden Versuch. */
+  verfolgeSaeulenlauf() {
+    if (!this.raetsel) return;
+    const passt = this.raetsel.schritt(
+      this.figur.richtung,
+      this.figur,
+      (feld, richtung) => this.istAnschlag(feld, richtung),
+    );
+    if (!passt) this.raetsel = null;
+  }
+
+  /** Sind alle sechs Läufe durch und wartet die Säule auf die Schlussfolge? */
+  saeulenTastenBereit() {
+    if (!this.raetsel) return false;
+    return this.raetsel.tastenBereit(
+      this.figur,
+      (feld, richtung) => this.istAnschlag(feld, richtung),
+    );
+  }
+
+  saeulenTaste(taste) {
+    const ergebnis = this.raetsel.taste(taste);
+    if (ergebnis === 'fehler') {
+      this.raetsel = null;
+      effekt('zurueck');
+      return;
+    }
+    if (ergebnis === 'geloest') {
+      this.loeseSaeule();
+      return;
+    }
+    effekt('auswahl');
+  }
+
+  /**
+   * Die Säule gibt auf. Ausgezahlt und weggespeichert wird sofort – der
+   * Spielstand soll auch dann stimmen, wenn mitten im Feuerwerk Schluss ist.
+   * Sichtbar wird es über Kick und Feuerwerk, der Text kommt danach.
+   */
+  loeseSaeule() {
+    const stand = saeulenStand(this.karte.id);
+    stand.abfolge = null;
+    stand.bereitAb = Date.now() + SPERRE_MS;
+    aendereGeld(BELOHNUNG);
+    speichereSpiel();
+
+    this.raetsel = null;
+    this.feuerwerk = this.erzeugeFeuerwerk();
+    this.zustand = 'feuerwerk';
+    spieleKlang('belohnung');
+  }
+
+  /**
+   * Legt die Raketen an. Sie starten gleichmäßig über die Zeit verteilt, aber
+   * nur so lange, dass die letzte noch steigen und ausbrennen kann – sonst
+   * hinge am Ende ein halbes Feuerwerk in der Luft, wenn die Kick schon
+   * durch ist.
+   */
+  erzeugeFeuerwerk() {
+    const letzterStart = Math.max(0, FEUERWERK_BILDER - RAKETEN_STEIGZEIT - FUNKEN_LEBEN);
+    const raketen = [];
+    for (let i = 0; i < FEUERWERK_RAKETEN; i += 1) {
+      raketen.push({
+        start: Math.round((i / FEUERWERK_RAKETEN) * letzterStart),
+        x: 24 + Math.random() * (BREITE - 48),
+        zuendhoehe: 20 + Math.random() * 56,
+        y: HOEHE + 4,
+        geplatzt: false,
+      });
+    }
+    return { bild: 0, raketen, funken: [] };
+  }
+
+  aktualisiereFeuerwerk() {
+    const stand = this.feuerwerk;
+    stand.bild += 1;
+
+    for (const rakete of stand.raketen) {
+      if (rakete.geplatzt || stand.bild < rakete.start) continue;
+      rakete.y -= RAKETEN_TEMPO;
+      if (rakete.y > rakete.zuendhoehe) continue;
+      rakete.geplatzt = true;
+      this.zuendeFunken(stand, rakete.x, rakete.y);
+    }
+
+    for (const funke of stand.funken) {
+      funke.x += funke.vx;
+      funke.y += funke.vy;
+      funke.vy += FUNKEN_SCHWERE;
+      funke.leben -= 1;
+    }
+    stand.funken = stand.funken.filter((funke) => funke.leben > 0);
+
+    if (stand.bild < FEUERWERK_BILDER) return;
+
+    this.feuerwerk = null;
+    this.zeigeText([
+      `In der Säule klackt es. Eine Klappe geht auf und spuckt ${BELOHNUNG} Geld aus.`,
+      'Der Brief zerfällt dir in der Hand. Am Nagel hängt in einer halben Stunde ein neuer.',
+    ]);
+  }
+
+  /** Eine geplatzte Rakete: Funken gleichmäßig im Kreis, alle in einer Farbe. */
+  zuendeFunken(stand, x, y) {
+    const farbe = FEUERWERK_FARBEN[Math.floor(Math.random() * FEUERWERK_FARBEN.length)];
+    for (let i = 0; i < FEUERWERK_FUNKEN; i += 1) {
+      const winkel = (i / FEUERWERK_FUNKEN) * Math.PI * 2 + Math.random() * 0.3;
+      const tempo = 0.7 + Math.random() * 1.5;
+      stand.funken.push({
+        x,
+        y,
+        vx: Math.cos(winkel) * tempo,
+        vy: Math.sin(winkel) * tempo,
+        farbe,
+        leben: Math.round(FUNKEN_LEBEN * (0.6 + Math.random() * 0.4)),
+      });
+    }
   }
 
   merkeBoxenstoppWennNoetig() {
@@ -941,6 +1170,10 @@ export class Weltszene {
       import('./lager.js').then(({ Lagerszene }) => schiebe(new Lagerszene()));
       return;
     }
+    if (kachel === 'briefsaeule') {
+      this.spricheSaeule(ziel);
+      return;
+    }
 
     const kachelText = {
       plattenspieler: 'Ein Plattenspieler. Die Nadel läuft noch, die Platte auch.',
@@ -1098,10 +1331,12 @@ export class Weltszene {
 
     this.karte.zeichne(ctx, kamera, this.bildzaehler);
     this.zeichneGegenstaende(ctx, kamera);
+    if (this.briefsaeule) this.zeichneSaeulenbrief(ctx, kamera);
     this.zeichneFiguren(ctx, kamera, spielerPixel);
 
     if (this.karte.daten.dunkel) this.zeichneDunkelheit(ctx, spielerPixel, kamera);
     if (this.heilungLaeuft()) this.zeichneHeilteller(ctx, kamera);
+    if (this.feuerwerk) this.zeichneFeuerwerk(ctx);
     if (this.zustand === 'anmarsch' && this.anmarsch) this.zeichneAusrufezeichen(ctx, kamera);
 
     this.textfenster.zeichnen(ctx);
@@ -1219,6 +1454,42 @@ export class Weltszene {
     const y = teller.y * KACHEL - kamera.y;
     const platten = Math.min(TELLER_PLAETZE.length, this.heilung.tick + 1);
     for (let i = 0; i < platten; i += 1) zeichneGoldPlatte(ctx, x, y, i);
+  }
+
+  /**
+   * Der blaue Brief an der Säule. Er hängt nur, solange ihn keiner abgenommen
+   * hat und die Sperre nach der letzten Belohnung durch ist – am Nagel sieht
+   * man der Säule also von Weitem an, woran man gerade ist.
+   */
+  zeichneSaeulenbrief(ctx, kamera) {
+    const stand = saeulenStand(this.karte.id);
+    if (stand.abfolge || sperreRest(stand) > 0) return;
+    zeichneBrief(
+      ctx,
+      this.briefsaeule.x * KACHEL - kamera.x,
+      this.briefsaeule.y * KACHEL - kamera.y,
+    );
+  }
+
+  /**
+   * Feuerwerk über dem ganzen Bild: erst die aufsteigenden Raketen als kurze
+   * Striche, dann die Funken, die mit ihrer Restbrenndauer ausblenden.
+   * Gezeichnet wird in Bildschirmkoordinaten – das Feuerwerk gehört zum
+   * Moment, nicht zu einer Stelle im Saal.
+   */
+  zeichneFeuerwerk(ctx) {
+    for (const rakete of this.feuerwerk.raketen) {
+      if (rakete.geplatzt || this.feuerwerk.bild < rakete.start) continue;
+      ctx.fillStyle = '#ffe07a';
+      ctx.fillRect(Math.round(rakete.x), Math.round(rakete.y), 1, 3);
+    }
+
+    for (const funke of this.feuerwerk.funken) {
+      ctx.globalAlpha = Math.min(1, funke.leben / (FUNKEN_LEBEN * 0.6));
+      ctx.fillStyle = funke.farbe;
+      ctx.fillRect(Math.round(funke.x), Math.round(funke.y), 2, 2);
+    }
+    ctx.globalAlpha = 1;
   }
 
   zeichneAusrufezeichen(ctx, kamera) {
