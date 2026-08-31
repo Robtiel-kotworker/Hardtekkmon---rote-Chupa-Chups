@@ -10,7 +10,7 @@ import { baueKarte, person, kaempfer, schild, fundstueck, warp } from './verzeic
 import {
   baueSpielerzimmer, baueLabor, setzeBoxenstopp, setzeKiosk, setzeGigHalle, setzeWohnhaus,
 } from './innenraeume.js';
-import { setzeBruchbude } from './casino.js';
+import { platziereBruchbude } from './casino.js';
 
 /** Hauptweg-Position: immer mittig, damit die Karten sauber anschließen. */
 const mitteX = (breite) => Math.floor(breite / 2) - 1;
@@ -188,6 +188,10 @@ baueKarte('schotterhausen', {
   stelleSchild(bauer, schilder, 23, 24, 'GIG-HALLE SCHOTTERHAUSEN – Einlass nur mit sieben Marken.');
   stelleSchild(bauer, schilder, weg + 3, 26, 'SCHOTTERHAUSEN – Die Stadt, die nie ganz aufwacht.');
 
+  platziereBruchbude(bauer, 'schotterhausen', 'Schotterhausen', [
+    { x: 26, y: 25 }, { x: 21, y: 26 }, { x: 24, y: 15 }, { x: 20, y: 25 },
+  ]);
+
   return {
     schilder,
     npcs: [
@@ -335,6 +339,10 @@ baueKarte('kellerstadt', {
   bauer.setze(28, 20, 'tonne');
   bauer.setze(29, 20, 'tonne');
   bauer.wiese(27, 22, 5, 4);
+
+  platziereBruchbude(bauer, 'kellerstadt', 'Kellerstadt', [
+    { x: 11, y: 9 }, { x: 20, y: 21 },
+  ]);
 
   // Was nach Wegen und Gebäuden noch Wiese ist, bekommt Bewuchs.
   bauer.streuenAuf('gras', 'blume', 0.10, 201);
@@ -501,7 +509,6 @@ baueKarte('subwoofer_city', {
 
   setzeBoxenstopp(bauer, 4, 8, 'subwoofer_city', 'Subwoofer City');
   setzeKiosk(bauer, 12, 8, 'subwoofer_city', 'Subwoofer City', KIOSK_MITTEL);
-  setzeBruchbude(bauer, 12, 3, 'subwoofer_city', 'Subwoofer City');
   setzeGigHalle(bauer, 22, 20, 'subwoofer_city', {
     id: 'gig2', ort: 'Subwoofer City', leiter: 'gig2', marke: 1,
     trainer: [[4, 11, 'raver', 'sub_basti'], [12, 11, 'schrauber', 'sub_bodo'],
@@ -517,6 +524,10 @@ baueKarte('subwoofer_city', {
   bauer.setze(6, 26, 'box');
   bauer.setze(7, 26, 'box');
   bauer.setze(6, 25, 'verstaerker');
+
+  platziereBruchbude(bauer, 'subwoofer_city', 'Subwoofer City', [
+    { x: 20, y: quer + 4 }, { x: 30, y: 14 },
+  ]);
 
   // Was nach Wegen und Gebäuden noch Wiese ist, bekommt Bewuchs.
   bauer.streuenAuf('gras', 'blume', 0.10, 211);
@@ -603,6 +614,10 @@ baueKarte('vinylhafen', {
   for (const x of [6, 14, 22, 30]) bauer.setze(x, quer + 3, 'laterne');
   bauer.setze(24, 20, 'tonne');
   bauer.setze(25, 20, 'tonne');
+
+  platziereBruchbude(bauer, 'vinylhafen', 'Vinylhafen', [
+    { x: 26, y: quer + 1 }, { x: 20, y: quer + 3 }, { x: 8, y: 12 },
+  ]);
 
   // Was nach Wegen und Gebäuden noch Wiese ist, bekommt Bewuchs.
   bauer.streuenAuf('gras', 'blume', 0.10, 223);
