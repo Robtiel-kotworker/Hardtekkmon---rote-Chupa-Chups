@@ -35,6 +35,11 @@ function leererStand() {
     startgewaehlt: false,
     // Optionale Hilfen ("Cheaten" im Hauptmenü). Standardmäßig alles aus.
     einstellungen: { typhilfe: false },
+    // Schlüsselgegenstand auf der SELECT-Taste – siehe legeAufSelect() unten.
+    selectGegenstand: null,
+    // Die Taschenlampe leuchtet nur an, wenn sie eingeschaltet ist (siehe
+    // schalteTaschenlampe()); nur Besitz allein reicht nicht mehr.
+    taschenlampeAn: false,
   };
 }
 
@@ -129,6 +134,30 @@ export function hatGegenstand(name, anzahl = 1) {
 
 export function anzahlGegenstand(name) {
   return spiel.beutel[name] ?? 0;
+}
+
+/**
+ * Legt einen Schlüsselgegenstand auf die SELECT-Taste (siehe scenes/beutel.js)
+ * – unterwegs lässt er sich damit direkt benutzen, ohne durchs Menü zu gehen
+ * (siehe benutzeSelectGegenstand() in scenes/welt.js). `null` nimmt den
+ * belegten Gegenstand wieder herunter.
+ */
+export function legeAufSelect(name) {
+  spiel.selectGegenstand = name;
+}
+
+export function selectGegenstand() {
+  return spiel.selectGegenstand ?? null;
+}
+
+/** Schaltet die Taschenlampe um und liefert den neuen Zustand. */
+export function schalteTaschenlampe() {
+  spiel.taschenlampeAn = !spiel.taschenlampeAn;
+  return spiel.taschenlampeAn;
+}
+
+export function taschenlampeAn() {
+  return Boolean(spiel.taschenlampeAn);
 }
 
 // --- Team ----------------------------------------------------------------------

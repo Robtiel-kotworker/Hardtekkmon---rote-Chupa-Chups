@@ -39,7 +39,9 @@ import {
   trainerBesiegt, merkeTrainerBesiegt, gigErhalten, anzahlGigs, heileTeam,
   merkeBoxenstopp, waehleStarter, merkeGesehen, setzeFlagge, hatFlagge,
   ersterKaempfer, speichereSpiel, aendereGeld,
+  selectGegenstand, schalteTaschenlampe, taschenlampeAn,
 } from '../game/spielstand.js';
+import { GEGENSTAENDE } from '../data/gegenstaende.js';
 import {
   Saeulenlauf, saeulenStand, sperreRest, sperrText, briefText, startfelder,
   wuerfleAbfolge, BELOHNUNG, SPERRE_MS,
@@ -503,6 +505,10 @@ export class Weltszene {
       import('./menue.js').then(({ Menueszene }) => schiebe(new Menueszene(this)));
       return;
     }
+    if (gedrueckt('SELECT')) {
+      this.benutzeSelectGegenstand();
+      return;
+    }
 
     // Steht der Spieler nach dem sechsten Anschlag der Laufformation, warten
     // A und B auf die Schlussfolge und tun nichts von dem, was sie sonst tun
@@ -914,6 +920,49 @@ export class Weltszene {
 
     effekt('bestaetigen');
     this.starteBlende(() => this.wechsleKarte(tuerZiel.zielId, tuerZiel.x, tuerZiel.y));
+  }
+
+  // --- Schlüsselgegenstand auf SELECT -----------------------------------------
+
+  /**
+   * Der Gegenstand auf der SELECT-Taste (siehe legeAufSelect() in
+   * game/spielstand.js, gesetzt über den Beutel) lässt sich unterwegs direkt
+   * benutzen, ohne durchs Menü zu gehen. Karte, Taschenlampe und ähnliche
+   * Schlüsselgegenstände bekommen hier ihre eigentliche Wirkung; alles ohne
+   * eigene Behandlung zeigt schlicht seinen Beschreibungstext.
+   */
+  benutzeSelectGegenstand() {
+    const name = selectGegenstand();
+    if (!name || !hatGegenstand(name)) {
+      effekt('zurueck');
+      this.zeigeText('Kein Gegenstand auf SELECT gelegt.');
+      return;
+    }
+
+    effekt('bestaetigen');
+
+    if (name === 'Taschenlampe') {
+      const an = schalteTaschenlampe();
+      this.zeigeText(an ? 'Taschenlampe an.' : 'Taschenlampe aus.');
+      return;
+    }
+    if (name === 'Tekkdex') {
+      import('./tekkdex.js').then(({ Tekkdexszene }) => schiebe(new Tekkdexszene()));
+      return;
+    }
+    if (name === 'Gigpass') {
+      import('./menue.js').then(({ Menueszene }) => {
+        const menue = new Menueszene(this);
+        menue.zeigeGigpass = true;
+        schiebe(menue);
+      });
+      return;
+    }
+    if (name === 'Stadtplan') {
+      this.zeigeText(`Du bist in ${this.karte.daten.name}.`);
+      return;
+    }
+    this.zeigeText(GEGENSTAENDE[name]?.text ?? '…');
   }
 
   merkeBoxenstoppWennNoetig() {
@@ -1452,7 +1501,7 @@ export class Weltszene {
   zeichneDunkelheit(ctx, spielerPixel, kamera) {
     const mitteX = spielerPixel.x - kamera.x + KACHEL / 2;
     const mitteY = spielerPixel.y - kamera.y + KACHEL / 2;
-    const radius = hatGegenstand('Taschenlampe') ? 78 : 44;
+    const radius = hatGegenstand('Taschenlampe') && taschenlampeAn() ? 78 : 44;
 
     const verlauf = ctx.createRadialGradient(mitteX, mitteY, radius * 0.3, mitteX, mitteY, radius);
     verlauf.addColorStop(0, 'rgba(0, 0, 0, 0)');
