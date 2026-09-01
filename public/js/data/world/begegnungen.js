@@ -22,48 +22,48 @@ export const BEGEGNUNGEN = {
     ['Ratz-Ronny', 4, 6], ['Tröti', 4, 6], ['Glitchi', 4, 7, 6], ['Kellerkind', 5, 7, 5], ['Nebelnils', 5, 7, 4],
   ),
   plattenwald: tabelle(
-    ['Schimmi', 6, 9], ['Muffel', 6, 9], ['Nebelnils', 7, 10, 7], ['Dunsti', 7, 10, 5],
-    ['Glitchi', 6, 9, 6], ['Nadel-Nadine', 8, 10, 3],
+    ['Schimmi', 6, 8], ['Muffel', 6, 8], ['Nebelnils', 7, 8, 7], ['Dunsti', 7, 8, 5],
+    ['Glitchi', 6, 8, 6], ['Nadel-Nadine', 7, 8, 3],
   ),
   route3: tabelle(
-    ['Fliesi', 10, 13], ['Kellerkind', 10, 13], ['Ratzomat', 11, 14, 6], ['Stampfi', 11, 14, 6],
-    ['Schrubbomat', 12, 14, 4],
+    ['Fliesi', 8, 11], ['Kellerkind', 8, 11], ['Ratzomat', 9, 12, 6], ['Stampfi', 9, 12, 6],
+    ['Schrubbomat', 10, 12, 4],
   ),
   boxenberg: tabelle(
-    ['Schimmi', 12, 15], ['Muffel', 12, 16], ['Kellerkind', 13, 16, 8], ['Fliesi', 13, 16, 6],
-    ['Bierbankbernd', 14, 17, 3], ['Gullideckel-Gustav', 15, 17, 2],
+    ['Schimmi', 10, 13], ['Muffel', 10, 13], ['Kellerkind', 11, 13, 8], ['Fliesi', 11, 13, 6],
+    ['Bierbankbernd', 12, 14, 3], ['Gullideckel-Gustav', 13, 14, 2],
   ),
   route4: tabelle(
-    ['Stromer Sven', 14, 18], ['Kabelkurt', 14, 18], ['Blitzbirne', 15, 18, 6],
-    ['Mate-Mandy', 15, 19, 5], ['Aggi', 16, 19, 4],
+    ['Stromer Sven', 12, 14], ['Kabelkurt', 12, 14], ['Blitzbirne', 13, 14, 6],
+    ['Mate-Mandy', 13, 14, 5], ['Aggi', 13, 14, 4],
   ),
   route5: tabelle(
-    ['Wummi', 18, 22], ['Boxi', 18, 22], ['Säuresusi', 19, 22, 6], ['Filterfritzi', 19, 23, 5],
-    ['Subwoofer-Sepp', 20, 23, 4], ['Plong', 19, 22, 6],
+    ['Wummi', 14, 15], ['Boxi', 14, 15], ['Säuresusi', 14, 15, 6], ['Filterfritzi', 14, 16, 5],
+    ['Subwoofer-Sepp', 15, 16, 4], ['Plong', 14, 15, 6],
   ),
   route7: tabelle(
-    ['Plattenpaule', 24, 28], ['Scratchi', 24, 28], ['Bitbert', 25, 29, 6],
-    ['Nadel-Nadine', 25, 29, 6], ['Kippen-Kevin', 26, 29, 3], ['Hüpfi', 25, 28, 5],
+    ['Plattenpaule', 16, 17], ['Scratchi', 16, 17], ['Bitbert', 16, 18, 6],
+    ['Nadel-Nadine', 16, 18, 6], ['Kippen-Kevin', 17, 18, 3], ['Hüpfi', 16, 17, 5],
   ),
   route9: tabelle(
-    ['Schranzi', 30, 34], ['Sägeseppel', 30, 34], ['Kreissägi', 31, 35, 7],
-    ['Hallenhalunke', 32, 35, 3], ['Schranzomat', 32, 35, 4], ['Trittbrett-Timo', 31, 34, 5],
+    ['Schranzi', 18, 19], ['Sägeseppel', 18, 19], ['Kreissägi', 18, 20, 7],
+    ['Hallenhalunke', 19, 20, 3], ['Schranzomat', 19, 20, 4], ['Trittbrett-Timo', 18, 19, 5],
   ),
   nebelmoor: tabelle(
-    ['Dunsti', 36, 40], ['Trockeneis-Toni', 36, 40], ['Tröpfi', 37, 40, 7],
-    ['Nebelniklas', 38, 41, 5], ['Augenring-Otto', 38, 41, 3], ['Absacker-Anton', 37, 40, 5],
+    ['Dunsti', 20, 22], ['Trockeneis-Toni', 20, 22], ['Tröpfi', 21, 22, 7],
+    ['Nebelniklas', 21, 23, 5], ['Augenring-Otto', 21, 23, 3], ['Absacker-Anton', 21, 22, 5],
   ),
   route10: tabelle(
-    ['Hüpfi', 40, 44], ['Federfritz', 40, 44], ['Plong', 41, 44, 7],
-    ['Donkomat', 42, 45, 5], ['Kaugummi-Kai', 42, 45, 3], ['Presslufthannes', 43, 45, 2],
+    ['Hüpfi', 22, 24], ['Federfritz', 22, 24], ['Plong', 23, 24, 7],
+    ['Donkomat', 23, 25, 5], ['Kaugummi-Kai', 23, 25, 3], ['Presslufthannes', 24, 25, 2],
   ),
   route11: tabelle(
-    ['Glitchmeister', 44, 48], ['Bytebert', 44, 48], ['Pillenpaul', 45, 48, 6],
-    ['Laserpointer-Lars', 45, 49, 4], ['Plongomat', 45, 48, 6], ['Kabelkorbinian', 46, 49, 5],
+    ['Glitchmeister', 24, 26], ['Bytebert', 24, 26], ['Pillenpaul', 25, 26, 6],
+    ['Laserpointer-Lars', 25, 26, 4], ['Plongomat', 25, 26, 6], ['Kabelkorbinian', 25, 26, 5],
   ),
   siegesweg: tabelle(
-    ['Afterhour-Achim', 48, 52], ['Tanzbär Tommy', 48, 52], ['Frühschicht-Fritz', 49, 53, 6],
-    ['Muffelmann', 49, 52, 6], ['Der Verklatschte', 50, 54, 2], ['Feierabend-Fabian', 50, 53, 4],
+    ['Afterhour-Achim', 26, 28], ['Tanzbär Tommy', 26, 28], ['Frühschicht-Fritz', 26, 28, 6],
+    ['Muffelmann', 26, 28, 6], ['Der Verklatschte', 27, 29, 2], ['Feierabend-Fabian', 27, 28, 4],
   ),
 };
 
