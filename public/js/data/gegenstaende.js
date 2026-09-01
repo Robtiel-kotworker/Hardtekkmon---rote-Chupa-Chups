@@ -23,11 +23,11 @@ function gegenstand(name, art, preis, symbol, wirkung, text) {
 // Super-Sample gibt es von Anfang an im Kiosk, Giga-Sample erst in größeren
 // Kiosken späterer Städte – Master-Sample ist wie eh und je ein einzelnes,
 // garantiertes Fundstück und nirgends käuflich.
-gegenstand('Samplepack', 'fang', 200, 'samplepack', { fangbonus: 1 },
+gegenstand('Samplepack', 'fang', 100, 'samplepack', { fangbonus: 1 },
   'Ein handelsübliches Pack. Fängt geschwächte Hardtekkmon ein.');
-gegenstand('Super-Sample', 'fang', 600, 'samplepackGross', { fangbonus: 1.5 },
+gegenstand('Super-Sample', 'fang', 300, 'samplepackGross', { fangbonus: 1.5 },
   'Mehr Speicher, mehr Chancen. Deutlich fängiger.');
-gegenstand('Giga-Sample', 'fang', 1200, 'samplepackGross', { fangbonus: 2 },
+gegenstand('Giga-Sample', 'fang', 600, 'samplepackGross', { fangbonus: 2 },
   'Studioqualität. Da will jedes Hardtekkmon rein.');
 gegenstand('Master-Sample', 'fang', 0, 'samplepackGross', { fangbonus: 255 },
   'Das legendäre Pack. Fängt garantiert – nur einmal zu bekommen.');
@@ -36,48 +36,48 @@ gegenstand('Master-Sample', 'fang', 0, 'samplepackGross', { fangbonus: 255 },
 // Dieselbe Vier-Stufen-Logik wie bei den Samplepacks: Mate und Super-Mate sind
 // von Anfang an erhältlich, Giga-Mate und Mate-Mate erst in den großen Kiosken
 // der späteren Städte.
-gegenstand('Mate', 'heilung', 200, 'trank', { kp: 20 },
+gegenstand('Mate', 'heilung', 100, 'trank', { kp: 20 },
   'Kalt, koffeinhaltig, heilt 20 Kraftpunkte.');
-gegenstand('Super-Mate', 'heilung', 500, 'trank', { kp: 50 },
+gegenstand('Super-Mate', 'heilung', 250, 'trank', { kp: 50 },
   'Zwei auf einmal. Heilt 50 Kraftpunkte.');
-gegenstand('Giga-Mate', 'heilung', 1200, 'trank', { kp: 80 },
+gegenstand('Giga-Mate', 'heilung', 600, 'trank', { kp: 80 },
   'Nicht mehr ganz legal. Heilt 80 Kraftpunkte.');
-gegenstand('Mate-Mate', 'heilung', 2500, 'pille', { kp: 999 },
+gegenstand('Mate-Mate', 'heilung', 1250, 'pille', { kp: 999 },
   'Volle Dröhnung. Stellt alle Kraftpunkte wieder her.');
-gegenstand('Defibrillator', 'beleben', 1500, 'pille', { beleben: 0.5 },
+gegenstand('Defibrillator', 'beleben', 750, 'pille', { beleben: 0.5 },
   'Bringt ein umgekipptes Hardtekkmon mit halber Kraft zurück.');
-gegenstand('Schwarzer Defibrillator', 'beleben', 3500, 'pille', { beleben: 1 },
+gegenstand('Schwarzer Defibrillator', 'beleben', 1750, 'pille', { beleben: 1 },
   'Bringt ein umgekipptes Hardtekkmon mit voller Kraft zurück.');
 
 // --- Levelaufstieg ---------------------------------------------------------------
-gegenstand('Roter Lolli', 'levelauf', 5000, 'pille', { stufen: 1 },
+gegenstand('Roter Lolli', 'levelauf', 2500, 'pille', { stufen: 1 },
   'Scharf, süß, sofort spürbar: Ein Hardtekkmon, das ihn bekommt, geht um eine Stufe hoch.');
 
 // --- Zustandsheilung ---------------------------------------------------------
-gegenstand('Kaugummi', 'status', 150, 'pille', { heiltStatus: ['zugedröhnt'] },
+gegenstand('Kaugummi', 'status', 75, 'pille', { heiltStatus: ['zugedröhnt'] },
   'Gegen Zittern und Zucken. Hebt "zugedröhnt" auf.');
-gegenstand('Kaffee', 'status', 150, 'trank', { heiltStatus: ['weggeratzt'] },
+gegenstand('Kaffee', 'status', 75, 'trank', { heiltStatus: ['weggeratzt'] },
   'Weckt jeden. Hebt "weggeratzt" auf.');
-gegenstand('Kohletablette', 'status', 150, 'pille', { heiltStatus: ['verkatert'] },
+gegenstand('Kohletablette', 'status', 75, 'pille', { heiltStatus: ['verkatert'] },
   'Bindet alles, was nicht reingehört. Hebt "verkatert" auf.');
 gegenstand('Eisbeutel', 'status', 150, 'pille', { heiltStatus: ['ausgebrannt'] },
   'Kühlt runter. Hebt "ausgebrannt" auf.');
 gegenstand('Handwärmer', 'status', 150, 'pille', { heiltStatus: ['tiefgekühlt'] },
   'Bringt wieder Leben in die Glieder. Hebt "tiefgekühlt" auf.');
-gegenstand('Allzweckreiniger', 'status', 700, 'trank',
+gegenstand('Allzweckreiniger', 'status', 350, 'trank',
   { heiltStatus: ['zugedröhnt', 'weggeratzt', 'verkatert', 'ausgebrannt', 'tiefgekühlt'] },
   'Macht alles wieder sauber. Hebt jeden Zustand auf.');
 
 // --- Kampfhilfen -------------------------------------------------------------
-gegenstand('Anlaufhilfe', 'kampfhilfe', 400, 'pille', { werte: { ang: 1 } },
+gegenstand('Anlaufhilfe', 'kampfhilfe', 200, 'pille', { werte: { ang: 1 } },
   'Kurzfristig mehr Druck: Angriff steigt im Kampf.');
-gegenstand('Ohrstöpsel', 'kampfhilfe', 400, 'pille', { werte: { spv: 1 } },
+gegenstand('Ohrstöpsel', 'kampfhilfe', 200, 'pille', { werte: { spv: 1 } },
   'Dämpft alles ab: Spezial-Verteidigung steigt im Kampf.');
-gegenstand('Turnschuh-Wachs', 'kampfhilfe', 400, 'pille', { werte: { ini: 1 } },
+gegenstand('Turnschuh-Wachs', 'kampfhilfe', 200, 'pille', { werte: { ini: 1 } },
   'Für schnellere Beine: Initiative steigt im Kampf.');
-gegenstand('Boxenkondensator', 'kampfhilfe', 400, 'pille', { werte: { ver: 1 } },
+gegenstand('Boxenkondensator', 'kampfhilfe', 200, 'pille', { werte: { ver: 1 } },
   'Puffert die Wucht ab: Verteidigung steigt im Kampf.');
-gegenstand('Subwoofer-Kern', 'kampfhilfe', 400, 'pille', { werte: { spa: 1 } },
+gegenstand('Subwoofer-Kern', 'kampfhilfe', 200, 'pille', { werte: { spa: 1 } },
   'Mehr Druck aus dem Bass: Spezial-Angriff steigt im Kampf.');
 
 // --- Anlegbare Spezialitems ----------------------------------------------------
