@@ -147,6 +147,11 @@ export class Weltkarte {
     return (this.daten.gegenstaende ?? []).find((g) => g.x === x && g.y === y) ?? null;
   }
 
+  /** Klebt gerade ein Zocker an diesem Automaten (siehe data/world/casino.js)? */
+  automatBesetzt(x, y) {
+    return (this.daten.besetzteAutomaten ?? []).some((p) => p.x === x && p.y === y);
+  }
+
   /** Begegnungsgruppe der Kachel, sofern die Karte wilde Hardtekkmon kennt. */
   begegnungsgruppe(x, y) {
     if (!this.daten.begegnungen) return null;

@@ -17,7 +17,7 @@ import { zahl, eines } from '../engine/rng.js';
 // zahlen dieselbe Quote von 36/37 = 97,3 %, genau wie am echten Tisch.
 
 /** Die roten Zahlen des französischen Rads. */
-const ROT = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+export const ROT = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 
 /**
  * Einsatzarten am Roulettetisch. `faktor` ist die Auszahlung inklusive
@@ -69,7 +69,7 @@ export const BANDIT_QUOTEN = {
 };
 
 /** Die Walze als flache Liste, damit ein einfacher Griff daraus zieht. */
-const WALZENFELDER = WALZE.flatMap((eintrag) => Array(eintrag.gewicht).fill(eintrag.symbol));
+export const WALZENFELDER = WALZE.flatMap((eintrag) => Array(eintrag.gewicht).fill(eintrag.symbol));
 
 /**
  * Bewertet drei Symbole. Zuerst zählt der Dreier, sonst der beste Zweier.
@@ -108,11 +108,14 @@ const KARTENWERTE = [
   ['8', 8], ['9', 9], ['10', 10], ['B', 10], ['D', 10], ['K', 10],
 ];
 
+/** Die vier Farben eines Blatts, für die grafische Kartendarstellung. */
+export const KARTENFARBEN = ['♠', '♥', '♦', '♣'];
+
 /** Frisches, gemischtes Deck aus 52 Karten. */
 export function neuesDeck() {
   const deck = [];
   for (let farbe = 0; farbe < 4; farbe += 1) {
-    for (const [name, wert] of KARTENWERTE) deck.push({ name, wert });
+    for (const [name, wert] of KARTENWERTE) deck.push({ name, wert, farbe: KARTENFARBEN[farbe] });
   }
   for (let i = deck.length - 1; i > 0; i -= 1) {
     const j = zahl(0, i);

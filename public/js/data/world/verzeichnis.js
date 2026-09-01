@@ -61,6 +61,10 @@ export function baueKarte(id, einstellungen, aufbau) {
     schilder: [...gelaende.schilder, ...(zusatz.schilder ?? [])],
     beschriftungen: [...gelaende.beschriftungen, ...(zusatz.beschriftungen ?? [])],
     gegenstaende: zusatz.gegenstaende ?? [],
+    // Automaten-Tische, an denen gerade ein Zocker klebt – siehe
+    // platziereAutomaten() in data/world/casino.js und automatBesetzt() in
+    // world/weltkarte.js.
+    besetzteAutomaten: zusatz.besetzteAutomaten ?? [],
   };
 
   return KARTEN[id];
