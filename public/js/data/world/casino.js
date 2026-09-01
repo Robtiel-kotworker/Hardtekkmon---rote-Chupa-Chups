@@ -228,11 +228,17 @@ function baueCasinoSaal(id, ortName, schachtId, saat, stadtId) {
     // Treppe zurück nach oben, oben mittig.
     bauer.setze(Math.floor(breite / 2), 1, 'treppeHoch');
 
-    // --- Automatenreihe an der linken Wand -----------------------------------
+    // --- Automatenbank: zwei Reihen zu je sechs Geräten ----------------------
+    // Eine Reihe an der Wand, eine zweite auf der Gasse davor – zusammen
+    // zwölf Automaten statt des einen einzelnen früher. Jeder ist über die
+    // Kachel direkt bespielbar (siehe 'automat' in scenes/welt.js); welche
+    // gerade von einem Zocker belegt sind, entscheidet sich weiter unten.
     const automaten = [];
     for (let y = 4; y <= 14; y += 2) {
       bauer.setze(2, y, 'automat');
-      automaten.push({ x: 3, y });
+      automaten.push({ automatX: 2, automatY: y, x: 3, y });
+      bauer.setze(9, y, 'automat');
+      automaten.push({ automatX: 9, automatY: y, x: 10, y });
     }
 
     // --- Tische in der Mitte und rechts --------------------------------------
@@ -286,22 +292,19 @@ function baueCasinoSaal(id, ortName, schachtId, saat, stadtId) {
         text: 'Alles oder nichts. Dazwischen gibt es hier nicht.',
         aktion: { art: 'casino', spiel: 'risiko' },
       }),
-      // Der freie Automat ganz unten ist der des Spielers.
-      person(3, 16, 'raver', 'links', {
-        text: 'Der da hinten ist frei. Der frisst aber auch gern mal alles.',
-        aktion: { art: 'casino', spiel: 'bandit' },
-      }),
     ];
-    bauer.setze(2, 16, 'automat');
 
     // --- Zocker --------------------------------------------------------------
     // Wie viele es sind und wo sie hängen, entscheidet die Aussaat des
     // Ortsnamens: immer dieselbe Aufstellung je Stadt, aber von Stadt zu
-    // Stadt verschieden.
+    // Stadt verschieden. Jeder besetzte Automat bleibt für den Spieler
+    // gesperrt (siehe automatBesetzt() in world/weltkarte.js) – alle anderen
+    // lassen sich frei anspielen, indem man einfach davor tritt.
     const rnd = generator(saat);
     const figuren = ['raver', 'zombie', 'techniker', 'schrauber', 'kumpel'];
-    const frei = automaten.filter((a) => a.y !== 16);
-    const anzahl = 2 + Math.floor(rnd() * 2);
+    const frei = [...automaten];
+    const anzahl = 4 + Math.floor(rnd() * 3);
+    const besetzteAutomaten = [];
     for (let i = 0; i < anzahl && frei.length > 0; i += 1) {
       const platz = frei.splice(Math.floor(rnd() * frei.length), 1)[0];
       const texte = ZOCKER_TEXTE[Math.floor(rnd() * ZOCKER_TEXTE.length)];
@@ -311,6 +314,7 @@ function baueCasinoSaal(id, ortName, schachtId, saat, stadtId) {
         // Der Automat, an dem dieser Zocker klebt und zu dem er zurückkehrt.
         platz: { x: platz.x, y: platz.y },
       });
+      besetzteAutomaten.push({ x: platz.automatX, y: platz.automatY });
     }
 
     return {
@@ -318,6 +322,7 @@ function baueCasinoSaal(id, ortName, schachtId, saat, stadtId) {
       npcs,
       schilder: [schild(klopfX + 3, klopfY, 'Shitter. Proberaum. Privat. Bitte dreimal klopfen.')],
       beschriftungen: [],
+      besetzteAutomaten,
     };
   });
 }

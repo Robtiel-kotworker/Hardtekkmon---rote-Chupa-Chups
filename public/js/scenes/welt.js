@@ -1279,6 +1279,15 @@ export class Weltszene {
       import('./sequenzer.js').then(({ Sequenzerszene }) => schiebe(new Sequenzerszene()));
       return;
     }
+    if (kachel === 'automat') {
+      if (this.karte.automatBesetzt(ziel.x, ziel.y)) {
+        this.zeigeText('Besetzt. Der lässt hier nicht los.');
+        return;
+      }
+      effekt('bestaetigen');
+      import('./casino.js').then(({ Casinoszene }) => schiebe(new Casinoszene('bandit')));
+      return;
+    }
 
     const kachelText = {
       plattenspieler: 'Ein Plattenspieler. Die Nadel läuft noch, die Platte auch.',
