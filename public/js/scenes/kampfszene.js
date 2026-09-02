@@ -26,7 +26,7 @@ import {
 } from '../game/hardtekkmon.js';
 import {
   spiel, nimmAuf, nimmGegenstand, aendereGeld, merkeGefangen, hatGegenstand,
-  typhilfeAn,
+  typhilfeAn, WAEHRUNG,
 } from '../game/spielstand.js';
 import { wirksamkeitGegen } from '../data/typen.js';
 import { fuehreRunde, wechsleEigenes } from '../battle/kampf.js';
@@ -678,7 +678,7 @@ export class Kampfszene {
     if (ergebnis === 'sieg' && this.kampf.art === 'trainer') {
       const geld = this.kampf.trainer.preisgeld ?? 200;
       aendereGeld(geld);
-      meldungen.push(`${this.kampf.trainer.name} zahlt dir ${geld} Mücken.`);
+      meldungen.push(`${this.kampf.trainer.name} zahlt dir ${geld} ${WAEHRUNG}.`);
     }
 
     for (const eintrag of this.entwicklungen) {

@@ -101,21 +101,49 @@ export const PROFESSOR_TEXTE = {
     'Hundert. Na schön. Für hundert vergesse ich Ihr Gesicht.',
     'Sie haben hier nichts gesehen. Es gibt hier nichts zu sehen. Und jetzt raus.',
   ],
-  gross: [
-    'Fünfhundert. Sehr vernünftig. Dann setzen Sie sich, das dauert einen Moment.',
-    'Sie haben sich nie gefragt, warum ein Boxenstopp Ihr halbtotes Hardtekkmon in elf Sekunden wieder auf Betriebstemperatur hat? Kein Mate der Welt ist so schnell. Nichts ist so schnell.',
-    'Oben passiert Folgendes: Sie geben Ihr Hardtekkmon ab, die Schwester legt es auf den Teller, und es wird eingescannt. Jede Zelle, jede Narbe, jede Macke. Zwei Sekunden.',
-    'Der Scan kommt hier runter. Wir setzen ihn im Expressverfahren auf einen Blankoklon – so einen, wie sie da hinten in den Kapseln schwimmen. Frisch, ohne Kratzer, volle Kraftpunkte.',
-    'Der Klon fährt nach oben. Die Schwester lächelt. Sie bekommen "Ihr" Hardtekkmon zurück, und es ist perfekt. Weil es neu ist.',
-    'Und das Original? Das haben Sie an der Theke abgegeben. Das geht hier durch die Maschine da drüben. Die läuft rund um die Uhr.',
-    'Den Rest sehen Sie ja selbst da vorne liegen. Wir kommen mit dem Entsorgen kaum hinterher.',
-    'Also. Fünfhundert. Und jetzt gehen Sie heilen, wie alle anderen auch.',
-  ],
   bezahlt: [
     'Der Professor winkt ab, ohne aufzusehen.',
     'Sie wissen alles. Umso mehr Grund, den Mund zu halten.',
   ],
 };
+
+/** Die beiden Beträge, die der Professor annimmt. */
+export const SCHWEIGEGELD = { klein: 100, gross: 250 };
+
+/**
+ * Die große Erklärung läuft nicht als Textwand, sondern als Film (siehe
+ * scenes/laborfilm.js): Jeder Eintrag ist genau ein Textfeld, und zu jedem
+ * Textfeld gehört eine eigene Animation, die zeigt, wovon gerade die Rede
+ * ist. Der Wortlaut ist der des Professors, nur auf Feldgröße umbrochen –
+ * gelesen wird ohne Weiterklicken, die Anzeigedauer richtet sich nach der
+ * Textlänge (siehe filmdauer()).
+ *
+ * Die Reihenfolge ist der Ablauf, den er beschreibt: Abgabe an der Theke,
+ * Scan, Klon aus der Kapsel, Austausch an der Theke, und am Ende das
+ * Original an der Maschine.
+ */
+export const KLONFILM = [
+  { bild: 'vorspann', text: 'Zweihundertfünfzig. Sehr vernünftig. Dann setzen Sie sich, das dauert einen Moment.' },
+  { bild: 'tempo', text: 'Sie haben sich nie gefragt, warum ein Boxenstopp Ihr halbtotes Hardtekkmon in elf Sekunden wieder auf Betriebstemperatur hat?' },
+  { bild: 'mate', text: 'Kein Mate der Welt ist so schnell. Nichts ist so schnell.' },
+  { bild: 'abgabe', text: 'Oben passiert Folgendes: Sie geben Ihr Hardtekkmon ab, die Schwester legt es auf den Teller,' },
+  { bild: 'scan', text: 'und es wird eingescannt. Jede Zelle, jede Narbe, jede Macke. Zwei Sekunden.' },
+  { bild: 'klonen', text: 'Der Scan kommt hier runter. Wir setzen ihn im Expressverfahren auf einen Blankoklon – so einen, wie sie da hinten in den Kapseln schwimmen.' },
+  { bild: 'klonfertig', text: 'Frisch, ohne Kratzer, volle Kraftpunkte.' },
+  { bild: 'austausch', text: 'Der Klon fährt nach oben. Die Schwester lächelt. Sie bekommen "Ihr" Hardtekkmon zurück, und es ist perfekt. Weil es neu ist.' },
+  { bild: 'liquidierung', text: 'Und das Original? Das haben Sie an der Theke abgegeben. Das geht hier durch die Maschine da drüben. Die läuft rund um die Uhr.' },
+  { bild: 'entsorgung', text: 'Den Rest sehen Sie ja selbst da vorne liegen. Wir kommen mit dem Entsorgen kaum hinterher.' },
+  { bild: 'schluss', text: 'Also. Zweihundertfünfzig. Und jetzt gehen Sie heilen, wie alle anderen auch.' },
+];
+
+/**
+ * Anzeigedauer eines Filmabschnitts in Bildern. Grundzeit plus reichlich
+ * Zeit je Zeichen – der Text schreibt sich mit rund einem Zeichen je Bild,
+ * danach bleibt er noch einmal so lange stehen. Weiterklicken muss man nie.
+ */
+export function filmdauer(text) {
+  return 110 + text.length * 3;
+}
 
 /**
  * Baut das Labor einer Stadt und trägt den Fahrstuhl in beide Richtungen ein.

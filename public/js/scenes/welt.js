@@ -38,7 +38,7 @@ import {
   spiel, hatGegenstand, gibGegenstand, merkeAufgesammelt, schonAufgesammelt,
   trainerBesiegt, merkeTrainerBesiegt, gigErhalten, anzahlGigs, heileTeam,
   merkeBoxenstopp, waehleStarter, merkeGesehen, setzeFlagge, hatFlagge,
-  ersterKaempfer, speichereSpiel, aendereGeld,
+  ersterKaempfer, speichereSpiel, aendereGeld, WAEHRUNG,
   selectGegenstand, schalteTaschenlampe, taschenlampeAn,
 } from '../game/spielstand.js';
 import { GEGENSTAENDE } from '../data/gegenstaende.js';
@@ -48,7 +48,7 @@ import {
 } from '../game/saeulenraetsel.js';
 import { KLOPFTUER_ZIEL } from '../data/world/casino.js';
 import {
-  GEHEIMTUER, FAHRSTUHL_ZIEL, KLONLABOR_CODE, PROFESSOR_TEXTE,
+  GEHEIMTUER, FAHRSTUHL_ZIEL, KLONLABOR_CODE, PROFESSOR_TEXTE, SCHWEIGEGELD,
 } from '../data/world/klonlabor.js';
 import { starteKampf } from '../battle/kampf.js';
 import { schiebe } from './stapel.js';
@@ -827,7 +827,8 @@ export class Weltszene {
 
   /**
    * Der Professor im Labor: beim ersten Mal ein Schreck, danach immer dasselbe
-   * Geschäft. Hundert kaufen sein Schweigen, fünfhundert seine Geschichte.
+   * Geschäft. Der kleine Betrag kauft sein Schweigen, der große seine
+   * Geschichte – und die zeigt er als Film (siehe scenes/laborfilm.js).
    */
   spricheKlonprofessor() {
     if (hatFlagge('klonlabor_geschichte')) {
@@ -843,19 +844,19 @@ export class Weltszene {
 
     this.waehle(
       [...(zuerst ? PROFESSOR_TEXTE.schreck : PROFESSOR_TEXTE.wieder), PROFESSOR_TEXTE.frage],
-      ['100 Mücken', '500 Mücken'],
+      [`${SCHWEIGEGELD.klein} ${WAEHRUNG}`, `${SCHWEIGEGELD.gross} ${WAEHRUNG}`],
       (wahl) => this.zahleSchweigegeld(wahl),
     );
   }
 
-  /** @param {number} wahl 0 = 100 Mücken, 1 = 500 Mücken, -1 = abgebrochen */
+  /** @param {number} wahl 0 = kleiner Betrag, 1 = großer Betrag, -1 = abgebrochen */
   zahleSchweigegeld(wahl) {
     if (wahl < 0) {
       this.zeigeText('Du gehst wortlos weiter. Er sieht dir nach. Sehr genau.');
       return;
     }
 
-    const betrag = wahl === 0 ? 100 : 500;
+    const betrag = wahl === 0 ? SCHWEIGEGELD.klein : SCHWEIGEGELD.gross;
     if (spiel.spieler.geld < betrag) {
       this.zeigeText(PROFESSOR_TEXTE.zuWenig);
       return;
@@ -865,12 +866,28 @@ export class Weltszene {
     setzeFlagge('klonlabor_schweigegeld');
     effekt('item');
 
-    if (betrag === 500) {
+    if (betrag === SCHWEIGEGELD.gross) {
       setzeFlagge('klonlabor_geschichte');
-      this.zeigeText(PROFESSOR_TEXTE.gross);
+      this.starteLaborfilm();
       return;
     }
     this.zeigeText(PROFESSOR_TEXTE.klein);
+  }
+
+  /**
+   * Die Erklärung läuft als Film: eigene Szene, eigene Musik, und danach
+   * wieder die Musik des Labors (siehe scenes/laborfilm.js).
+   */
+  starteLaborfilm() {
+    this.zustand = 'blende';
+    import('./laborfilm.js').then(({ Laborfilmszene }) => {
+      schiebe(new Laborfilmszene({
+        danach: () => {
+          spieleTrack(this.karte.daten.musik);
+          this.zustand = 'frei';
+        },
+      }));
+    });
   }
 
   // --- Briefsäule im Casino ----------------------------------------------------

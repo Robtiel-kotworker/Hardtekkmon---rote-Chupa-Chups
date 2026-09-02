@@ -196,6 +196,9 @@ const DATEI_TRACKS = {
   // Nur im Klonlabor unter dem Boxenstopp (siehe data/world/klonlabor.js) –
   // Tastenfeld und Fahrstuhl darüber laufen weiterhin unter 'gebaeude'.
   klonlabor: { dateien: ['audio/labor.mp3'] },
+  // Läuft nur, solange der Professor seine Erklärung als Film abspielt
+  // (siehe scenes/laborfilm.js). Danach übernimmt wieder 'klonlabor'.
+  laborfilm: { dateien: ['audio/labor_animation.mp3'] },
 };
 
 /**
