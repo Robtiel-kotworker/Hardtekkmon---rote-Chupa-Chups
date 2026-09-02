@@ -214,6 +214,10 @@ export function hatFlagge(name) {
   return spiel.flaggen.has(name);
 }
 
+export function entferneFlagge(name) {
+  spiel.flaggen.delete(name);
+}
+
 export function merkeTrainerBesiegt(id) {
   spiel.besiegteTrainer.add(id);
 }
