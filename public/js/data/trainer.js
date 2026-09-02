@@ -15,7 +15,7 @@ export const TRAINER = {};
  * @param {string} figur Aussehen (siehe gfx/menschen.js)
  * @param {[string, number][]} team [Artname, Stufe]
  * @param {{ start: string, sieg: string, niederlage: string }} texte
- * @param {{ preisgeld?: number, gig?: number, blick?: number }} [zusatz]
+ * @param {{ preisgeld?: number, gig?: number, blick?: number, musik?: string }} [zusatz]
  */
 function trainer(id, name, figur, team, texte, zusatz = {}) {
   const hoechsteStufe = team.reduce((max, [, stufe]) => Math.max(max, stufe), 1);
@@ -28,6 +28,9 @@ function trainer(id, name, figur, team, texte, zusatz = {}) {
     blick: zusatz.blick ?? 4,
     gig: zusatz.gig ?? null,
     preisgeld: zusatz.preisgeld ?? hoechsteStufe * 40,
+    // Übersteuert die normale Kampfmusik nach Gegnerart (siehe KAMPFMUSIK in
+    // scenes/kampfszene.js) – bisher nur für die Helene-Fischer-Ultras genutzt.
+    musik: zusatz.musik ?? null,
   };
 }
 
@@ -405,6 +408,80 @@ trainer('champion', 'Bierdusche-Benny', 'rivale',
     sieg: 'Und deswegen steh ich hier oben und du da unten.',
     niederlage: 'Das … das war stark, {name}. Wirklich stark. Der Platz gehört dir.',
   }, { preisgeld: 12000, blick: 0 });
+
+// --- Die Helene-Fischer-Ultras --------------------------------------------------
+// Die Fanfraktion mit Hauptquartier in Hardtekk City (siehe
+// data/world/hardtekk_city.js). Jeder Ultra sieht gleich aus (Figur
+// 'hfultra', siehe gfx/menschen.js) und bekommt eigene Kampfmusik statt der
+// üblichen Arena-Musik (siehe KAMPFMUSIK in scenes/kampfszene.js).
+
+// -- Hauptquartier, Eingangshalle: drei Ultras versperren den Weg -------------
+trainer('hfu_sven', 'HF Ultra Sven', 'hfultra', [['Kellerkind', 12], ['Muffel', 12]], {
+  start: 'Halt! Erst mal die wichtige Frage: Findest du Helene nicht auch einfach unfassbar schön?',
+  sieg: 'Sie wäre trotzdem stolz auf mich. Bestimmt.',
+  niederlage: 'Ich heul jetzt. Vor Rührung. Wegen Helene, nicht wegen dir.',
+}, { musik: 'ultrakampf' });
+trainer('hfu_sabrina', 'HF Ultra Sabrina', 'hfultra', [['Fliesi', 12], ['Schimmi', 13]], {
+  start: 'Wusstest du, dass Helene beim Tanzen niemals schwitzt? Hat sie uns persönlich erzählt.',
+  sieg: 'Egal. Ich bin trotzdem atemlos. Vor Aufregung.',
+  niederlage: 'Mir ist ganz schwindelig. Aber nicht wegen dir. Wegen Helene.',
+}, { musik: 'ultrakampf' });
+trainer('hfu_marco', 'HF Ultra Marco', 'hfultra', [['Presslufthannes', 13], ['Gullideckel-Gustav', 13]], {
+  start: 'Wir tragen alle das gleiche Shirt, damit sofort klar ist: Wir gehören zu ihr.',
+  sieg: 'Passt schon. Hardtekk zerstören wir trotzdem noch.',
+  niederlage: 'Okay, du bist stark. Aber hast du schon mal ihr Lächeln gesehen? Nein? Eben.',
+}, { musik: 'ultrakampf' });
+
+// -- Hauptquartier, Büro: der Vize-Vorsitzende ---------------------------------
+trainer('hfu_silvio_hq', 'HF Ultra Silvio', 'hfultra',
+  [['Absacker-Anton', 14], ['Chemie-Chantal', 14], ['Zahnlücken-Zombie', 15]], {
+    start: 'Vize-Vorsitzender Silvio. Wer zu Helene will, kommt an mir vorbei. Durch die Nacht, sozusagen.',
+    sieg: 'Läuft bei mir. Immer. So wie die Musik durch mein Herz läuft.',
+    niederlage: 'Nein! Das darf nicht … Helene wird das gar nicht gefallen. Geh trotzdem weiter, wenn du unbedingt musst.',
+  }, { musik: 'ultrakampf', preisgeld: 1200 });
+
+// -- Hauptquartier, VIP-Suite: die erste echte Begegnung -----------------------
+trainer('helene_hq', 'Helene Fischer', 'helene',
+  [['Lichtorgel-Lisa', 17], ['Blitzbirne', 17], ['Blitzbaron Bernd', 18]], {
+    start: 'Wir haben von dir gehört, {name}. Ein kleiner Hardtekk-Rebell. Wir finden das … niedlich. Wir lassen dich trotzdem atemlos zurück.',
+    sieg: 'Seht ihr? Wir gewinnen immer. Wir beide.',
+    niederlage: 'Das … das darf nicht wahr sein. Wir müssen jetzt leider los, der Bus wartet. Wir sind sowieso schon spät dran, mitten durch die Nacht.',
+  }, { musik: 'ultrakampfHelene', preisgeld: 2500 });
+
+// -- Verstreute Ultras: die "Mission" läuft nach der ersten Niederlage weiter --
+trainer('hfu_jasmin', 'HF Ultra Jasmin', 'hfultra', [['Muffel', 14], ['Kellerkind', 14]], {
+  start: 'Du hast unseren Vize besiegt? Dann zeig mal, ob du auch gegen mich durchhältst. Ich hab extra Glitzer aufgelegt.',
+  sieg: 'Siehst du? Glitzer gewinnt.',
+  niederlage: 'Ich muss Helene sofort eine Sprachnachricht schicken. Ganz dringend.',
+}, { musik: 'ultrakampf' });
+trainer('hfu_kevin', 'HF Ultra Kevin', 'hfultra', [['Wummi', 16], ['Boxi', 16]], {
+  start: 'Ich soll hier heimlich die Boxen umstellen. Auf Helene-Musik. Bevor das jemand merkt.',
+  sieg: 'Okay, die Boxen bleiben, wie sie sind. Diesmal.',
+  niederlage: 'Sag niemandem, dass ich das vorhatte. Bitte. Bitte bitte.',
+}, { musik: 'ultrakampf' });
+
+// -- Vinylhafen: Silvios Rückkampf, danach ist das Finale offen -----------------
+trainer('hfu_silvio_vinylhafen', 'HF Ultra Silvio', 'hfultra',
+  [['Chemie-Chantal', 18], ['Absacker-Anton', 18], ['Zahnlücken-Zombie', 19], ['Bierbankbernd', 19]], {
+    start: 'Du schon wieder! Ich bin seitdem hart im Training. Innerlich. Und musikalisch.',
+    sieg: 'Diesmal läuft’s bei mir. Ich mein’s ernst.',
+    niederlage: 'Wieder du. Okay. Ich glaub, ich muss Helene sagen, dass wir ein Problem haben.',
+  }, { musik: 'ultrakampf', preisgeld: 1900 });
+
+// -- Region Ost: die Bewegung bröckelt bereits ein wenig ------------------------
+trainer('hfu_mandy', 'HF Ultra Mandy', 'hfultra', [['Trockeneis-Toni', 21], ['Dunstomat', 22]], {
+  start: 'Ehrlich? Ich zweifle schon länger. Aber ein Kampf für Helene geht schon noch.',
+  sieg: 'Wenigstens das hat noch geklappt.',
+  niederlage: 'Weißt du was? Vielleicht hör ich sowieso auf. Aber erst nach dem nächsten Konzert.',
+}, { musik: 'ultrakampf' });
+
+// -- Hauptquartier, Tourbus-Kammer: das echte Finale ----------------------------
+trainer('helene_final', 'Helene Fischer', 'helene',
+  [['Lichtorgel-Lisa', 29], ['Blitzbirne', 29], ['Blitzbaron Bernd', 30], ['Stromer Sven', 30], ['Aggregatus', 31]], {
+    start: 'Wir sind beeindruckt, {name}. Wirklich. Aber jetzt ist Schluss mit nett – wir zeigen dir, warum wir seit Jahren ganz oben stehen.',
+    sieg: 'Da. Seht ihr. Wir hatten immer recht.',
+    niederlage: 'Wir … wir haben verloren? Das ist eine ganz neue Erfahrung. Wir müssen das erst mal verarbeiten. Zu zweit.',
+  }, { musik: 'ultrakampfHelene', preisgeld: 6000 });
 
 /** @param {string} id */
 export function trainerInfo(id) {

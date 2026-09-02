@@ -197,6 +197,21 @@ export function baueSpielerzimmer(id, rueck) {
           unsichtbar: true,
           text: 'Dein Plattenspieler. Die Nadel ist durch, aber er läuft noch.',
         }),
+        // Erscheint erst, sobald das Starter-Hardtekkmon gewählt ist – vorher
+        // wäre ein Stadtplan ohnehin nur Altpapier. Danach drückt sie ihn dir
+        // einmalig in die Hand und wiederholt sich fortan.
+        person(5, 5, 'oma', 'unten', {
+          text: 'Warte, bevor du losstürmst – hier, nimm den Stadtplan mit. Sonst verläufst du dich noch.',
+          aktion: {
+            art: 'gib',
+            flagge: 'gib_mutter_stadtplan',
+            gegenstand: 'Stadtplan',
+            anzahl: 1,
+            bedingung: { flagge: 'starter' },
+            vorherText: 'Bist du noch nicht los? Das Labor ist gleich nebenan.',
+            nochmalText: 'Pass auf dich auf da draußen. Und ruf mal an.',
+          },
+        }),
       ],
     };
   });

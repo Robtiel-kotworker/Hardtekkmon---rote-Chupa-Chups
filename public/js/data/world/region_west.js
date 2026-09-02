@@ -311,7 +311,10 @@ baueKarte('plattenwald', {
 // --- Kellerstadt -------------------------------------------------------------------
 baueKarte('kellerstadt', {
   name: 'Kellerstadt', breite: 34, hoehe: 28,
-  verbindungen: { sueden: 'plattenwald', osten: 'route3' },
+  // Osten führt nicht mehr direkt zur Route, sondern erst durch Hardtekk
+  // City hindurch (siehe data/world/hardtekk_city.js) – die Hauptstadt
+  // kommt bewusst gleich nach der ersten Gig-Marke.
+  verbindungen: { sueden: 'plattenwald', osten: 'hardtekk_city' },
 }, (bauer) => {
   const weg = mitteX(34);
   const quer = mitteY(28);
@@ -350,7 +353,7 @@ baueKarte('kellerstadt', {
 
   const schilder = [];
   stelleSchild(bauer, schilder, 21, 23, 'GIG 1 – KELLERCLUB. Leitung: Fliesentisch Kalle.');
-  stelleSchild(bauer, schilder, 31, quer - 1, 'Nach Osten: Route 3 und der Boxenberg.');
+  stelleSchild(bauer, schilder, 31, quer - 1, 'Nach Osten: Hardtekk City, die Hauptstadt.');
 
   return {
     schilder,
@@ -362,6 +365,11 @@ baueKarte('kellerstadt', {
       person(20, 21, 'oma', 'links', {
         text: 'Der Lärm hört nie auf. Ich hör ihn schon gar nicht mehr. Was sagtest du?',
       }),
+      // Erster Hinweis auf die Helene-Fischer-Ultras, lange bevor man ihnen
+      // in Hardtekk City tatsächlich begegnet.
+      person(30, 13, 'maedchen', 'unten', {
+        text: 'In Hardtekk City laufen neuerdings lauter Leute mit gleichen weißen Shirts rum. Alle blond, alle mit Herzchen drauf. Find ich unheimlich.',
+      }),
     ],
     gegenstaende: [fundstueck(31, 3, 'Anlaufhilfe'), fundstueck(9, 5, 'Boxenkondensator')],
   };
@@ -370,7 +378,7 @@ baueKarte('kellerstadt', {
 // --- Route 3 --------------------------------------------------------------------
 baueKarte('route3', {
   name: 'Route 3 – Zum Boxenberg', breite: 44, hoehe: 22,
-  begegnungen: 'route3', verbindungen: { westen: 'kellerstadt' },
+  begegnungen: 'route3', verbindungen: { westen: 'hardtekk_city' },
 }, (bauer) => {
   const quer = mitteY(22);
   bauer.rahmen('baum');
@@ -385,6 +393,8 @@ baueKarte('route3', {
   bauer.rechteck(38, quer - 3, 6, 8, 'klippe');
   bauer.wegX(34, 41, quer + 1, 'weg', 1);
   bauer.setze(41, quer, 'hoehleAusgang');
+  // Standplatz der Ultra freihalten, die aus Hardtekk City hinterherläuft.
+  bauer.setze(3, quer, 'gras');
 
   const schilder = [];
   stelleSchild(bauer, schilder, 37, quer + 3, 'BOXENBERG – Drinnen ist es dunkel. Und es wummert.');
@@ -393,6 +403,8 @@ baueKarte('route3', {
     schilder,
     warps: [warp(41, quer, 'boxenberg', 2, 24)],
     npcs: [
+      // Ist dir aus Hardtekk City gefolgt, nachdem ihr Vize verloren hat.
+      kaempfer(3, quer, 'hfultra', 'rechts', 'hfu_jasmin'),
       kaempfer(14, quer - 1, 'zombie', 'rechts', 'r3_zacharias'),
       kaempfer(27, quer + 1, 'oma', 'links', 'r3_waltraud'),
       person(8, 16, 'kumpel', 'oben', {
@@ -489,6 +501,8 @@ baueKarte('route4', {
           nochmalText: 'Nicht an den Leitungen ziehen. Danke.',
         },
       }),
+      // Auf dem Weg zur Anlage von Subwoofer City – siehe hfu_kevins Text.
+      kaempfer(34, quer + 2, 'hfultra', 'links', 'hfu_kevin'),
     ],
     gegenstaende: [fundstueck(12, 18, 'Kaugummi', 2)],
   };
@@ -638,6 +652,9 @@ baueKarte('vinylhafen', {
         bewegung: 'drehen',
         text: 'Am Steg wurden schon Platten aus dem Wasser gefischt, die noch liefen.',
       }),
+      // Silvios Rückkampf – erst danach öffnet sich die letzte Tür im
+      // Hauptquartier von Hardtekk City (siehe data/world/hardtekk_city.js).
+      kaempfer(34, 13, 'hfultra', 'links', 'hfu_silvio_vinylhafen'),
     ],
     gegenstaende: [fundstueck(2, 24, 'Allzweckreiniger')],
   };

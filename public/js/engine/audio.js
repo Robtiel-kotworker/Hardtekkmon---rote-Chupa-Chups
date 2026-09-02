@@ -211,6 +211,14 @@ const DATEI_TRACKS = {
   // die 172 Bilder (172/60 s) der Fahrt gekürzt, läuft also einmal glatt
   // durch, statt mitten in der Animation abgeschnitten zu werden.
   fahrstuhl: { dateien: ['audio/fahrstuhl.mp3'] },
+  // Kämpfe gegen die Helene-Fischer-Ultras (siehe trainer.musik in
+  // data/trainer.js und KAMPFMUSIK in scenes/kampfszene.js): drei Varianten
+  // im selben Shuffle-Verfahren wie der normale Kampftrack.
+  ultrakampf: {
+    dateien: ['audio/ultrakampf_v1.mp3', 'audio/ultrakampf_v2.mp3', 'audio/ultrakampf_v3.mp3'],
+  },
+  // Nur für Helene Fischer selbst.
+  ultrakampfHelene: { dateien: ['audio/ultrakampf_helene.mp3'] },
 };
 
 /**
@@ -326,21 +334,22 @@ function starteEinzelschleife(name) {
 }
 
 /**
- * Kampf-Track: eine der vier Varianten wird gezogen, abgespielt, und beim
- * natürlichen Ende (kein loop) sofort die nächste gezogene Variante
- * angeschlossen – so entsteht der lange, im Shuffle laufende Loop.
+ * Track mit mehreren Varianten (Kampf, Ultra-Kampf): eine wird gezogen,
+ * abgespielt, und beim natürlichen Ende (kein loop) sofort die nächste
+ * gezogene Variante angeschlossen – so entsteht der lange, im Shuffle
+ * laufende Loop.
  */
-function starteKampfVariante() {
-  const liste = dateiPuffer.kampf;
+function starteVariantenSchleife(name) {
+  const liste = dateiPuffer[name];
   if (!ctx || !musikBus || !liste || liste.length === 0) return;
   const index = ziehVariante(liste.length);
   const quelle = ctx.createBufferSource();
   quelle.buffer = liste[index];
   quelle.connect(musikBus);
   quelle.onended = () => {
-    // Nur weiterziehen, wenn wir noch im Kampf sind und nicht durch ein
-    // manuelles stop() (Trackwechsel) hierher kommen.
-    if (laufenderTrack === 'kampf' && dateiQuelle === quelle) starteKampfVariante();
+    // Nur weiterziehen, wenn wir noch im selben Track sind und nicht durch
+    // ein manuelles stop() (Trackwechsel) hierher kommen.
+    if (laufenderTrack === name && dateiQuelle === quelle) starteVariantenSchleife(name);
   };
   quelle.start();
   dateiQuelle = quelle;
@@ -348,7 +357,7 @@ function starteKampfVariante() {
 
 function starteDateiTrack(name) {
   stoppeDateiQuelle();
-  if (name === 'kampf') starteKampfVariante();
+  if (dateiPuffer[name]?.length > 1) starteVariantenSchleife(name);
   else starteEinzelschleife(name);
 }
 

@@ -68,8 +68,10 @@ export function neuesSpiel(name = 'Ravey') {
   gibGegenstand('Samplepack', 5);
   gibGegenstand('Mate', 3);
   gibGegenstand('Tekkdex', 1);
-  gibGegenstand('Stadtplan', 1);
   gibGegenstand('Gigpass', 1);
+  // Der Stadtplan kommt erst von der Mutter im Spielerzimmer, sobald das
+  // Starter-Hardtekkmon gewählt ist (siehe baueSpielerzimmer in
+  // data/world/innenraeume.js) – vorher gäbe es ohnehin kaum etwas zu zeigen.
   return spiel;
 }
 
