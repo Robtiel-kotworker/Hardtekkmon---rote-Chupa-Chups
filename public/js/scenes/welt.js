@@ -1130,7 +1130,7 @@ export class Weltszene {
       return;
     }
     if (name === 'Stadtplan') {
-      this.zeigeText(`Du bist in ${this.karte.daten.name}.`);
+      import('./karte.js').then(({ Kartenszene }) => schiebe(new Kartenszene(this.karte.id)));
       return;
     }
     this.zeigeText(GEGENSTAENDE[name]?.text ?? '…');
@@ -1602,7 +1602,13 @@ export class Weltszene {
         break;
 
       case 'gib':
-        if (hatFlagge(aktion.flagge)) {
+        // `bedingung` ist optional: ohne sie gibt es das Geschenk beim
+        // ersten Ansprechen wie gehabt. Mit ihr (siehe die Mutter im
+        // Spielerzimmer, die erst nach dem Starter den Stadtplan gibt)
+        // zeigt sie vorher nur `vorherText` an, ohne die Flagge zu setzen.
+        if (aktion.bedingung && !this.bedingungErfuellt(aktion.bedingung)) {
+          this.zeigeText(aktion.vorherText ?? npc.text);
+        } else if (hatFlagge(aktion.flagge)) {
           this.zeigeText(aktion.nochmalText ?? npc.text);
         } else {
           setzeFlagge(aktion.flagge);

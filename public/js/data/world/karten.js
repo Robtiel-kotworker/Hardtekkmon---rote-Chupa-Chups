@@ -7,6 +7,7 @@
 
 import './region_west.js';
 import './region_ost.js';
+import './hardtekk_city.js';
 
 export { KARTEN, karte } from './verzeichnis.js';
 

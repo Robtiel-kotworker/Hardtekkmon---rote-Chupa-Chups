@@ -201,6 +201,8 @@ baueKarte('nebelmoor', {
         },
       }),
       legende(31, 4, 'Nebelzar', 45, 'legende_nebelzar'),
+      // So weit im Osten ist von der einstigen Kampagne nicht mehr viel übrig.
+      kaempfer(30, 12, 'hfultra', 'links', 'hfu_mandy'),
     ],
     gegenstaende: [fundstueck(3, 15, 'Allzweckreiniger', 2), fundstueck(30, 18, 'Subwoofer-Kern')],
   };

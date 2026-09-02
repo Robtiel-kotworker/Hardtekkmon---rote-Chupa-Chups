@@ -92,9 +92,7 @@ const NAMENSPLATZ_ABZUG = 35;
 const FANGSYMBOL_PLATZ = 11;
 
 /**
- * Kampfmusik nach Gegnerart. Es gibt genau diese beiden Kampfarten – wild
- * und trainer, vergeben in starteWildkampf() und starteTrainerkampf() der
- * Weltszene –, damit deckt die Tabelle alle Kämpfe ab:
+ * Kampfmusik nach Gegnerart – der Normalfall für alle Kämpfe:
  *
  *   wild    – Begegnungen mit wilden Hardtekkmon (hohes Gras und die festen
  *             Legenden auf der Karte): der normale Kampftrack, vier
@@ -102,8 +100,10 @@ const FANGSYMBOL_PLATZ = 11;
  *   trainer – Trainerkämpfe unterwegs und die Gig-/Arena-Kämpfe: der
  *             härtere Arena-Track, zugleich die Musik der Gig-Hallen.
  *
- * Beide Tracks sind eigene Stücke, wilde und Trainer-/Gig-Kämpfe klingen
- * damit deutlich verschieden.
+ * Ein einzelner Trainer kann das mit einem eigenen `musik`-Feld übersteuern
+ * (siehe trainer() in data/trainer.js) – bisher nur die
+ * Helene-Fischer-Ultras, deren Kämpfe eigene Tracks bekommen statt der
+ * normalen Arena-Musik.
  */
 const KAMPFMUSIK = { wild: 'kampf', trainer: 'gig' };
 
@@ -166,7 +166,7 @@ export class Kampfszene {
   }
 
   betreten() {
-    spieleTrack(KAMPFMUSIK[this.kampf.art] ?? 'kampf');
+    spieleTrack(this.kampf.trainer?.musik ?? KAMPFMUSIK[this.kampf.art] ?? 'kampf');
     const gegner = this.kampf.gegner.mon;
     const einleitung = this.kampf.art === 'trainer'
       ? [`${this.kampf.trainer.name} will einen Kampf!`,

@@ -39,6 +39,16 @@ export const FIGUREN = {
   schwester: { haut: '#f8d0a0', haar: '#f07898', oberteil: '#f8f8f8', hose: '#f8f8f8' },
   verkaeufer: { haut: '#f0c090', haar: '#403028', oberteil: '#4878c8', hose: '#303848' },
   zombie: { haut: '#a8c090', haar: '#4a4a58', oberteil: '#585048', hose: '#38383a' },
+  // HF Ultra Grunts: Frauen und Männer sehen bewusst identisch aus – lange
+  // blonde Haare, weißes Shirt mit rotem Herz-und-H-Aufnäher (siehe
+  // abzeichen() unten).
+  hfultra: {
+    haut: '#f0c090', haar: '#f8e070', oberteil: '#f8f8f0', hose: '#c8d0e0', akzent: '#e04058', abzeichen: true,
+  },
+  // Das Oberhaupt der Ultras – eigene Farbwelt (Gold statt Vereinsweiß) und
+  // der Spiegel mit dem eigenen Spiegelbild, den sie nie aus der Hand legt
+  // (siehe spiegelprop() unten und spricheHelene() in scenes/welt.js).
+  helene: { haut: '#f0c8a0', haar: '#f8e070', oberteil: '#f0c040', hose: '#181820', spiegel: true },
 };
 
 /** @type {Map<string, HTMLCanvasElement>} */
@@ -81,6 +91,32 @@ function kopfteil(ctx, figur, richtung) {
     default:
       break;
   }
+}
+
+/**
+ * Herz-und-H-Aufnäher der HF Ultras, mittig auf der Brust – von hinten
+ * bleibt er unsichtbar.
+ */
+function abzeichen(ctx, figur, richtung) {
+  if (!figur.abzeichen || richtung === 'oben') return;
+  rechteck(ctx, figur.akzent, 6, 10, 4, 3);
+  rechteck(ctx, '#f8f8f0', 6, 10, 1, 3);
+  rechteck(ctx, '#f8f8f0', 9, 10, 1, 3);
+  rechteck(ctx, '#f8f8f0', 6, 11, 4, 1);
+}
+
+/**
+ * Helenes Spiegel: Sie hält ihn an der Hüfte, das "Spiegelbild" ist nur ein
+ * heller Fleck im Rahmen – mehr braucht es nicht, damit klar ist, dass da
+ * ständig jemand zurückblickt.
+ */
+function spiegelprop(ctx, figur, richtung) {
+  if (!figur.spiegel || richtung === 'oben') return;
+  const links = richtung === 'links';
+  const x = links ? 0 : 13;
+  rechteck(ctx, '#c8c8d8', links ? x + 2 : x, 16, 1, 4);
+  rechteck(ctx, '#c8c8d8', x, 9, 3, 7);
+  rechteck(ctx, '#e8f0ff', links ? x + 1 : x, 10, 2, 5);
 }
 
 /**
@@ -142,6 +178,8 @@ function zeichneFigur(ctx, figur, richtung, bild) {
   }
 
   kopfteil(ctx, figur, richtung);
+  abzeichen(ctx, figur, richtung);
+  spiegelprop(ctx, figur, richtung);
 }
 
 /**
