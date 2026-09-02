@@ -94,7 +94,7 @@ baueKarte('hardtekk_city', {
 
 // --- Hauptquartier: Eingangshalle ----------------------------------------------
 baueKarte('hf_eingangshalle', {
-  name: 'HFU-Hauptquartier – Eingangshalle', breite: 16, hoehe: 14, drinnen: true,
+  name: 'HFU-Hauptquartier – Eingangshalle', breite: 16, hoehe: 14, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 16, 14, 'wandInnen');
   bauer.rechteck(1, 2, 14, 11, 'bodenInnen');
@@ -138,7 +138,7 @@ baueKarte('hf_eingangshalle', {
 
 // --- Hauptquartier: Büro (Silvio) ----------------------------------------------
 baueKarte('hf_buero', {
-  name: 'HFU-Hauptquartier – Büro', breite: 14, hoehe: 12, drinnen: true,
+  name: 'HFU-Hauptquartier – Büro', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 14, 12, 'wandInnen');
   bauer.rechteck(1, 2, 12, 9, 'bodenInnen');
@@ -176,7 +176,7 @@ baueKarte('hf_buero', {
 
 // --- Hauptquartier: VIP-Suite (erste Begegnung mit Helene) ---------------------
 baueKarte('hf_vip_suite', {
-  name: 'HFU-Hauptquartier – VIP-Suite', breite: 14, hoehe: 12, drinnen: true,
+  name: 'HFU-Hauptquartier – VIP-Suite', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 14, 12, 'wandInnen');
   bauer.rechteck(1, 2, 12, 9, 'bodenInnen');
@@ -214,7 +214,7 @@ baueKarte('hf_vip_suite', {
 
 // --- Hauptquartier: Tourbus-Kammer (das eigentliche Finale) --------------------
 baueKarte('hf_tourbus', {
-  name: 'HFU-Hauptquartier – Tourbus-Kammer', breite: 12, hoehe: 10, drinnen: true,
+  name: 'HFU-Hauptquartier – Tourbus-Kammer', breite: 12, hoehe: 10, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 12, 10, 'wandInnen');
   bauer.rechteck(1, 2, 10, 7, 'teppichGold');

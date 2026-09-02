@@ -222,6 +222,17 @@ const DATEI_TRACKS = {
   },
   // Nur für Helene Fischer selbst.
   ultrakampfHelene: { dateien: ['audio/ultrakampf_helene.mp3'] },
+  // Läuft nur in den vier Innenräumen des HFU-Hauptquartiers (siehe die
+  // `musik`-Angabe der jeweiligen baueKarte()-Aufrufe in
+  // data/world/hardtekk_city.js) – bewusst leise im Hintergrund, wie
+  // Beschallung in einem Ladengeschäft, nicht wie richtige Kampf- oder
+  // Stadtmusik (siehe `pegel` unten und dessen Auswertung in
+  // starteEinzelschleife). Auf 138 BPM taktverschoben (Original ~88,5 BPM),
+  // `zufallsStart` sorgt dafür, dass der Loop nicht jedes Mal von vorne
+  // beginnt.
+  hfHauptquartier: {
+    dateien: ['audio/hq_ambient.mp3'], pegel: 0.3, zufallsStart: true,
+  },
 };
 
 /**
@@ -322,15 +333,38 @@ function stoppeDateiQuelle() {
   dateiQuelle = null;
 }
 
-/** Einzelne Datei in Dauerschleife (Titel, Stadt, Route, Gebäude, Gig, Heilung). */
+/**
+ * Einzelne Datei in Dauerschleife (Titel, Stadt, Route, Gebäude, Gig,
+ * Heilung). Zwei Zusatzfelder je Eintrag sind optional:
+ *
+ *   pegel        – eigener Lautstärke-Faktor unterhalb der normalen
+ *                  Musiklautstärke, über einen zusätzlichen Gain-Knoten vor
+ *                  dem musikBus (der bleibt dadurch unangetastet, Ducking
+ *                  durch einmalige Klänge funktioniert also weiterhin).
+ *   zufallsStart – beginnt an einer zufälligen Stelle im Stück statt immer
+ *                  am Anfang (z. B. Hintergrundbeschallung, die nicht bei
+ *                  jedem Betreten von vorne losspringen soll).
+ */
 function starteEinzelschleife(name) {
   const puffer = dateiPuffer[name]?.[0];
   if (!ctx || !musikBus || !puffer) return;
+  const eintrag = DATEI_TRACKS[name];
+
   const quelle = ctx.createBufferSource();
   quelle.buffer = puffer;
   quelle.loop = true;
-  quelle.connect(musikBus);
-  quelle.start();
+
+  let ziel = musikBus;
+  if (eintrag?.pegel !== undefined) {
+    const pegelKnoten = ctx.createGain();
+    pegelKnoten.gain.value = eintrag.pegel;
+    pegelKnoten.connect(musikBus);
+    ziel = pegelKnoten;
+  }
+  quelle.connect(ziel);
+
+  const start = eintrag?.zufallsStart ? Math.random() * puffer.duration : 0;
+  quelle.start(0, start);
   dateiQuelle = quelle;
   dateiStartZeit = ctx.currentTime;
   dateiLaenge = puffer.duration;
