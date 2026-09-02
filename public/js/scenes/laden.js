@@ -14,7 +14,9 @@ import { UI } from '../gfx/palette.js';
 import { Auswahl } from '../ui/auswahl.js';
 import { Textfenster } from '../ui/textfenster.js';
 import { GEGENSTAENDE } from '../data/gegenstaende.js';
-import { spiel, gibGegenstand, nimmGegenstand, aendereGeld } from '../game/spielstand.js';
+import {
+  spiel, gibGegenstand, nimmGegenstand, aendereGeld, WAEHRUNG,
+} from '../game/spielstand.js';
 import { poppe } from './stapel.js';
 
 export class Ladenszene {
@@ -95,7 +97,7 @@ export class Ladenszene {
     aendereGeld(-summe);
     gibGegenstand(name, this.menge);
     effekt('item');
-    this.textfenster.zeige(`${this.menge}× ${name} für ${summe} Mücken. Danke!`);
+    this.textfenster.zeige(`${this.menge}× ${name} für ${summe} ${WAEHRUNG}. Danke!`);
     this.modus = 'kaufen';
   }
 
@@ -109,7 +111,7 @@ export class Ladenszene {
     nimmGegenstand(name, 1);
     aendereGeld(preis);
     effekt('item');
-    this.textfenster.zeige(`${name} für ${preis} Mücken verkauft.`);
+    this.textfenster.zeige(`${name} für ${preis} ${WAEHRUNG} verkauft.`);
 
     this.verkaufNamen = Object.keys(spiel.beutel)
       .filter((eintrag) => GEGENSTAENDE[eintrag] && GEGENSTAENDE[eintrag].art !== 'schluessel');
@@ -124,7 +126,7 @@ export class Ladenszene {
 
     // Rechts oben liegen die Bildschirmschalter, deshalb etwas eingerückt.
     fenster(ctx, BREITE - 124, 2, 88, 16);
-    zeichneText(ctx, `Mücken: ${spiel.spieler.geld}`, BREITE - 118, 6, { farbe: UI.text });
+    zeichneText(ctx, `${WAEHRUNG}: ${spiel.spieler.geld}`, BREITE - 118, 6, { farbe: UI.text });
 
     if (this.modus === 'hauptmenue') {
       this.hauptmenue.zeichnen(ctx, 8, 24, 90, 44);

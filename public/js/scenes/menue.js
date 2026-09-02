@@ -14,7 +14,7 @@ import { UI } from '../gfx/palette.js';
 import { Auswahl } from '../ui/auswahl.js';
 import { Textfenster } from '../ui/textfenster.js';
 import {
-  spiel, speichereSpiel, spielzeitText, anzahlGigs, typhilfeAn, schalteTyphilfe,
+  spiel, speichereSpiel, spielzeitText, anzahlGigs, typhilfeAn, schalteTyphilfe, WAEHRUNG,
 } from '../game/spielstand.js';
 import { ARTEN_GESAMT } from '../game/hardtekkmon.js';
 import { meldeAb } from '../engine/konto.js';
@@ -146,7 +146,7 @@ export class Menueszene {
     fenster(ctx, 12, 10, BREITE - 24, HOEHE - 30);
     zeichneText(ctx, 'GIGPASS', 22, 16, { farbe: UI.text });
     zeichneText(ctx, spiel.spieler.name, 22, 30, { farbe: UI.text });
-    zeichneText(ctx, `Mücken ${spiel.spieler.geld}`, 22, 42, { farbe: UI.text });
+    zeichneText(ctx, `${WAEHRUNG} ${spiel.spieler.geld}`, 22, 42, { farbe: UI.text });
     zeichneText(ctx, `Zeit ${spielzeitText()}`, 130, 30, { farbe: UI.text });
     zeichneText(ctx, `Dex ${spiel.gefangen.size}/${ARTEN_GESAMT}`, 130, 42, { farbe: UI.text });
 

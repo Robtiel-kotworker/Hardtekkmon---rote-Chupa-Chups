@@ -13,7 +13,7 @@ import { fenster, gegenstandSymbol } from '../gfx/ui.js';
 import { zeichneText, umbrechen } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { Auswahl } from '../ui/auswahl.js';
-import { spiel, legeAufSelect, selectGegenstand } from '../game/spielstand.js';
+import { spiel, legeAufSelect, selectGegenstand, WAEHRUNG } from '../game/spielstand.js';
 import { GEGENSTAENDE, BEUTEL_REIHENFOLGE, ausserhalbNutzbar, anlegbar } from '../data/gegenstaende.js';
 import { schiebe, poppe } from './stapel.js';
 
@@ -140,7 +140,7 @@ export class Beutelszene {
     });
 
     fenster(ctx, 158, 14, 78, 92);
-    zeichneText(ctx, `Mücken`, 164, 20, { farbe: UI.text });
+    zeichneText(ctx, WAEHRUNG, 164, 20, { farbe: UI.text });
     zeichneText(ctx, String(spiel.spieler.geld), 164, 30, { farbe: UI.text });
 
     const name = this.namen[this.auswahl.index];
