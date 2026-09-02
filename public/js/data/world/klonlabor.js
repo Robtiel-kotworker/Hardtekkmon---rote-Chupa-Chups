@@ -136,7 +136,7 @@ export function baueKlonlabor(id, ortName, boxenstoppId, tuerOben) {
   }));
 
   const karte = baueKarte(id, {
-    name: `Klonlabor ${ortName}`, breite: BREITE, hoehe: HOEHE, drinnen: true, musik: 'gebaeude',
+    name: `Klonlabor ${ortName}`, breite: BREITE, hoehe: HOEHE, drinnen: true, musik: 'klonlabor',
   }, (bauer) => {
     bauer.rechteck(0, 0, BREITE, HOEHE, 'laborwand');
     bauer.rechteck(1, 2, BREITE - 2, HOEHE - 3, 'laborboden');

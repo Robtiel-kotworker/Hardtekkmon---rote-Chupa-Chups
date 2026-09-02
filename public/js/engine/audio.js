@@ -193,6 +193,9 @@ const DATEI_TRACKS = {
   // Nur im Casinosaal unten (siehe data/world/casino.js) – Bruchbude und
   // Treppenschacht darüber laufen weiterhin unter 'gebaeude'.
   casino: { dateien: ['audio/casino.mp3'] },
+  // Nur im Klonlabor unter dem Boxenstopp (siehe data/world/klonlabor.js) –
+  // Tastenfeld und Fahrstuhl darüber laufen weiterhin unter 'gebaeude'.
+  klonlabor: { dateien: ['audio/labor.mp3'] },
 };
 
 /**
