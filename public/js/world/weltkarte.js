@@ -152,6 +152,21 @@ export class Weltkarte {
     return (this.daten.besetzteAutomaten ?? []).some((p) => p.x === x && p.y === y);
   }
 
+  /**
+   * Tauscht eine Kachel zur Laufzeit aus und zeichnet das Kartenbild neu.
+   * Gebraucht für die geheime Fahrstuhltür im Boxenstopp, die erst nach der
+   * richtigen Codeeingabe erscheint (siehe scenes/welt.js). Steht dort schon
+   * die gewünschte Kachel, passiert nichts – dann bleibt auch das gerenderte
+   * Bild, wie es ist.
+   */
+  setzeKachel(x, y, name) {
+    if (!this.innen(x, y)) return;
+    const stelle = y * this.breite + x;
+    if (this.daten.kacheln[stelle] === name) return;
+    this.daten.kacheln[stelle] = name;
+    this.bild = this.rendere();
+  }
+
   /** Begegnungsgruppe der Kachel, sofern die Karte wilde Hardtekkmon kennt. */
   begegnungsgruppe(x, y) {
     if (!this.daten.begegnungen) return null;

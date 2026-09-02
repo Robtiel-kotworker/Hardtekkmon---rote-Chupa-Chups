@@ -19,7 +19,7 @@ import {
 import { zeichneMensch } from '../gfx/menschen.js';
 import { monSprite } from '../gfx/monsprites.js';
 import { blende as zeichneBlende, fenster, gegenstandSymbol } from '../gfx/ui.js';
-import { zeichneText } from '../gfx/font.js';
+import { zeichneText, textBreite } from '../gfx/font.js';
 import { UI } from '../gfx/palette.js';
 import { Weltkarte } from '../world/weltkarte.js';
 import { kameraPosition } from '../world/kamera.js';
@@ -47,6 +47,9 @@ import {
   wuerfleAbfolge, BELOHNUNG, SPERRE_MS,
 } from '../game/saeulenraetsel.js';
 import { KLOPFTUER_ZIEL } from '../data/world/casino.js';
+import {
+  GEHEIMTUER, FAHRSTUHL_ZIEL, KLONLABOR_CODE, PROFESSOR_TEXTE,
+} from '../data/world/klonlabor.js';
 import { starteKampf } from '../battle/kampf.js';
 import { schiebe } from './stapel.js';
 
@@ -261,6 +264,7 @@ export class Weltszene {
     this.karte = new Weltkarte(id);
     spiel.position.karte = id;
     spieleTrack(this.karte.daten.musik);
+    this.wendeGeheimtuerAn();
 
     // Ein Versuch an der Säule gilt nur innerhalb ihres Saals: Wer die Karte
     // verlässt, fängt beim nächsten Mal wieder an der Säule an.
@@ -277,6 +281,19 @@ export class Weltszene {
         if (hatFlagge(`wache:${id}:${npc.index}`)) npc.entfernt = true;
       }
     }
+  }
+
+  /**
+   * Setzt die geheime Fahrstuhltür des Boxenstopps auf den Stand des
+   * Spielstands: offen, wenn die Kombination schon eingegeben wurde, sonst
+   * schlicht Wand. Beide Fälle werden ausdrücklich gesetzt – die Kartendaten
+   * liegen modulweit, ein neues Spiel im selben Browserfenster würde eine
+   * einmal getauschte Kachel sonst geerbt bekommen.
+   */
+  wendeGeheimtuerAn() {
+    const tuer = GEHEIMTUER[this.karte.id];
+    if (!tuer) return;
+    this.karte.setzeKachel(tuer.x, tuer.y, hatFlagge(tuer.flagge) ? 'fahrstuhltuer' : 'wandInnen');
   }
 
   wechsleKarte(id, x, y, richtung = null) {
@@ -305,6 +322,23 @@ export class Weltszene {
     this.nachText = () => {
       this.frageAuswahl = new Auswahl({ eintraege: ['Ja', 'Nein'] });
       this.frageAntwort = { beiJa, beiNein };
+      this.zustand = 'frage';
+    };
+    this.zustand = 'text';
+  }
+
+  /**
+   * Wie frage(), nur mit beliebig vielen Antworten. `beiWahl` bekommt den
+   * gewählten Eintrag als Index, ein Abbruch mit B liefert -1.
+   * @param {string|string[]} inhalt
+   * @param {string[]} eintraege
+   * @param {(wahl: number) => void} beiWahl
+   */
+  waehle(inhalt, eintraege, beiWahl) {
+    this.textfenster.zeige(ersetzeName(inhalt));
+    this.nachText = () => {
+      this.frageAuswahl = new Auswahl({ eintraege });
+      this.frageAntwort = { beiWahl };
       this.zustand = 'frage';
     };
     this.zustand = 'text';
@@ -462,12 +496,14 @@ export class Weltszene {
       case 'frage': {
         const antwort = this.frageAuswahl.aktualisieren();
         if (antwort === 'bestaetigt' || antwort === 'abbruch') {
-          const ja = antwort === 'bestaetigt' && this.frageAuswahl.index === 0;
-          const { beiJa, beiNein } = this.frageAntwort;
+          const bestaetigt = antwort === 'bestaetigt';
+          const index = this.frageAuswahl.index;
+          const { beiJa, beiNein, beiWahl } = this.frageAntwort;
           this.frageAuswahl = null;
           this.frageAntwort = null;
           this.zustand = 'frei';
-          if (ja) beiJa?.();
+          if (beiWahl) beiWahl(bestaetigt ? index : -1);
+          else if (bestaetigt && index === 0) beiJa?.();
           else beiNein?.();
         }
         break;
@@ -632,6 +668,15 @@ export class Weltszene {
     this.warpSperre = false;
     this.verfolgeSaeulenlauf();
 
+    // Die Fahrstuhltür ist kein normaler Übergang: Sie liegt im Boxenstopp
+    // erst nach der richtigen Codeeingabe überhaupt da, und statt einer
+    // Blende läuft eine ganze Fahrt (siehe scenes/fahrstuhl.js).
+    if (this.karte.kachelAn(this.figur.x, this.figur.y) === 'fahrstuhltuer'
+      && FAHRSTUHL_ZIEL[this.karte.id]) {
+      this.starteFahrstuhl();
+      return;
+    }
+
     const warp = this.karte.warpAn(this.figur.x, this.figur.y);
     if (warp) {
       if (warp.bedingung && !this.bedingungErfuellt(warp.bedingung)) {
@@ -724,6 +769,108 @@ export class Weltszene {
     stand.blitz = 1;
     stand.blitzRest = HEIL_BLITZ_BILDER;
     effekt('heilPuls');
+  }
+
+  // --- Klonlabor unter dem Boxenstopp ------------------------------------------
+
+  /**
+   * Das Tastenfeld an der Wand. Beim ersten Mal öffnet es die Codeeingabe,
+   * später ist die Tür ohnehin schon offen.
+   */
+  oeffneTastenfeld() {
+    const tuer = GEHEIMTUER[this.karte.id];
+    if (tuer && hatFlagge(tuer.flagge)) {
+      this.zeigeText('Sicherheitsbereich. Zugang bereits freigegeben.');
+      return;
+    }
+    this.zeigeText(
+      'Sicherheitsbereich. Bitte dreistellige Geheimkombination eingeben und mit Enter bestätigen.',
+      () => {
+        import('./tastenfeld.js').then(({ Tastenfeldszene }) => {
+          schiebe(new Tastenfeldszene({
+            code: KLONLABOR_CODE,
+            beiErfolg: () => this.oeffneGeheimtuer(),
+          }));
+        });
+      },
+    );
+  }
+
+  /** Stimmt der Code, fährt links neben dem Tastenfeld eine Tür auf. */
+  oeffneGeheimtuer() {
+    const tuer = GEHEIMTUER[this.karte.id];
+    if (!tuer) return;
+    setzeFlagge(tuer.flagge);
+    this.karte.setzeKachel(tuer.x, tuer.y, 'fahrstuhltuer');
+    effekt('item');
+    this.zeigeText([
+      'Etwas klackt in der Wand.',
+      'Links neben dem Tastenfeld fährt eine Tür auf. Dahinter steht ein Fahrstuhl und wartet.',
+    ]);
+  }
+
+  /** Fahrt zwischen Boxenstopp und Labor – der Kartenwechsel kommt danach. */
+  starteFahrstuhl() {
+    const ziel = FAHRSTUHL_ZIEL[this.karte.id];
+    if (!ziel) return;
+    this.zustand = 'blende';
+    import('./fahrstuhl.js').then(({ Fahrstuhlszene }) => {
+      schiebe(new Fahrstuhlszene({
+        richtung: ziel.richtung,
+        danach: () => {
+          this.wechsleKarte(ziel.zielId, ziel.x, ziel.y, 'unten');
+          this.zustand = 'frei';
+        },
+      }));
+    });
+  }
+
+  /**
+   * Der Professor im Labor: beim ersten Mal ein Schreck, danach immer dasselbe
+   * Geschäft. Hundert kaufen sein Schweigen, fünfhundert seine Geschichte.
+   */
+  spricheKlonprofessor() {
+    if (hatFlagge('klonlabor_geschichte')) {
+      this.zeigeText(PROFESSOR_TEXTE.bezahlt);
+      return;
+    }
+
+    // Der Schreck gilt je Labor: In der nächsten Stadt steht ein anderer
+    // Professor, und der erschrickt genauso.
+    const schreckFlagge = `klonlabor_gesehen:${this.karte.id}`;
+    const zuerst = !hatFlagge(schreckFlagge);
+    if (zuerst) setzeFlagge(schreckFlagge);
+
+    this.waehle(
+      [...(zuerst ? PROFESSOR_TEXTE.schreck : PROFESSOR_TEXTE.wieder), PROFESSOR_TEXTE.frage],
+      ['100 Mücken', '500 Mücken'],
+      (wahl) => this.zahleSchweigegeld(wahl),
+    );
+  }
+
+  /** @param {number} wahl 0 = 100 Mücken, 1 = 500 Mücken, -1 = abgebrochen */
+  zahleSchweigegeld(wahl) {
+    if (wahl < 0) {
+      this.zeigeText('Du gehst wortlos weiter. Er sieht dir nach. Sehr genau.');
+      return;
+    }
+
+    const betrag = wahl === 0 ? 100 : 500;
+    if (spiel.spieler.geld < betrag) {
+      this.zeigeText(PROFESSOR_TEXTE.zuWenig);
+      return;
+    }
+
+    aendereGeld(-betrag);
+    setzeFlagge('klonlabor_schweigegeld');
+    effekt('item');
+
+    if (betrag === 500) {
+      setzeFlagge('klonlabor_geschichte');
+      this.zeigeText(PROFESSOR_TEXTE.gross);
+      return;
+    }
+    this.zeigeText(PROFESSOR_TEXTE.klein);
   }
 
   // --- Briefsäule im Casino ----------------------------------------------------
@@ -1279,6 +1426,10 @@ export class Weltszene {
       import('./sequenzer.js').then(({ Sequenzerszene }) => schiebe(new Sequenzerszene()));
       return;
     }
+    if (kachel === 'tastenfeld') {
+      this.oeffneTastenfeld();
+      return;
+    }
     if (kachel === 'automat') {
       if (this.karte.automatBesetzt(ziel.x, ziel.y)) {
         this.zeigeText('Besetzt. Der lässt hier nicht los.');
@@ -1300,6 +1451,13 @@ export class Weltszene {
       gully: 'Von da unten kommt ein tiefes Wummern.',
       tresen: 'Ein Tresen. Sauber gewischt.',
       tisch: 'Ein Tisch. Nichts Interessantes drauf.',
+      klonkapsel: 'In der Nährlösung schwimmt ein Hardtekkmon. Es schläft. Hoffentlich schläft es.',
+      leichenhaufen: 'Du schaust hin. Du schaust wieder weg. Es waren zu viele.',
+      totesMon: 'Es liegt einfach da. Jemand wollte es später wegräumen.',
+      toetungsmaschine: 'Ein Trichter, ein Behälter, ein roter Knopf. Mehr Maschine braucht es offenbar nicht.',
+      labortisch: 'Notizen, Kolben, halb leere Kaffeebecher. Und eine Liste mit sehr vielen Häkchen.',
+      blutfleck: 'Der Fleck ist alt. Der daneben ist neu.',
+      laborwand: 'Beton. Kein Fenster. Kein Wunder.',
     }[kachel];
     if (kachelText) this.zeigeText(kachelText);
   }
@@ -1399,6 +1557,10 @@ export class Weltszene {
           : npc.text);
         break;
 
+      case 'klonprofessor':
+        this.spricheKlonprofessor();
+        break;
+
       case 'wildkampf':
         this.zeigeText(npc.text ?? '…', () => {
           this.starteWildkampf(aktion.spezies, aktion.stufe, { npc, flagge: npc.flagge });
@@ -1445,6 +1607,7 @@ export class Weltszene {
 
     this.karte.zeichne(ctx, kamera, this.bildzaehler);
     this.zeichneGegenstaende(ctx, kamera);
+    this.zeichneKlonkapseln(ctx, kamera);
     if (this.briefsaeule) this.zeichneSaeulenbrief(ctx, kamera);
     this.zeichneFiguren(ctx, kamera, spielerPixel);
 
@@ -1455,7 +1618,12 @@ export class Weltszene {
 
     this.textfenster.zeichnen(ctx);
     if (this.zustand === 'frage' && this.frageAuswahl) {
-      this.frageAuswahl.zeichnen(ctx, BREITE - 56, HOEHE - 100, 50, 32);
+      // Das Kästchen wächst mit den Antworten mit: "Ja/Nein" ergibt genau die
+      // frühere feste Größe, längere Antworten bekommen mehr Platz.
+      const eintraege = this.frageAuswahl.eintraege;
+      const breite = Math.max(50, ...eintraege.map((eintrag) => textBreite(eintrag) + 22));
+      const hoehe = eintraege.length * 12 + 8;
+      this.frageAuswahl.zeichnen(ctx, BREITE - breite - 6, HOEHE - 68 - hoehe, breite, hoehe);
     }
 
     this.zeichneOrtsschild(ctx);
@@ -1476,6 +1644,28 @@ export class Weltszene {
         continue;
       }
       gegenstandSymbol(ctx, 'samplepack', eintrag.x * KACHEL - kamera.x, eintrag.y * KACHEL - kamera.y);
+    }
+  }
+
+  /**
+   * Was in den Klonkapseln des Labors schwimmt. Die Kachel liefert nur die
+   * leere Röhre – welches Hardtekkmon darin hängt, steht in den Kartendaten
+   * (siehe data/world/klonlabor.js) und kommt hier als Sprite hinein, mit
+   * einer Spiegelung obendrauf, damit das Glas Glas bleibt.
+   */
+  zeichneKlonkapseln(ctx, kamera) {
+    for (const kapsel of this.karte.daten.kapseln ?? []) {
+      const x = Math.round(kapsel.x * KACHEL - kamera.x);
+      const y = Math.round(kapsel.y * KACHEL - kamera.y);
+      if (x < -KACHEL || y < -KACHEL || x > BREITE || y > HOEHE) continue;
+
+      const art = artNachName(kapsel.art);
+      if (art) ctx.drawImage(monSprite(art, 'klein'), x + 2, y + 2, 12, 11);
+
+      ctx.fillStyle = 'rgba(120, 208, 232, 0.22)';
+      ctx.fillRect(x + 2, y + 2, 12, 11);
+      ctx.fillStyle = 'rgba(232, 248, 255, 0.30)';
+      ctx.fillRect(x + 3, y + 3, 2, 9);
     }
   }
 
