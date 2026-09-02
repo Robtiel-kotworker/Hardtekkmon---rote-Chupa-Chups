@@ -212,10 +212,13 @@ const DATEI_TRACKS = {
   // durch, statt mitten in der Animation abgeschnitten zu werden.
   fahrstuhl: { dateien: ['audio/fahrstuhl.mp3'] },
   // Kämpfe gegen die Helene-Fischer-Ultras (siehe trainer.musik in
-  // data/trainer.js und KAMPFMUSIK in scenes/kampfszene.js): drei Varianten
+  // data/trainer.js und KAMPFMUSIK in scenes/kampfszene.js): vier Varianten
   // im selben Shuffle-Verfahren wie der normale Kampftrack.
   ultrakampf: {
-    dateien: ['audio/ultrakampf_v1.mp3', 'audio/ultrakampf_v2.mp3', 'audio/ultrakampf_v3.mp3'],
+    dateien: [
+      'audio/ultrakampf_v1.mp3', 'audio/ultrakampf_v2.mp3',
+      'audio/ultrakampf_v3.mp3', 'audio/ultrakampf_v4.mp3',
+    ],
   },
   // Nur für Helene Fischer selbst.
   ultrakampfHelene: { dateien: ['audio/ultrakampf_helene.mp3'] },
