@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { baueKarte, person, warp, kaempfer } from './verzeichnis.js';
+import { baueKlonlabor } from './klonlabor.js';
 
 /**
  * @typedef {{ karte: string, x: number, y: number }} Rueckweg
@@ -32,7 +33,16 @@ function ausgang(matteX, matteY, rueck) {
 }
 
 /**
- * Boxenstopp: hier werden Hardtekkmon kostenlos wieder aufgepäppelt.
+ * Lage des Tastenfelds an der hinteren Wand des Boxenstopps und der geheimen
+ * Fahrstuhltür links daneben (siehe data/world/klonlabor.js).
+ */
+const TASTENFELD = { x: 11, y: 1 };
+const GEHEIMTUER_STELLE = { x: 10, y: 1 };
+
+/**
+ * Boxenstopp: hier werden Hardtekkmon kostenlos wieder aufgepäppelt. Hinten
+ * rechts an der Wand hängt außerdem ein kleines Tastenfeld – wer die richtige
+ * Kombination kennt, kommt von hier ins Klonlabor im Untergeschoss.
  * @param {string} id
  * @param {string} ort
  * @param {Rueckweg} rueck
@@ -53,6 +63,9 @@ export function baueBoxenstopp(id, ort, rueck) {
     bauer.setze(2, 7, 'tisch');
     bauer.setze(3, 7, 'tisch');
     bauer.setze(10, 7, 'plattenspieler');
+    // Das Tastenfeld an der Wand direkt über dem Computer. Die Kachel links
+    // daneben bleibt Wand, bis der Code stimmt.
+    bauer.setze(TASTENFELD.x, TASTENFELD.y, 'tastenfeld');
 
     return {
       warps: ausgang(matteX, matteY, rueck),
@@ -264,6 +277,8 @@ export function setzeBoxenstopp(bauer, x, y, stadtId, ortName) {
   // Tür – von außen dauerhaft als Heilungscenter lesbar.
   bauer.beschriftung(x, y + 3, 6, 'Heilungscenter');
   baueBoxenstopp(id, ortName, { karte: stadtId, x: tuerX, y: tuerY });
+  // Und darunter das, wovon oben niemand spricht.
+  baueKlonlabor(`klonlabor_${stadtId}`, ortName, id, GEHEIMTUER_STELLE);
   return { tuerX, tuerY };
 }
 

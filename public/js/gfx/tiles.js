@@ -577,6 +577,179 @@ export const KACHELN = {
     },
   },
 
+  // --- Klonlabor unter dem Boxenstopp ----------------------------------------
+  // Der Gegenentwurf zum warmen Heilungscenter darüber: kalter Beton, Stahl,
+  // Neonlicht – und überall die Spuren dessen, was hier wirklich passiert
+  // (siehe data/world/klonlabor.js).
+
+  /**
+   * Das Tastenfeld an der Wand des Boxenstopps: unscheinbarer grauer Kasten
+   * mit Ziffernblock. Ansprechen öffnet die Codeeingabe (siehe
+   * scenes/tastenfeld.js), die richtige Kombination lässt die Fahrstuhltür
+   * daneben erscheinen.
+   */
+  tastenfeld: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, WELT.wandInnen);
+      kasten(ctx, WELT.wandInnenDunkel, 0, 12, 16, 4);
+      kasten(ctx, '#e0c898', 0, 0, 16, 2);
+      // Gehäuse
+      kasten(ctx, '#20242e', 3, 2, 10, 12);
+      kasten(ctx, '#4a5060', 4, 3, 8, 10);
+      // Display mit drei Stellen
+      kasten(ctx, '#0c2412', 5, 4, 6, 3);
+      kasten(ctx, '#48f078', 6, 5, 1, 1);
+      kasten(ctx, '#48f078', 8, 5, 1, 1);
+      kasten(ctx, '#48f078', 10, 5, 1, 1);
+      // Ziffernblock
+      for (let ky = 0; ky < 3; ky += 1) {
+        for (let kx = 0; kx < 3; kx += 1) {
+          kasten(ctx, '#c8ccd8', 5 + kx * 2, 8 + ky * 2, 1, 1);
+        }
+      }
+      kasten(ctx, '#e04058', 11, 12, 1, 1);
+    },
+  },
+  /**
+   * Die Fahrstuhltür. Sie ist begehbar: Wer darauftritt, löst die Fahrt aus
+   * (siehe FAHRSTUHL_ZIEL und nachSchritt() in scenes/welt.js). Im Boxenstopp
+   * liegt an ihrer Stelle zunächst eine Wand – die Kachel wird erst nach der
+   * richtigen Codeeingabe gesetzt.
+   */
+  fahrstuhltuer: {
+    zeichne(ctx) {
+      flaeche(ctx, '#20242e');
+      kasten(ctx, '#8a8a98', 0, 0, 16, 3);
+      kasten(ctx, '#48f078', 7, 1, 2, 1);
+      kasten(ctx, '#484c58', 0, 3, 16, 13);
+      kasten(ctx, '#9098a8', 1, 4, 6, 12);
+      kasten(ctx, '#9098a8', 9, 4, 6, 12);
+      kasten(ctx, '#c8ccd8', 1, 4, 6, 1);
+      kasten(ctx, '#c8ccd8', 9, 4, 6, 1);
+      kasten(ctx, '#12121a', 7, 4, 2, 12);
+      kasten(ctx, '#6a7280', 5, 9, 1, 3);
+      kasten(ctx, '#6a7280', 10, 9, 1, 3);
+    },
+  },
+  /** Betonwand des Labors – kälter und schmutziger als jede Zimmerwand. */
+  laborwand: {
+    fest: true,
+    varianten: 2,
+    zeichne(ctx, rnd) {
+      flaeche(ctx, '#4a5058');
+      kasten(ctx, '#5a6068', 0, 0, 16, 12);
+      kasten(ctx, '#6a7078', 0, 0, 16, 1);
+      kasten(ctx, '#3a4048', 0, 12, 16, 4);
+      sprenkeln(ctx, rnd, '#525860', 10);
+      sprenkeln(ctx, rnd, '#6a7078', 5);
+    },
+  },
+  /** Fliesenboden des Labors: klinisch, aber längst nicht mehr sauber. */
+  laborboden: {
+    varianten: 3,
+    zeichne(ctx, rnd) {
+      flaeche(ctx, '#98a0a8');
+      kasten(ctx, '#a8b0b8', 1, 1, 14, 14);
+      kasten(ctx, '#7a828a', 0, 15, 16, 1);
+      kasten(ctx, '#7a828a', 15, 0, 1, 16);
+      sprenkeln(ctx, rnd, '#8a929a', 6);
+    },
+  },
+  /** Derselbe Boden, nur mit einer eingetrockneten Lache darauf. */
+  blutfleck: {
+    varianten: 3,
+    zeichne(ctx, rnd) {
+      flaeche(ctx, '#98a0a8');
+      kasten(ctx, '#a8b0b8', 1, 1, 14, 14);
+      kasten(ctx, '#7a828a', 0, 15, 16, 1);
+      kasten(ctx, '#7a828a', 15, 0, 1, 16);
+      kasten(ctx, '#6a0c18', 4, 6, 8, 5);
+      kasten(ctx, '#8c1020', 3, 5, 9, 6);
+      kasten(ctx, '#b01828', 5, 6, 4, 3);
+      sprenkeln(ctx, rnd, '#8c1020', 10);
+    },
+  },
+  /**
+   * Klonkapsel: Glasröhre mit Nährlösung. Was darin schwimmt, kommt erst zur
+   * Laufzeit dazu – jede Kapsel bekommt ein anderes Hardtekkmon (siehe
+   * zeichneKlonkapseln in scenes/welt.js).
+   */
+  klonkapsel: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#98a0a8');
+      kasten(ctx, '#2a3038', 1, 0, 14, 16);
+      kasten(ctx, '#5a6470', 2, 1, 12, 14);
+      kasten(ctx, '#1e4a56', 2, 2, 12, 11);
+      kasten(ctx, '#2a3038', 2, 13, 12, 3);
+      kasten(ctx, '#48f078', 12, 14, 1, 1);
+      kasten(ctx, '#e8c860', 3, 14, 1, 1);
+    },
+  },
+  /** Der Haufen: übereinandergestapelte Hardtekkmon, die es nicht überstanden haben. */
+  leichenhaufen: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#98a0a8');
+      kasten(ctx, '#8c1020', 0, 11, 16, 5);
+      kasten(ctx, '#6a7050', 1, 9, 6, 5);
+      kasten(ctx, '#7a6a80', 8, 9, 7, 5);
+      kasten(ctx, '#8a7a58', 3, 5, 6, 5);
+      kasten(ctx, '#5a7a70', 9, 6, 5, 4);
+      kasten(ctx, '#7a5a68', 5, 2, 6, 4);
+      // X-Augen, wo eben noch Augen waren.
+      for (const [ax, ay] of [[6, 3], [8, 3], [2, 10], [4, 10], [10, 10], [12, 10]]) {
+        kasten(ctx, '#20242e', ax, ay, 1, 1);
+      }
+    },
+  },
+  /** Ein einzelnes, danebenliegendes Exemplar. */
+  totesMon: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#98a0a8');
+      kasten(ctx, '#8c1020', 1, 10, 13, 3);
+      kasten(ctx, '#6a7a58', 2, 6, 11, 5);
+      kasten(ctx, '#7a8a68', 3, 5, 8, 5);
+      kasten(ctx, '#5a6a50', 12, 7, 3, 3);
+      kasten(ctx, '#20242e', 4, 7, 1, 1);
+      kasten(ctx, '#20242e', 6, 7, 1, 1);
+    },
+  },
+  /** Edelstahltisch mit Kolben und Papierkram. */
+  labortisch: {
+    fest: true,
+    // Wie Tresen und Tisch: der Professor dahinter bleibt ansprechbar.
+    reichweite: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#98a0a8');
+      kasten(ctx, '#98a0ac', 0, 3, 16, 10);
+      kasten(ctx, '#e8ecf4', 0, 4, 16, 5);
+      kasten(ctx, '#c8ccd8', 0, 9, 16, 3);
+      kasten(ctx, '#48f078', 3, 3, 3, 5);
+      kasten(ctx, '#a8e8f8', 9, 4, 2, 4);
+      kasten(ctx, '#f0e4cc', 12, 5, 3, 3);
+    },
+  },
+  /**
+   * Die Tötungsmaschine: Trichter oben, Behälter unten, ein roter Knopf. Der
+   * Professor erklärt bei genügend Schweigegeld, wofür sie gebraucht wird.
+   */
+  toetungsmaschine: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, '#98a0a8');
+      kasten(ctx, '#2a3038', 0, 0, 16, 15);
+      kasten(ctx, '#586470', 1, 1, 14, 12);
+      for (let i = 0; i < 4; i += 1) kasten(ctx, '#f0c040', 1 + i * 4, 1, 2, 2);
+      kasten(ctx, '#12121a', 3, 5, 10, 6);
+      kasten(ctx, '#8c1020', 4, 9, 8, 2);
+      kasten(ctx, '#e04058', 12, 11, 2, 2);
+      kasten(ctx, '#8c1020', 0, 15, 16, 1);
+    },
+  },
+
   // --- Bruchbude und Treppenschacht ------------------------------------------
   /** Begehbare Stufe im Schacht: von oben gesehen eine Kante nach der anderen. */
   stufen: {

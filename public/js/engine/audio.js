@@ -1028,6 +1028,8 @@ const EFFEKTE = {
   item: { halbtoene: 21, dauer: 0.18, form: 'square', lautstaerke: 0.18 },
   // Ein Piep je Stroboskop-Blitz der Heilsequenz.
   heilPuls: { halbtoene: 26, dauer: 0.12, form: 'square', lautstaerke: 0.17 },
+  // Der Gong, wenn der Fahrstuhl unten ankommt (siehe scenes/fahrstuhl.js).
+  fahrstuhl: { halbtoene: 14, dauer: 0.4, form: 'triangle', lautstaerke: 0.18 },
 };
 
 /**

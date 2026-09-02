@@ -65,6 +65,9 @@ export function baueKarte(id, einstellungen, aufbau) {
     // platziereAutomaten() in data/world/casino.js und automatBesetzt() in
     // world/weltkarte.js.
     besetzteAutomaten: zusatz.besetzteAutomaten ?? [],
+    // Klonkapseln samt Inhalt – das Hardtekkmon darin kommt erst zur Laufzeit
+    // dazu (siehe zeichneKlonkapseln in scenes/welt.js).
+    kapseln: zusatz.kapseln ?? [],
   };
 
   return KARTEN[id];
