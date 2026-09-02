@@ -8,7 +8,9 @@
 import { ctx, loesche, HOEHE } from './engine/screen.js';
 import { starteEingabe, eingabeSchritt } from './engine/input.js';
 import { schleife } from './engine/loop.js';
-import { starteAudio, audioSchritt, tonUmschalten } from './engine/audio.js';
+import {
+  starteAudio, spieleTrack, audioSchritt, tonUmschalten,
+} from './engine/audio.js';
 import { starteKonto } from './engine/kontoUi.js';
 import { baueKacheln } from './gfx/tiles.js';
 import { zeichneText } from './gfx/font.js';
@@ -36,8 +38,14 @@ function verbindeSchalter() {
     ton.classList.toggle('is-off', !tonUmschalten());
   });
 
-  // Der Ton darf erst nach einer echten Eingabe starten.
-  const wecken = () => starteAudio();
+  // Der Ton darf erst nach einer echten Eingabe starten – dafür reicht aber
+  // jede Berührung der Seite, nicht erst eine der acht Spieltasten. So läuft
+  // das Titellied schon auf dem "IRGENDEINE TASTE DRÜCKEN"-Bildschirm, statt
+  // erst mit dem Tastendruck, der gleichzeitig das Menü öffnet.
+  const wecken = () => {
+    starteAudio();
+    spieleTrack('titel');
+  };
   window.addEventListener('pointerdown', wecken, { once: true });
   window.addEventListener('keydown', wecken, { once: true });
 }
