@@ -9,7 +9,9 @@
 // ============================================================================
 
 import { BREITE, HOEHE } from '../engine/screen.js';
-import { effekt } from '../engine/audio.js';
+import {
+  effekt, spieleTrack, starteZusatzschleife, stoppeZusatzschleife,
+} from '../engine/audio.js';
 import { zeichneText, textBreite } from '../gfx/font.js';
 import { poppe } from './stapel.js';
 
@@ -37,6 +39,16 @@ export class Fahrstuhlszene {
 
   betreten() {
     effekt('zurueck');
+    // Die Fahrstuhlmusik ist exakt auf die Dauer der Fahrt gekürzt (siehe
+    // 'fahrstuhl' in engine/audio.js) und läuft einmal glatt durch. Das
+    // Quietschen liegt als eigene Schleife gleichzeitig obendrauf.
+    spieleTrack('fahrstuhl');
+    starteZusatzschleife('quietsch');
+  }
+
+  /** Die Zusatzschleife läuft nur während der Fahrt – sie stoppt selbst dann, wenn die Szene je vorzeitig verlassen würde. */
+  verlassen() {
+    stoppeZusatzschleife();
   }
 
   aktualisieren() {

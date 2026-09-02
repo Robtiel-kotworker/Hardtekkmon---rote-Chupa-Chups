@@ -29,6 +29,14 @@ let ctx = null;
 let summe = null;
 /** @type {GainNode|null} */
 let musikBus = null;
+/**
+ * Eigener Bus für Zusatzschleifen, die parallel zur Musik laufen – z. B. das
+ * Quietschen im Fahrstuhl (siehe starteZusatzschleife). Unabhängig vom
+ * Musikbus, damit ein Ducking der Musik (siehe spieleKlang) die Zusatzschleife
+ * nicht mit runterzieht.
+ * @type {GainNode|null}
+ */
+let zusatzBus = null;
 /** @type {GainNode|null} */
 let kickBus = null;
 let verzerrer = null;
@@ -199,6 +207,21 @@ const DATEI_TRACKS = {
   // Läuft nur, solange der Professor seine Erklärung als Film abspielt
   // (siehe scenes/laborfilm.js). Danach übernimmt wieder 'klonlabor'.
   laborfilm: { dateien: ['audio/labor_animation.mp3'] },
+  // Nur während der Fahrstuhlfahrt (siehe scenes/fahrstuhl.js) – exakt auf
+  // die 172 Bilder (172/60 s) der Fahrt gekürzt, läuft also einmal glatt
+  // durch, statt mitten in der Animation abgeschnitten zu werden.
+  fahrstuhl: { dateien: ['audio/fahrstuhl.mp3'] },
+};
+
+/**
+ * Zusatzschleifen laufen parallel ZUR laufenden Musik, statt sie abzulösen –
+ * anders als die Stücke oben, von denen immer nur eines gleichzeitig spielt.
+ * Bisher gibt es genau eine: das Quietschen im Fahrstuhl, das über der
+ * Fahrstuhlmusik liegt (siehe starteZusatzschleife unten und betreten() in
+ * scenes/fahrstuhl.js).
+ */
+const ZUSATZSCHLEIFEN = {
+  quietsch: { datei: 'audio/quietsch.mp3' },
 };
 
 /**
@@ -224,13 +247,21 @@ const KLANG_DATEIEN = {
 /** Wie weit die Musik unter einem einmaligen Klang abgesenkt wird. */
 const DUCK_PEGEL = 0.25;
 const MUSIK_PEGEL = 0.8;
+/** Lautstärke der Zusatzschleifen – etwas leiser als die Musik, damit sie als Extra obendrauf liegen statt sie zu übertönen. */
+const ZUSATZ_PEGEL = 0.55;
 
 /** @type {Object<string, AudioBuffer[]>} Dekodierte Puffer je Track, nach dem Laden. */
 const dateiPuffer = {};
 /** @type {Object<string, AudioBuffer>} Dekodierte Puffer der einmaligen Klänge. */
 const klangPuffer = {};
+/** @type {Object<string, AudioBuffer>} Dekodierte Puffer der Zusatzschleifen. */
+const zusatzPuffer = {};
 /** @type {AudioBufferSourceNode|null} Gerade laufende Audiodatei. */
 let dateiQuelle = null;
+/** @type {AudioBufferSourceNode|null} Gerade laufende Zusatzschleife. */
+let zusatzQuelle = null;
+/** Welche Zusatzschleife zuletzt angefordert wurde – für das Nachstarten, falls die Datei beim Anfordern noch nicht geladen war. */
+let gewuenschteZusatzschleife = '';
 /**
  * Uhrzeit des Audiokontexts, zu der die laufende Datei angefangen hat, und
  * ihre Länge. Daraus liest trackZeit() die Abspielposition – die Grundlage
@@ -257,9 +288,16 @@ async function ladeDateien() {
     ...Object.entries(KLANG_DATEIEN).map(async ([name, eintrag]) => {
       klangPuffer[name] = await ladePuffer(eintrag.datei);
     }),
+    ...Object.entries(ZUSATZSCHLEIFEN).map(async ([name, eintrag]) => {
+      zusatzPuffer[name] = await ladePuffer(eintrag.datei);
+    }),
   ]);
-  // Wurde währenddessen schon ein Datei-Track angefordert, jetzt nachstarten.
+  // Wurde währenddessen schon ein Datei-Track bzw. eine Zusatzschleife
+  // angefordert, jetzt nachstarten.
   if (DATEI_TRACKS[laufenderTrack] && !dateiQuelle) starteDateiTrack(laufenderTrack);
+  if (ZUSATZSCHLEIFEN[gewuenschteZusatzschleife] && !zusatzQuelle) {
+    starteZusatzschleife(gewuenschteZusatzschleife);
+  }
 }
 
 function stoppeDateiQuelle() {
@@ -374,6 +412,10 @@ export function starteAudio() {
   musikBus.gain.value = MUSIK_PEGEL;
   musikBus.connect(summe);
 
+  zusatzBus = ctx.createGain();
+  zusatzBus.gain.value = ZUSATZ_PEGEL;
+  zusatzBus.connect(summe);
+
   summe.connect(ctx.destination);
 
   naechsterSchrittZeit = ctx.currentTime;
@@ -416,6 +458,44 @@ export function spieleTrack(name) {
 
 export function aktuellerTrack() {
   return laufenderTrack;
+}
+
+/** Stoppt nur die laufende Tonquelle, ohne die gewünschte Schleife zu vergessen. */
+function stoppeZusatzQuelle() {
+  if (!zusatzQuelle) return;
+  try {
+    zusatzQuelle.stop();
+  } catch {
+    // Bereits beendet.
+  }
+  zusatzQuelle = null;
+}
+
+/**
+ * Startet eine Zusatzschleife parallel zur laufenden Musik – beide laufen
+ * gleichzeitig, keine löst die andere ab (siehe ZUSATZSCHLEIFEN und
+ * scenes/fahrstuhl.js). Läuft schon eine, wird sie zuerst gestoppt.
+ * @param {keyof typeof ZUSATZSCHLEIFEN} name
+ */
+export function starteZusatzschleife(name) {
+  gewuenschteZusatzschleife = name;
+  stoppeZusatzQuelle();
+
+  const puffer = zusatzPuffer[name];
+  if (!ctx || !zusatzBus || !puffer) return; // Puffer evtl. noch nicht geladen – ladeDateien() startet dann selbst nach.
+
+  const quelle = ctx.createBufferSource();
+  quelle.buffer = puffer;
+  quelle.loop = true;
+  quelle.connect(zusatzBus);
+  quelle.start();
+  zusatzQuelle = quelle;
+}
+
+/** Beendet die laufende Zusatzschleife, falls eine läuft. */
+export function stoppeZusatzschleife() {
+  gewuenschteZusatzschleife = '';
+  stoppeZusatzQuelle();
 }
 
 /**

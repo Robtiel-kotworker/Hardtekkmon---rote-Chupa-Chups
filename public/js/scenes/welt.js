@@ -37,7 +37,7 @@ import { erstelleHardtekkmon, ausTabelle } from '../game/hardtekkmon.js';
 import {
   spiel, hatGegenstand, gibGegenstand, merkeAufgesammelt, schonAufgesammelt,
   trainerBesiegt, merkeTrainerBesiegt, gigErhalten, anzahlGigs, heileTeam,
-  merkeBoxenstopp, waehleStarter, merkeGesehen, setzeFlagge, hatFlagge,
+  merkeBoxenstopp, waehleStarter, merkeGesehen, setzeFlagge, hatFlagge, entferneFlagge,
   ersterKaempfer, speichereSpiel, aendereGeld, WAEHRUNG,
   selectGegenstand, schalteTaschenlampe, taschenlampeAn,
 } from '../game/spielstand.js';
@@ -818,6 +818,13 @@ export class Weltszene {
       schiebe(new Fahrstuhlszene({
         richtung: ziel.richtung,
         danach: () => {
+          // Oben angekommen schließt sich die geheime Tür wieder: Der
+          // Zugang gilt nur für den einen Besuch, beim nächsten Mal muss
+          // die Kombination am Tastenfeld erneut eingegeben werden.
+          if (ziel.richtung === 'hoch') {
+            const tuer = GEHEIMTUER[ziel.zielId];
+            if (tuer) entferneFlagge(tuer.flagge);
+          }
           this.wechsleKarte(ziel.zielId, ziel.x, ziel.y, 'unten');
           this.zustand = 'frei';
         },
