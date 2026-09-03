@@ -941,6 +941,25 @@ export const KACHELN = {
       }
     },
   },
+  /** Die Teleportationskapsel unten rechts in jedem Boxenstopp (siehe baueBoxenstopp). */
+  telefonzelle: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, WELT.bodenInnen);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(2, 14, 12, 2);
+      kasten(ctx, '#5c0c12', 1, 0, 14, 1);
+      kasten(ctx, '#7a1018', 1, 1, 14, 2);
+      kasten(ctx, '#f0d8a0', 3, 1, 10, 1);
+      kasten(ctx, '#c0202c', 2, 3, 12, 10);
+      kasten(ctx, '#a8c8d8', 3, 4, 4, 6);
+      kasten(ctx, '#a8c8d8', 9, 4, 4, 6);
+      kasten(ctx, '#7a1018', 7, 4, 2, 6);
+      kasten(ctx, '#7a1018', 3, 6, 10, 1);
+      kasten(ctx, '#8c1620', 2, 13, 12, 2);
+      kasten(ctx, '#e8c860', 9, 9, 1, 2);
+    },
+  },
 };
 
 /**

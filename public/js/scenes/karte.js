@@ -23,6 +23,10 @@ import { karte as kartendaten } from '../data/world/karten.js';
 import { trainerInfo } from '../data/trainer.js';
 import { artNachName } from '../data/arten.js';
 import { begegnungstabelle } from '../data/world/begegnungen.js';
+import { hatFlagge } from '../game/spielstand.js';
+
+/** Wie lange eine Ablehnungsmeldung im Teleport-Modus stehen bleibt. */
+const MELDUNG_BILDER = 70;
 
 /** Sichtbare Höhe des Kartenausschnitts (Rest ist Kopf-/Fußzeile). */
 const ANSICHT_HOEHE = 128;
@@ -169,13 +173,23 @@ function baueLandmasse() {
 }
 
 export class Kartenszene {
-  /** @param {string} [aktuelleKarte] Kennung der Karte, auf der die Weltszene gerade steht. */
-  constructor(aktuelleKarte = '') {
+  /**
+   * @param {string} [aktuelleKarte] Kennung der Karte, auf der die Weltszene gerade steht.
+   * @param {{ modus?: 'ansicht'|'teleport', beiTeleport?: (zielStadtId: string) => void }} [optionen]
+   *   `modus: 'teleport'` – für "Göttliche Dosis" (siehe scenes/team.js): A
+   *   wählt keine Detailansicht, sondern versucht direkt zu teleportieren;
+   *   nur besuchte Städte mit Boxenstopp sind gültige Ziele.
+   */
+  constructor(aktuelleKarte = '', optionen = {}) {
     this.bildzaehler = 0;
     this.hierId = stationVon(aktuelleKarte);
     this.index = Math.max(0, STATIONEN.findIndex((s) => s.id === this.hierId));
     this.detail = false;
     this.scrollY = this.zielScroll(this.index);
+    this.modus = optionen.modus ?? 'ansicht';
+    this.beiTeleport = optionen.beiTeleport ?? null;
+    this.meldung = null;
+    this.meldungRest = 0;
 
     if (!landmasseCache) landmasseCache = baueLandmasse();
     this.landmasse = landmasseCache;
@@ -189,6 +203,9 @@ export class Kartenszene {
 
   aktualisieren() {
     this.bildzaehler += 1;
+
+    if (this.meldungRest > 0) this.meldungRest -= 1;
+    else if (this.meldung) this.meldung = null;
 
     if (this.detail) {
       if (gedrueckt('A') || gedrueckt('B')) {
@@ -211,13 +228,38 @@ export class Kartenszene {
     this.scrollY += (ziel - this.scrollY) * 0.3;
 
     if (gedrueckt('A')) {
-      effekt('bestaetigen');
-      this.detail = true;
+      if (this.modus === 'teleport') this.versucheTeleport();
+      else {
+        effekt('bestaetigen');
+        this.detail = true;
+      }
     }
     if (gedrueckt('B')) {
       effekt('zurueck');
       poppe();
     }
+  }
+
+  /** Nur besuchte Städte mit Boxenstopp (Telefon-Nummer) sind gültige Ziele. */
+  versucheTeleport() {
+    const station = STATIONEN[this.index];
+    if (station.id === this.hierId) {
+      this.zeigeMeldung('Du bist schon hier.');
+      return;
+    }
+    if (!station.telefon || !hatFlagge(`besucht:${station.id}`)) {
+      this.zeigeMeldung('Daran hat es keine Erinnerung.');
+      return;
+    }
+    effekt('bestaetigen');
+    poppe();
+    this.beiTeleport?.(station.id);
+  }
+
+  zeigeMeldung(text) {
+    this.meldung = text;
+    this.meldungRest = MELDUNG_BILDER;
+    effekt('zurueck');
   }
 
   // --- Zeichnen ----------------------------------------------------------------
@@ -258,14 +300,25 @@ export class Kartenszene {
 
     ctx.restore();
 
-    // Namensleiste unter der Karte, live zur Auswahl.
-    const name = kartendaten(aktiv.id)?.name ?? aktiv.id;
+    // Namensleiste unter der Karte, live zur Auswahl. Städte mit Boxenstopp
+    // tragen ihre Telefonnummer direkt hinter dem Namen (siehe
+    // scenes/telefonzelle.js).
+    const rohname = kartendaten(aktiv.id)?.name ?? aktiv.id;
+    const name = aktiv.telefon ? `${rohname} (${aktiv.telefon})` : rohname;
     fenster(ctx, kartenX, ANSICHT_Y + ANSICHT_HOEHE + 4, KARTE_BREITE, 12);
     zeichneText(ctx, name, kartenX + 4, ANSICHT_Y + ANSICHT_HOEHE + 7, { farbe: UI.text });
     if (aktiv.id === this.hierId) {
       const hinweis = 'HIER';
       zeichneText(ctx, hinweis, kartenX + KARTE_BREITE - textBreite(hinweis) - 4,
         ANSICHT_Y + ANSICHT_HOEHE + 7, { farbe: UI.auswahl });
+    }
+
+    if (this.meldung) {
+      const breite = textBreite(this.meldung) + 8;
+      const mx = (BREITE - breite) / 2;
+      const my = ANSICHT_Y + ANSICHT_HOEHE - 20;
+      fenster(ctx, mx, my, breite, 12, true);
+      zeichneText(ctx, this.meldung, mx + 4, my + 3, { farbe: UI.auswahl });
     }
 
     if (this.detail) this.zeichneDetail(ctx, aktiv);

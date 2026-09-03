@@ -127,11 +127,13 @@ function setzeStatus(ziel, status, ereignisse, seite) {
   // Wer den passenden Typ hat, ist gegen den Zustand unempfindlich.
   const immun = (status === STATUS.zugedroehnt && typen.includes('STROM'))
     || (status === STATUS.verkatert && typen.includes('CHEMIE'))
-    || (status === STATUS.ausgebrannt && typen.includes('KICK'));
+    || (status === STATUS.ausgebrannt && typen.includes('KICK'))
+    // Acid-Typen haben Erfahrung mit "Göttliche Dosis" und knipst es nicht aus.
+    || (status === STATUS.ausgeknipst && typen.includes('ACID'));
   if (immun) return false;
 
   ziel.mon.status = status;
-  if (status === STATUS.weggeratzt) ziel.mon.schlafRunden = zahl(1, 3);
+  if (status === STATUS.weggeratzt || status === STATUS.ausgeknipst) ziel.mon.schlafRunden = zahl(1, 3);
 
   const name = anzeigename(ziel.mon);
   const meldungen = {
@@ -140,6 +142,7 @@ function setzeStatus(ziel, status, ereignisse, seite) {
     [STATUS.zugedroehnt]: `${name} ist zugedröhnt und wird langsamer!`,
     [STATUS.ausgebrannt]: `${name} ist ausgebrannt!`,
     [STATUS.tiefgekuehlt]: `${name} ist tiefgekühlt!`,
+    [STATUS.ausgeknipst]: `${name} ist komplett ausgeknipst!`,
   };
   ereignisse.push(ereignis('status', { seite, status }));
   ereignisse.push(text(meldungen[status] ?? `${name} geht es plötzlich anders.`));
@@ -222,6 +225,16 @@ function kannHandeln(kaempfer, seite, ereignisse) {
     }
     kaempfer.mon.status = null;
     ereignisse.push(text(`${name} ist wieder wach!`));
+  }
+
+  if (kaempfer.mon.status === STATUS.ausgeknipst) {
+    if (kaempfer.mon.schlafRunden > 0) {
+      kaempfer.mon.schlafRunden -= 1;
+      ereignisse.push(text(`${name} ist komplett ausgeknipst und rührt sich nicht.`));
+      return false;
+    }
+    kaempfer.mon.status = null;
+    ereignisse.push(text(`${name} kommt wieder zu sich!`));
   }
 
   if (kaempfer.mon.status === STATUS.tiefgekuehlt) {

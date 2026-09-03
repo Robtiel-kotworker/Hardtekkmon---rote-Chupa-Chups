@@ -17,6 +17,10 @@ export const STATUS = {
   zugedroehnt: 'zugedröhnt', // Paralyse: langsamer, setzt manchmal aus
   ausgebrannt: 'ausgebrannt', // Verbrennung: halber Angriff, Schaden pro Runde
   tiefgekuehlt: 'tiefgekühlt', // Eis: keine Aktion, bis es auftaut
+  // Nur durch "Göttliche Dosis" (siehe unten): Acid-Typen sind dagegen immun
+  // (siehe setzeStatus() in battle/kampf.js), allen anderen fehlt schlicht
+  // die Erfahrung mit der Wirkung.
+  ausgeknipst: 'ausgeknipst',
 };
 
 const status = (art, chance = 1) => ({ art: 'status', status: art, chance });
@@ -76,6 +80,8 @@ attacke('Tröpfchen', 'ACID', 'spezial', 40, 100, 30, status('verkatert', 0.3), 
 attacke('Schleichende Dosis', 'ACID', 'status', 0, 85, 15, status('verkatert'), 'Merkt man erst später. Dann aber richtig.');
 attacke('Ätzriff', 'ACID', 'physisch', 75, 95, 15, null, 'Ein Riff mit Widerhaken.');
 attacke('Pupillentanz', 'ACID', 'status', 0, 100, 20, verwirren(), 'Der Blick geht in zwei Richtungen gleichzeitig.');
+attacke('Göttliche Dosis', 'ACID', 'status', 0, 100, 5, status('ausgeknipst'),
+  'Setzt instant eine extrem hochdosierte Dosis LSD-25 frei. Nur Acid-Typen kommen damit klar.');
 
 // --- RAVE -------------------------------------------------------------------
 attacke('Tanzflächenwalze', 'RAVE', 'physisch', 80, 95, 15, null, 'Rollt einmal quer über die Fläche.');
