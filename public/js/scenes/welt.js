@@ -397,6 +397,10 @@ export class Weltszene {
       return;
     }
 
+    // Muss vor merkeTrainerBesiegt() erfasst werden, sonst wäre ein einmaliger
+    // Sieg von hier aus nicht mehr von einem (eigentlich unmöglichen, aber
+    // zur Sicherheit abgefangenen) Rückkampf zu unterscheiden.
+    const warSchonBesiegt = Boolean(zusatz.trainerId) && trainerBesiegt(zusatz.trainerId);
     if (zusatz.trainerId) merkeTrainerBesiegt(zusatz.trainerId);
 
     // Eine feste Begegnung verschwindet nur, wenn sie besiegt oder gefangen
@@ -415,6 +419,14 @@ export class Weltszene {
       if (trainer.gig !== null) {
         gigErhalten(trainer.gig);
         texte.push(`Du erhältst die ${trainer.gig + 1}. Gig-Marke!`);
+      }
+
+      // Einmaliger Extra-Gegenstand obendrauf (bisher nur Helene Fischers
+      // Finale, siehe data/trainer.js) – nur beim allerersten Sieg.
+      if (trainer.belohnung && !warSchonBesiegt) {
+        gibGegenstand(trainer.belohnung, 1);
+        effekt('item');
+        texte.push(`${trainer.name} drückt dir noch ein ${trainer.belohnung} in die Hand: Wir haben davon eh noch ein paar Kisten voll.`);
       }
 
       if (zusatz.trainerId === 'champion') {

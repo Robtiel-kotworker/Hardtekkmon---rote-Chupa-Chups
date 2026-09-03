@@ -15,7 +15,7 @@ export const TRAINER = {};
  * @param {string} figur Aussehen (siehe gfx/menschen.js)
  * @param {[string, number][]} team [Artname, Stufe]
  * @param {{ start: string, sieg: string, niederlage: string }} texte
- * @param {{ preisgeld?: number, gig?: number, blick?: number, musik?: string }} [zusatz]
+ * @param {{ preisgeld?: number, gig?: number, blick?: number, musik?: string, belohnung?: string }} [zusatz]
  */
 function trainer(id, name, figur, team, texte, zusatz = {}) {
   const hoechsteStufe = team.reduce((max, [, stufe]) => Math.max(max, stufe), 1);
@@ -31,6 +31,9 @@ function trainer(id, name, figur, team, texte, zusatz = {}) {
     // Übersteuert die normale Kampfmusik nach Gegnerart (siehe KAMPFMUSIK in
     // scenes/kampfszene.js) – bisher nur für die Helene-Fischer-Ultras genutzt.
     musik: zusatz.musik ?? null,
+    // Einmaliger Gegenstand obendrauf, zusätzlich zum Preisgeld (siehe
+    // kampfEnde() in scenes/welt.js) – bisher nur für Helene Fischers Finale.
+    belohnung: zusatz.belohnung ?? null,
   };
 }
 
@@ -481,7 +484,7 @@ trainer('helene_final', 'Helene Fischer', 'helene',
     start: 'Wir sind beeindruckt, {name}. Wirklich. Aber jetzt ist Schluss mit nett – wir zeigen dir, warum wir seit Jahren ganz oben stehen.',
     sieg: 'Da. Seht ihr. Wir hatten immer recht.',
     niederlage: 'Wir … wir haben verloren? Das ist eine ganz neue Erfahrung. Wir müssen das erst mal verarbeiten. Zu zweit.',
-  }, { musik: 'ultrakampfHelene', preisgeld: 6000 });
+  }, { musik: 'ultrakampfHelene', preisgeld: 6000, belohnung: 'Master-Sample' });
 
 /** @param {string} id */
 export function trainerInfo(id) {
