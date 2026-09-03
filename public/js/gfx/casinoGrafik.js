@@ -382,8 +382,12 @@ export const TISCH = {
   zellenHoehe: 10,
 };
 
-/** Nummer einer Rasterzelle: Spalte c (0..11), Zeile r (0 oben .. 2 unten). */
-function tischZahl(c, r) {
+/**
+ * Nummer einer Rasterzelle: Spalte c (0..11), Zeile r (0 oben .. 2 unten).
+ * Auch von der Casinoszene genutzt, um beim Zahl-Setzen den Cursor über den
+ * Tisch zu bewegen (siehe aktualisiereZahlwahl() in scenes/casino.js).
+ */
+export function tischZahl(c, r) {
   // Unterste Zeile 1,4,7..; mittlere 2,5,8..; oberste 3,6,9..
   return c * 3 + (3 - r);
 }
