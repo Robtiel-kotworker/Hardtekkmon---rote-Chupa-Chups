@@ -249,6 +249,13 @@ export class Weltszene {
      */
     this.klopfZiel = null;
     this.klopfAnzahl = 0;
+    /**
+     * Wie oft man Helene Fischer im HQ hintereinander nach ihrer ersten
+     * Niederlage angesprochen hat (siehe sprichHelene()) – genau wie beim
+     * Klopfzähler zählt nur direkt aufeinanderfolgendes Ansprechen, jede
+     * andere Interaktion dazwischen setzt zurück.
+     */
+    this.heleneAnzahl = 0;
   }
 
   betreten() {
@@ -284,6 +291,8 @@ export class Weltszene {
     // Dieselbe Logik für die Klopftür: ein Kartenwechsel setzt den Zähler zurück.
     this.klopfZiel = null;
     this.klopfAnzahl = 0;
+    // Und für die genervte Helene: die Karte verlassen zählt nicht mehr als "hintereinander".
+    this.heleneAnzahl = 0;
 
     for (const npc of this.karte.npcs) {
       // Einmal gefangene Legenden und abgehakte Wachen bleiben verschwunden.
@@ -1477,6 +1486,11 @@ export class Weltszene {
     }
 
     const npc = this.karte.npcAn(ziel.x, ziel.y);
+    // Genauso beim Genervt-Zähler für Helene: Alles außer ihr selbst
+    // unterbricht die Reihe (siehe sprichHelene()).
+    if (npc?.trainer !== 'helene_hq' && this.heleneAnzahl > 0) {
+      this.heleneAnzahl = 0;
+    }
     if (npc) {
       this.sprich(npc);
       return;
@@ -1609,6 +1623,10 @@ export class Weltszene {
     }
     if (npc.trainer) {
       const trainer = trainerInfo(npc.trainer);
+      if (npc.trainer === 'helene_hq') {
+        this.sprichHelene(trainer);
+        return;
+      }
       this.zeigeText(trainer.texte.sieg);
       return;
     }
@@ -1688,6 +1706,36 @@ export class Weltszene {
         this.zeigeText(npc.text ?? '…');
         break;
     }
+  }
+
+  /**
+   * Helene Fischer bleibt nach ihrer ersten Niederlage im HQ ansprechbar wie
+   * jeder besiegte Trainer – nervt man sie aber zehnmal hintereinander (der
+   * Zähler bricht bei jeder anderen Interaktion ab, siehe interagiere()),
+   * reicht es ihr: einmalige Extra-Belohnung samt Rüdiger-Drohung, danach
+   * nur noch die Kurzfassung der Drohung.
+   */
+  sprichHelene(trainer) {
+    this.heleneAnzahl += 1;
+
+    if (this.heleneAnzahl < 10) {
+      this.zeigeText(trainer.texte.sieg);
+      return;
+    }
+
+    if (!hatFlagge('helene_genervt')) {
+      setzeFlagge('helene_genervt');
+      gibGegenstand('Master-Sample', 2);
+      effekt('item');
+      this.zeigeText([
+        'Helene Fischer: "Jetzt lass mal gut sein, ja? Ich bin ein Star. Einen Star nervt man nicht dauernd voll."',
+        'Sie drückt dir noch 2× Master-Sample in die Hand.',
+        'Helene Fischer: "So. Und jetzt verschwindest du, sonst hole ich Rüdiger. Meinen Personenschützer. 2,10 Meter, rote Haare. Den willst du nicht kennenlernen."',
+      ]);
+      return;
+    }
+
+    this.zeigeText('Helene Fischer: "Ich hab Rüdiger schon gerufen. Verschwinde lieber."');
   }
 
   // --- Darstellung ------------------------------------------------------------
