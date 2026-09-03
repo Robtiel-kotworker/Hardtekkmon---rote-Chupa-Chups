@@ -51,7 +51,15 @@ const GIG_INNENRAUM = Object.fromEntries(
 );
 const STATIONS_IDS = new Set(STATIONEN.map((s) => s.id));
 
-function stationVon(karteId) {
+/**
+ * Ordnet eine Karten-ID ihrer Station auf der Regionskarte zu – auch für
+ * Innenräume und Nebenkarten (Boxenstopp, Kiosk, Klonlabor, Wohnhaus,
+ * Gig-Halle, HQ-Räume). Wird auch von welt.js benutzt, um "besucht"-Flaggen
+ * zu setzen: wer in einer Stadt irgendein Gebäude betritt, gilt damit auch
+ * als in der Stadt gewesen, selbst wenn die Außenkarte gerade nicht geladen
+ * ist (siehe ladeKarte() in scenes/welt.js).
+ */
+export function stationVon(karteId) {
   if (STATIONS_IDS.has(karteId)) return karteId;
   if (GIG_INNENRAUM[karteId]) return GIG_INNENRAUM[karteId];
   if (karteId.startsWith('boxenstopp_')) return karteId.slice('boxenstopp_'.length);
