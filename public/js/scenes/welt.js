@@ -33,12 +33,12 @@ import { karte as kartendaten } from '../data/world/karten.js';
 import { begegnungstabelle } from '../data/world/begegnungen.js';
 import { trainerInfo } from '../data/trainer.js';
 import { artNachName, ARTEN } from '../data/arten.js';
-import { erstelleHardtekkmon, ausTabelle } from '../game/hardtekkmon.js';
+import { erstelleHardtekkmon, ausTabelle, anzeigename } from '../game/hardtekkmon.js';
 import {
   spiel, hatGegenstand, gibGegenstand, merkeAufgesammelt, schonAufgesammelt,
   trainerBesiegt, merkeTrainerBesiegt, gigErhalten, anzahlGigs, heileTeam,
   merkeBoxenstopp, waehleStarter, merkeGesehen, setzeFlagge, hatFlagge, entferneFlagge,
-  ersterKaempfer, speichereSpiel, aendereGeld, WAEHRUNG,
+  ersterKaempfer, speichereSpiel, aendereGeld, WAEHRUNG, nimmAuf,
   selectGegenstand, schalteTaschenlampe, taschenlampeAn,
 } from '../game/spielstand.js';
 import { GEGENSTAENDE } from '../data/gegenstaende.js';
@@ -49,6 +49,7 @@ import {
 import { KLOPFTUER_ZIEL } from '../data/world/casino.js';
 import {
   GEHEIMTUER, FAHRSTUHL_ZIEL, KLONLABOR_CODE, PROFESSOR_TEXTE, SCHWEIGEGELD,
+  STORY_WIEDERHOLUNG_PREIS, KLONTEST_PREIS,
 } from '../data/world/klonlabor.js';
 import { starteKampf } from '../battle/kampf.js';
 import { schiebe } from './stapel.js';
@@ -910,7 +911,7 @@ export class Weltszene {
    */
   spricheKlonprofessor() {
     if (hatFlagge('klonlabor_geschichte')) {
-      this.zeigeText(PROFESSOR_TEXTE.bezahlt);
+      this.sprichProfessorWieder();
       return;
     }
 
@@ -966,6 +967,90 @@ export class Weltszene {
         },
       }));
     });
+  }
+
+  /**
+   * Jeder weitere Besuch, nachdem man sich die große Geschichte schon einmal
+   * hat zeigen lassen: Der Professor erkennt einen wieder und bietet drei
+   * Dinge an – die Geschichte gegen Aufpreis noch einmal, in Ruhe lassen,
+   * oder den "Test" (siehe spricheProfessorTest()).
+   */
+  sprichProfessorWieder() {
+    this.waehle(
+      PROFESSOR_TEXTE.wiedererkennung,
+      ['Erzähl mir nochmal die Story', 'Nichts, schon gut', 'Test'],
+      (wahl) => {
+        if (wahl === 0) this.zahleErneuteStory();
+        else if (wahl === 2) this.spricheProfessorTest();
+        // wahl === 1 ("Nichts, schon gut") oder abgebrochen (-1): Dialog endet einfach.
+      },
+    );
+  }
+
+  /** Dieselbe Erklärung wie beim ersten Mal, nur diesmal gegen einen Aufpreis statt umsonst. */
+  zahleErneuteStory() {
+    if (spiel.spieler.geld < STORY_WIEDERHOLUNG_PREIS) {
+      this.zeigeText(PROFESSOR_TEXTE.zuWenig);
+      return;
+    }
+    aendereGeld(-STORY_WIEDERHOLUNG_PREIS);
+    effekt('item');
+    this.starteLaborfilm();
+  }
+
+  /**
+   * Der "Test": gegen ordentlich Aufpreis darf man einem eigenen Hardtekkmon
+   * live beim Klonen zusehen – inklusive des Items, das es gerade trägt
+   * (siehe klone()). Das Geld wird erst abgebucht, wenn wirklich ein
+   * Hardtekkmon gewählt wurde, nicht schon bei der Zusage.
+   */
+  spricheProfessorTest() {
+    this.zeigeText(PROFESSOR_TEXTE.testAngebot, () => {
+      this.frage(PROFESSOR_TEXTE.testFrage,
+        () => this.waehleKlonMon(),
+        () => this.zeigeText(PROFESSOR_TEXTE.testAbgelehnt));
+    });
+  }
+
+  waehleKlonMon() {
+    if (spiel.spieler.geld < KLONTEST_PREIS) {
+      this.zeigeText(PROFESSOR_TEXTE.zuWenig);
+      return;
+    }
+    this.waehle(
+      PROFESSOR_TEXTE.testWelches,
+      spiel.team.map((mon) => anzeigename(mon)),
+      (index) => {
+        if (index < 0) {
+          this.zeigeText(PROFESSOR_TEXTE.testAbgebrochen);
+          return;
+        }
+        aendereGeld(-KLONTEST_PREIS);
+        this.klone(index);
+      },
+    );
+  }
+
+  /**
+   * Klont ein Hardtekkmon aus dem Team – Werte, Attacken, Erbwerte, Item,
+   * alles exakt gleich. Der Klon landet im Team, wenn noch Platz ist, sonst
+   * in der Kiste (dieselbe Logik wie beim Fangen, siehe nimmAuf()).
+   */
+  klone(index) {
+    const original = spiel.team[index];
+    const klon = structuredClone(original);
+    const wohin = nimmAuf(klon);
+
+    const meldungen = [
+      'Der Professor tippt hektisch. Irgendwo hinter der Wand piept, blinkt und surrt es kurz.',
+      `Wenige Sekunden später: ${anzeigename(klon)} existiert jetzt exakt zweimal.`,
+    ];
+    if (klon.item) meldungen.push(`${klon.item} wurde brav mitkopiert.`);
+    if (wohin === 'lager') meldungen.push('Das Team ist voll – der Klon wandert in die Kiste.');
+    meldungen.push('Professor: "Die Liquidierungsmaschine blieb für diesen einen Vorgang aus. Sag niemandem, dass ich das gesagt habe."');
+
+    effekt('gefangen');
+    this.zeigeText(meldungen);
   }
 
   // --- Briefsäule im Casino ----------------------------------------------------

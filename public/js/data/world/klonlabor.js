@@ -101,14 +101,33 @@ export const PROFESSOR_TEXTE = {
     'Hundert. Na schön. Für hundert vergesse ich Ihr Gesicht.',
     'Sie haben hier nichts gesehen. Es gibt hier nichts zu sehen. Und jetzt raus.',
   ],
-  bezahlt: [
-    'Der Professor winkt ab, ohne aufzusehen.',
-    'Sie wissen alles. Umso mehr Grund, den Mund zu halten.',
+  // Ab dem zweiten Besuch, nachdem man sich die große Geschichte schon
+  // einmal hat zeigen lassen (siehe sprichProfessorWieder() in scenes/welt.js).
+  wiedererkennung: 'Na, {name}, was verschlägt dich wieder hierher?',
+  testAngebot: [
+    'So, du bist wohl neugierig, wa? Für dich mach ich ausnahmsweise mal eine Ausnahme.',
+    'Das kostet dich aber ein bisschen was. 10000 Pillen und ich bin bereit, dich den ganzen Klonapparat live und in Farbe betrachten zu lassen.',
+    'Natürlich können wir dann auch die Liquidierungsmaschine kurz mal ausschalten. Aus Sicherheitsgründen natürlich.',
+    'Habe ich eigentlich schon erwähnt, dass lustigerweise Items, die man einem Hardtekkmon zum Tragen gibt, auch mitgeklont werden? Nur so nebenbei.',
   ],
+  testFrage: 'Also, geht\'s los oder geht\'s los?',
+  testAbgelehnt: 'Er zuckt mit den Schultern. "Wie du willst. Du weißt ja, wo du mich findest."',
+  testWelches: 'Welches Hardtekkmon soll dran glauben?',
+  testAbgebrochen: 'Na gut. Dann eben nicht.',
 };
 
 /** Die beiden Beträge, die der Professor annimmt. */
 export const SCHWEIGEGELD = { klein: 100, gross: 250 };
+
+/** Was es kostet, sich die große Geschichte ein weiteres Mal zeigen zu lassen. */
+export const STORY_WIEDERHOLUNG_PREIS = 500;
+
+/**
+ * Preis für den "Test": den Klonapparat live sehen und dabei ein
+ * Hardtekkmon (samt getragenem Item) klonen (siehe spricheProfessorTest()
+ * in scenes/welt.js).
+ */
+export const KLONTEST_PREIS = 10000;
 
 /**
  * Die große Erklärung läuft nicht als Textwand, sondern als Film (siehe
