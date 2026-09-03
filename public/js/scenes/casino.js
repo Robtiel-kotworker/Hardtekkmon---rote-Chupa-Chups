@@ -28,7 +28,7 @@ import {
 import {
   zeichneKarte, zeichneWalze, zeichneAutomatGehaeuse, baueWalzenstreifen,
   zeichneRouletteRad, zeichneRouletteTisch, RAD_REIHENFOLGE, radWinkel, easeOutKubisch,
-  TISCH, feldfarbe,
+  TISCH, feldfarbe, tischZahl,
 } from '../gfx/casinoGrafik.js';
 import { poppe } from './stapel.js';
 
@@ -94,6 +94,14 @@ export class Casinoszene {
     this.rouletteStart = 0;
     this.rouletteLetztesFach = -1;
 
+    /**
+     * Cursor beim Zahl-Setzen (Modus 'zahlwahl'): Spalte -1 steht für die 0
+     * (spannt über alle Reihen), sonst 0..11 im Zahlenraster – siehe
+     * tischZahl() in gfx/casinoGrafik.js für die Spalte/Reihe-zu-Zahl-Formel.
+     */
+    this.rouletteZahlSpalte = 0;
+    this.rouletteZahlZeile = 2;
+
     /** Risikotisch: nur ein Ergebnis, das der Chip am Ende zeigt. */
     this.risikoErgebnis = null;
     this.risikoStart = 0;
@@ -126,6 +134,7 @@ export class Casinoszene {
     switch (this.modus) {
       case 'einsatz': this.aktualisiereEinsatz(); break;
       case 'wette': this.aktualisiereWette(); break;
+      case 'zahlwahl': this.aktualisiereZahlwahl(); break;
       case 'zug': this.aktualisiereZug(); break;
       case 'banditSpin': this.aktualisiereBanditSpin(); break;
       case 'rouletteSpin': this.aktualisiereRouletteSpin(); break;
@@ -175,9 +184,52 @@ export class Casinoszene {
     if (antwort !== 'bestaetigt') return;
 
     const schluessel = Object.keys(ROULETTE_EINSAETZE)[this.wettmenue.index];
-    // Bei "ZAHL" wird eine Zahl gezogen, auf die gesetzt wird – die Auswahl
-    // einer eigenen Zahl wäre auf diesem Bildschirm zu fummelig.
-    const gewaehlteZahl = 1 + Math.floor(Math.random() * 36);
+    // Bei "ZAHL" wird die konkrete Zahl auf dem Setztisch gewählt, statt
+    // sofort zu drehen – siehe aktualisiereZahlwahl().
+    if (schluessel === 'zahl') {
+      this.modus = 'zahlwahl';
+      return;
+    }
+
+    this.starteRouletteSpin(schluessel);
+  }
+
+  /** Setztisch-Cursor: Spalte -1 (die 0) oder 0..11, Reihe 0..2 im Zahlenraster. */
+  aktualisiereZahlwahl() {
+    if (gedrueckt('LEFT')) {
+      this.rouletteZahlSpalte = this.rouletteZahlSpalte > -1
+        ? this.rouletteZahlSpalte - 1 : TISCH.spalten - 1;
+      effekt('auswahl');
+    } else if (gedrueckt('RIGHT')) {
+      this.rouletteZahlSpalte = this.rouletteZahlSpalte < TISCH.spalten - 1
+        ? this.rouletteZahlSpalte + 1 : -1;
+      effekt('auswahl');
+    } else if (this.rouletteZahlSpalte > -1) {
+      if (gedrueckt('UP') && this.rouletteZahlZeile > 0) {
+        this.rouletteZahlZeile -= 1;
+        effekt('auswahl');
+      } else if (gedrueckt('DOWN') && this.rouletteZahlZeile < TISCH.zeilen - 1) {
+        this.rouletteZahlZeile += 1;
+        effekt('auswahl');
+      }
+    }
+
+    if (gedrueckt('A')) {
+      effekt('bestaetigen');
+      const zahl = this.rouletteZahlSpalte === -1 ? 0 : tischZahl(this.rouletteZahlSpalte, this.rouletteZahlZeile);
+      this.starteRouletteSpin('zahl', zahl);
+      return;
+    }
+    if (gedrueckt('B')) {
+      // Zurück zur Wettart-Auswahl – der Einsatz bleibt abgebucht, wie beim
+      // Wechsel zwischen den anderen Wettarten auch.
+      effekt('zurueck');
+      this.modus = 'wette';
+    }
+  }
+
+  /** Dreht das Rad für die gewählte Wettart (und bei "ZAHL" die gewählte Zahl). */
+  starteRouletteSpin(schluessel, gewaehlteZahl = 0) {
     const ergebnis = dreheRoulette(schluessel, this.einsatz, gewaehlteZahl);
 
     this.rouletteErgebnis = ergebnis;
@@ -358,6 +410,7 @@ export class Casinoszene {
     switch (this.modus) {
       case 'einsatz': this.zeichneSpielvorschau(ctx, 0.45); this.zeichneEinsatz(ctx); break;
       case 'wette': this.zeichneRouletteTischBild(ctx, 1); this.zeichneWette(ctx); break;
+      case 'zahlwahl': this.zeichneZahlwahl(ctx); break;
       case 'zug': this.zeichneBlackjackTisch(ctx); this.zeichneZug(ctx); break;
       case 'banditSpin': this.zeichneBanditBild(ctx, this.bildzaehler - this.banditStart); break;
       case 'rouletteSpin': this.zeichneRouletteSpinBild(ctx, this.bildzaehler - this.rouletteStart); break;
@@ -412,6 +465,21 @@ export class Casinoszene {
       farbe: '#f8f4e8', schatten: '#12121a',
     });
     this.wettmenue.zeichnen(ctx, 44, HOEHE - 50, 150, 4 * 10 + 8, { zeilenhoehe: 10 });
+  }
+
+  /** Setztisch mit goldenem Cursor auf der gerade angepeilten Zahl (0..36). */
+  zeichneZahlwahl(ctx) {
+    const zahl = this.rouletteZahlSpalte === -1 ? 0 : tischZahl(this.rouletteZahlSpalte, this.rouletteZahlZeile);
+    zeichneRouletteTisch(ctx, TISCH_X, TISCH_Y, { hervorZahl: zahl });
+
+    const hinweis = `Einsatz ${this.einsatz}. Welche Zahl?`;
+    zeichneText(ctx, hinweis, (BREITE - textBreite(hinweis)) / 2, TISCH_Y + TISCH.hoehe + 6, {
+      farbe: '#f8f4e8', schatten: '#12121a',
+    });
+    const bestaetigen = `${zahl} mit A bestätigen`;
+    zeichneText(ctx, bestaetigen, (BREITE - textBreite(bestaetigen)) / 2, TISCH_Y + TISCH.hoehe + 18, {
+      farbe: UI.auswahl,
+    });
   }
 
   // --- Blackjack-Bild -------------------------------------------------------------
