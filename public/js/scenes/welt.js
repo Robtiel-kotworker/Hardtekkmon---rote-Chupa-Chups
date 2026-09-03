@@ -52,6 +52,7 @@ import {
 } from '../data/world/klonlabor.js';
 import { starteKampf } from '../battle/kampf.js';
 import { schiebe } from './stapel.js';
+import { stationVon } from './karte.js';
 
 // 16 Pixel je Kachel: 1.6 ergibt genau 10 Bilder pro Schritt (statt zuvor 8) –
 // spürbar ruhiger, ohne dass Laufanimation und Bewegung auseinanderlaufen
@@ -265,12 +266,16 @@ export class Weltszene {
     spiel.position.karte = id;
     spieleTrack(this.karte.daten.musik);
     this.wendeGeheimtuerAn();
-    // Merkt sich jede betretene Karte – die Teleportationskapsel (siehe
-    // oeffneTelefonzelle()) und "Göttliche Dosis" prüfen darüber, welche
-    // Städte schon einmal betreten wurden. Das Gebäude selbst muss dafür
-    // nicht betreten werden, die Außenkarte reicht (siehe data/world/
-    // regionskarte.js für die Städte-Liste).
-    setzeFlagge(`besucht:${id}`);
+    // Merkt sich die Station jeder betretenen Karte – die Teleportations-
+    // kapsel (siehe oeffneTelefonzelle()) und "Göttliche Dosis" prüfen
+    // darüber, welche Städte schon einmal betreten wurden. stationVon()
+    // bildet dabei auch Innenräume (Boxenstopp, Kiosk, Klonlabor, Haus,
+    // Gig-Halle, HQ) auf ihre Stadt ab: wer irgendein Gebäude einer Stadt
+    // betritt, gilt damit auch als in der Stadt gewesen, auch wenn die
+    // Außenkarte in diesem Spielstand nie eigens als "besucht" markiert
+    // wurde (z. B. bei einem Spielstand, der schon in einem Gebäude
+    // gespeichert war, bevor es dieses Flag gab).
+    setzeFlagge(`besucht:${stationVon(id)}`);
 
     // Ein Versuch an der Säule gilt nur innerhalb ihres Saals: Wer die Karte
     // verlässt, fängt beim nächsten Mal wieder an der Säule an.
