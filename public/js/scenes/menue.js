@@ -63,7 +63,7 @@ export class Menueszene {
         import('./tekkdex.js').then(({ Tekkdexszene }) => schiebe(new Tekkdexszene()));
         break;
       case 1:
-        import('./team.js').then(({ Teamszene }) => schiebe(new Teamszene()));
+        import('./team.js').then(({ Teamszene }) => schiebe(new Teamszene({ welt: this.welt })));
         break;
       case 2:
         import('./beutel.js').then(({ Beutelszene }) => schiebe(new Beutelszene()));

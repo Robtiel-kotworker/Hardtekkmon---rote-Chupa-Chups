@@ -65,7 +65,7 @@ gegenstand('Eisbeutel', 'status', 150, 'pille', { heiltStatus: ['ausgebrannt'] }
 gegenstand('Handwärmer', 'status', 150, 'pille', { heiltStatus: ['tiefgekühlt'] },
   'Bringt wieder Leben in die Glieder. Hebt "tiefgekühlt" auf.');
 gegenstand('Allzweckreiniger', 'status', 350, 'trank',
-  { heiltStatus: ['zugedröhnt', 'weggeratzt', 'verkatert', 'ausgebrannt', 'tiefgekühlt'] },
+  { heiltStatus: ['zugedröhnt', 'weggeratzt', 'verkatert', 'ausgebrannt', 'tiefgekühlt', 'ausgeknipst'] },
   'Macht alles wieder sauber. Hebt jeden Zustand auf.');
 
 // --- Kampfhilfen -------------------------------------------------------------

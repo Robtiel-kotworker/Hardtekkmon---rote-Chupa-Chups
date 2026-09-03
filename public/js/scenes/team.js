@@ -21,23 +21,28 @@ import { spiel, nimmGegenstand, gibGegenstand, merkeGefangen } from '../game/spi
 import { gegenstandInfo, tragbar } from '../data/gegenstaende.js';
 import { Auswahl } from '../ui/auswahl.js';
 import { Textfenster } from '../ui/textfenster.js';
-import { poppe } from './stapel.js';
+import { schiebe, poppe } from './stapel.js';
 
 const UNTERMENUE_EINTRAEGE = ['Geben', 'Nehmen', 'Tauschen'];
 
 export class Teamszene {
   /**
-   * @param {{ gegenstand?: string }} [vorgabe] Wird ein Gegenstand übergeben,
-   * dient die Auswahl dem Anwenden dieses Gegenstands.
+   * @param {{ gegenstand?: string, welt?: object }} [vorgabe] Wird ein
+   * Gegenstand übergeben, dient die Auswahl dem Anwenden dieses Gegenstands.
+   * `welt` (nur vom Pausemenü aus gesetzt) wird für den Teleport per
+   * "Göttliche Dosis" gebraucht (siehe bestaetige()/aktualisiereUntermenue()).
    */
   constructor(vorgabe = {}) {
     this.ueberlagernd = false;
     this.index = 0;
     this.tauschIndex = null;
     this.gegenstand = vorgabe.gegenstand ?? null;
-    // Untermenü Geben/Nehmen/Tauschen für das per A ausgewählte Hardtekkmon.
+    this.welt = vorgabe.welt ?? null;
+    // Untermenü Geben/Nehmen/Tauschen (+ ggf. "Göttliche Dosis") für das per
+    // A ausgewählte Hardtekkmon.
     this.untermenue = null;
     this.untermenueMon = null;
+    this.untermenueEintraege = UNTERMENUE_EINTRAEGE;
     // Item-Auswahl innerhalb von "Geben".
     this.gebenListe = null;
     this.gebenNamen = [];
@@ -98,12 +103,26 @@ export class Teamszene {
       return;
     }
 
-    this.untermenue = new Auswahl({ eintraege: UNTERMENUE_EINTRAEGE });
+    this.untermenueEintraege = this.kannTeleportieren(mon)
+      ? [...UNTERMENUE_EINTRAEGE, 'Göttliche Dosis']
+      : UNTERMENUE_EINTRAEGE;
+    this.untermenue = new Auswahl({ eintraege: this.untermenueEintraege });
     this.untermenueMon = this.index;
     effekt('bestaetigen');
   }
 
-  /** Verarbeitet Geben/Nehmen/Tauschen für das zuvor ausgewählte Hardtekkmon. */
+  /**
+   * "Göttliche Dosis" außerhalb des Kampfes: nur ein Hardtekkmon mit dieser
+   * Attacke kann teleportieren, und nur direkt aus dem Pausemenü heraus (die
+   * Weltszene muss bekannt sein, siehe menue.js), nicht während ein
+   * Gegenstand angewendet wird.
+   */
+  kannTeleportieren(mon) {
+    return Boolean(this.welt) && !this.gegenstand
+      && mon.attacken.some((a) => a.name === 'Göttliche Dosis');
+  }
+
+  /** Verarbeitet Geben/Nehmen/Tauschen/Göttliche Dosis für das zuvor ausgewählte Hardtekkmon. */
   aktualisiereUntermenue() {
     const antwort = this.untermenue.aktualisieren();
     if (antwort === 'abbruch') {
@@ -117,18 +136,37 @@ export class Teamszene {
     const mon = spiel.team[this.untermenueMon];
     const wahl = this.untermenue.index;
     const monIndex = this.untermenueMon;
+    const eintraege = this.untermenueEintraege;
     this.untermenue = null;
     this.untermenueMon = null;
     if (!mon) return;
 
-    if (wahl === 0) this.oeffneGebenListe(mon);
-    else if (wahl === 1) this.nehmen(mon);
+    if (eintraege[wahl] === 'Geben') this.oeffneGebenListe(mon);
+    else if (eintraege[wahl] === 'Nehmen') this.nehmen(mon);
+    else if (eintraege[wahl] === 'Göttliche Dosis') this.oeffneTeleportKarte();
     else {
       // Tauschen: Position dieses Hardtekkmon merken, die Bestätigung auf
       // dem Zielplatz erledigt bestaetige() wie gehabt.
       this.tauschIndex = monIndex;
       this.index = monIndex;
     }
+  }
+
+  /**
+   * Öffnet die Region-Karte im Teleport-Modus: Team- und Pausemenü werden
+   * dafür geschlossen, die Weltszene übernimmt bei Erfolg (siehe
+   * teleportZuBoxenstopp() in welt.js).
+   */
+  oeffneTeleportKarte() {
+    const welt = this.welt;
+    poppe(); // Team schließen
+    poppe(); // Pausemenü schließen
+    import('./karte.js').then(({ Kartenszene }) => {
+      schiebe(new Kartenszene(welt.karte.id, {
+        modus: 'teleport',
+        beiTeleport: (stationId) => welt.teleportZuBoxenstopp(stationId),
+      }));
+    });
   }
 
   /** Öffnet die Auswahl der trag- und gebbaren Gegenstände im Beutel. */
@@ -304,7 +342,7 @@ export class Teamszene {
 
   /** Geben/Nehmen/Tauschen, aufgeklappt neben der Zeile des gewählten Hardtekkmon. */
   zeichneUntermenue(ctx) {
-    const hoehe = UNTERMENUE_EINTRAEGE.length * 14 + 8;
+    const hoehe = this.untermenueEintraege.length * 14 + 8;
     const y = Math.max(4, Math.min(16 + this.untermenueMon * 23, HOEHE - hoehe - 4));
     this.untermenue.zeichnen(ctx, 128, y, 108, hoehe, { zeilenhoehe: 14 });
   }

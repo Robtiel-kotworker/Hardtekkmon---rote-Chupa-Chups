@@ -265,6 +265,12 @@ export class Weltszene {
     spiel.position.karte = id;
     spieleTrack(this.karte.daten.musik);
     this.wendeGeheimtuerAn();
+    // Merkt sich jede betretene Karte – die Teleportationskapsel (siehe
+    // oeffneTelefonzelle()) und "Göttliche Dosis" prüfen darüber, welche
+    // Städte schon einmal betreten wurden. Das Gebäude selbst muss dafür
+    // nicht betreten werden, die Außenkarte reicht (siehe data/world/
+    // regionskarte.js für die Städte-Liste).
+    setzeFlagge(`besucht:${id}`);
 
     // Ein Versuch an der Säule gilt nur innerhalb ihres Saals: Wer die Karte
     // verlässt, fängt beim nächsten Mal wieder an der Säule an.
@@ -807,6 +813,45 @@ export class Weltszene {
       'Etwas klackt in der Wand.',
       'Links neben dem Tastenfeld fährt eine Tür auf. Dahinter steht ein Fahrstuhl und wartet.',
     ]);
+  }
+
+  // --- Teleportationskapsel ----------------------------------------------------
+
+  /**
+   * Die Telefonzelle im Boxenstopp: fragt zuerst nach der Nummer, dann
+   * übernimmt die Telefonzellenszene Eingabe, Prüfung und Bezahlung (siehe
+   * scenes/telefonzelle.js) und meldet am Ende nur noch die Zielstadt zurück.
+   */
+  oeffneTelefonzelle() {
+    const aktuelleStadtId = this.karte.id.replace('boxenstopp_', '');
+    this.zeigeText('Welche Nummer soll angerufen werden?', () => {
+      import('./telefonzelle.js').then(({ Telefonzellenszene }) => {
+        schiebe(new Telefonzellenszene({
+          aktuelleStadtId,
+          beiErfolg: (zielStadtId) => this.teleportZuBoxenstopp(zielStadtId, { ausSchwarz: true }),
+        }));
+      });
+    });
+  }
+
+  /**
+   * Bringt den Spieler in den Boxenstopp einer Stadt – von der
+   * Telefonzelle und von "Göttliche Dosis" (siehe scenes/team.js) genutzt.
+   * @param {string} stadtId
+   * @param {{ ausSchwarz?: boolean }} [optionen] `ausSchwarz`: der Bildschirm
+   *   ist bereits schwarz (Telefonzelle hat ihre eigene Animation gerade
+   *   beendet) – dann direkt aus Schwarz einblenden statt erst noch
+   *   abzudunkeln.
+   */
+  teleportZuBoxenstopp(stadtId, { ausSchwarz = false } = {}) {
+    const gehe = () => this.wechsleKarte(`boxenstopp_${stadtId}`, 6, 9, 'unten');
+    if (ausSchwarz) {
+      gehe();
+      this.blende = { wert: 1, phase: 'ein', beiMitte: null };
+      this.zustand = 'blende';
+    } else {
+      this.starteBlende(gehe);
+    }
   }
 
   /** Fahrt zwischen Boxenstopp und Labor – der Kartenwechsel kommt danach. */
@@ -1452,6 +1497,10 @@ export class Weltszene {
     }
     if (kachel === 'tastenfeld') {
       this.oeffneTastenfeld();
+      return;
+    }
+    if (kachel === 'telefonzelle') {
+      this.oeffneTelefonzelle();
       return;
     }
     if (kachel === 'automat') {

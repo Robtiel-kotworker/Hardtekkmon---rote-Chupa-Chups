@@ -66,6 +66,9 @@ export function baueBoxenstopp(id, ort, rueck) {
     // Das Tastenfeld an der Wand direkt über dem Computer. Die Kachel links
     // daneben bleibt Wand, bis der Code stimmt.
     bauer.setze(TASTENFELD.x, TASTENFELD.y, 'tastenfeld');
+    // Die Teleportationskapsel: unten rechts, in jedem Boxenstopp gleich
+    // (siehe scenes/telefonzelle.js und oeffneTelefonzelle() in scenes/welt.js).
+    bauer.setze(12, 8, 'telefonzelle');
 
     return {
       warps: ausgang(matteX, matteY, rueck),
