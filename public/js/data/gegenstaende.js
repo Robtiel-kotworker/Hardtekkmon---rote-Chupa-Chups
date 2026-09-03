@@ -127,8 +127,13 @@ export function anlegbar(name) {
  * Tragen geben lassen: Anlegeitems wie der EP-Teiler, aber auch Heil- und
  * Statusmittel wie Mate – die setzen sich dann automatisch ein, sobald die
  * KP unter 20 fallen (siehe pruefeGetragenesItem in battle/kampf.js).
+ * Das Master-Sample ist die einzige Ausnahme unter den Fang-Items: Es lässt
+ * sich zwar nicht einsetzen, wohl aber tragen – unter anderem, weil ein
+ * getragenes Item beim Klonen im Labor mitkopiert wird (siehe klone() in
+ * scenes/welt.js).
  */
 export function tragbar(name) {
+  if (name === 'Master-Sample') return true;
   const art = GEGENSTAENDE[name]?.art;
   return art === 'anlege' || art === 'heilung' || art === 'status';
 }
