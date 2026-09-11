@@ -1619,6 +1619,13 @@ export class Weltszene {
       this.oeffneTelefonzelle();
       return;
     }
+    if (kachel === 'muelleimer') {
+      this.zeigeText([
+        'Nur ein leerer Mülleimer.',
+        'Moment mal, da liegt ein zerknüllter Zettel. Auf dem Zettel steht "666".',
+      ]);
+      return;
+    }
     if (kachel === 'automat') {
       if (this.karte.automatBesetzt(ziel.x, ziel.y)) {
         this.zeigeText('Besetzt. Der lässt hier nicht los.');
@@ -1810,11 +1817,11 @@ export class Weltszene {
 
     if (!hatFlagge('helene_genervt')) {
       setzeFlagge('helene_genervt');
-      gibGegenstand('Master-Sample', 2);
+      gibGegenstand('Master-Sample', 1);
       effekt('item');
       this.zeigeText([
         'Helene Fischer: "Jetzt lass mal gut sein, ja? Ich bin ein Star. Einen Star nervt man nicht dauernd voll."',
-        'Sie drückt dir noch 2× Master-Sample in die Hand.',
+        'Sie drückt dir noch ein Master-Sample in die Hand.',
         'Helene Fischer: "So. Und jetzt verschwindest du, sonst hole ich Rüdiger. Meinen Personenschützer. 2,10 Meter, rote Haare. Den willst du nicht kennenlernen."',
       ]);
       return;

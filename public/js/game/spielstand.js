@@ -17,7 +17,7 @@ export const ANZAHL_GIGS = 8;
  * Name der Währung. Steht an einer Stelle, damit Beutel, Kiosk, Menü,
  * Kampfbelohnung und alle Dialoge dieselbe Bezeichnung benutzen.
  */
-export const WAEHRUNG = 'Pillen';
+export const WAEHRUNG = 'Pfandbons';
 
 /** @type {any} */
 export let spiel = null;

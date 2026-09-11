@@ -331,8 +331,15 @@ baueKarte('glitchstadt', {
   bauer.rahmen('baum');
   bauer.wegX(0, 37, quer, 'asphalt');
   bauer.wegY(quer, 29, weg, 'asphalt');
-  // Nordausgang: schmal, damit die Wache ihn wirklich versperrt.
+  // Nordausgang auf eine Kachel verengen – hier steht die Wache (dieselbe
+  // Technik wie am Nordausgang von Bassdorf: Bäume auf beiden Seiten lassen
+  // nur eine begehbare Spalte, in die man ausschließlich über das Feld
+  // gelangt, auf dem die Wache steht).
   bauer.rechteck(weg + 1, 0, 1, quer, 'asphalt');
+  for (const x of [weg, weg + 2]) {
+    bauer.setze(x, 0, 'baum');
+    bauer.setze(x, 1, 'baum');
+  }
 
   setzeBoxenstopp(bauer, 4, 6, 'glitchstadt', 'Glitchstadt');
   setzeKiosk(bauer, 28, 6, 'glitchstadt', 'Glitchstadt', KIOSK_GROSS);
@@ -366,7 +373,7 @@ baueKarte('glitchstadt', {
   return {
     schilder,
     npcs: [
-      person(weg + 1, 4, 'wache', 'unten', {
+      person(weg + 1, 2, 'wache', 'unten', {
         aktion: {
           art: 'wache',
           bedingung: { gigs: 8 },
@@ -393,6 +400,10 @@ baueKarte('siegesweg', {
   bauer.streuen(2, 2, 24, 40, 'fels', 0.2, 131);
 
   bauer.wegY(30, 43, weg, 'hoehleBoden', 3);
+  // Am Südrand auf eine Kachel verengen – deckt sich mit dem ebenso
+  // verengten Nordausgang von Glitchstadt, wo die Wache steht (siehe dort).
+  bauer.setze(weg, 43, 'fels');
+  bauer.setze(weg + 2, 43, 'fels');
   bauer.wegX(6, weg + 2, 30, 'hoehleBoden', 2);
   bauer.wegY(18, 30, 6, 'hoehleBoden', 2);
   bauer.wegX(6, 21, 18, 'hoehleBoden', 2);

@@ -143,6 +143,16 @@ export class Kampfszene {
       gegnerBlinken: 0,
       gegnerSichtbar: true,
       eigenesSichtbar: true,
+      // Welches Hardtekkmon gerade gezeichnet wird (Sprite + Infobox) – bewusst
+      // getrennt von kampf.gegner.mon/kampf.eigene.mon, das schon beim
+      // Zusammenstellen der Ereignisse auf den Nachfolger springt, sobald ein
+      // Wechsel ansteht (siehe kampf.gegner = alsKaempfer(...) in battle/
+      // kampf.js). Ohne diese Trennung würde das nächste Hardtekkmon schon
+      // während der K.-o.-Animation des vorigen aufblitzen. Aktualisiert wird
+      // nur in setzeAnzeigeNeu() – also erst, wenn das jeweilige
+      // 'eigenerWechsel'/'gegnerWechsel'-Ereignis tatsächlich an der Reihe ist.
+      gegnerMon: this.kampf.gegner.mon,
+      eigenesMon: this.kampf.eigene.mon,
       wurf: null,
     };
 
@@ -410,6 +420,10 @@ export class Kampfszene {
     this.anzeige.zielErfahrung = this.anzeige.erfahrung;
     this.anzeige.eigenesSichtbar = true;
     this.anzeige.gegnerSichtbar = true;
+    // Erst jetzt, beim tatsächlichen Wechsel, auf das neue Hardtekkmon
+    // umschalten – siehe Kommentar bei anzeige.gegnerMon im Konstruktor.
+    this.anzeige.gegnerMon = this.kampf.gegner.mon;
+    this.anzeige.eigenesMon = this.kampf.eigene.mon;
   }
 
   verarbeiteEreignisse() {
@@ -729,8 +743,8 @@ export class Kampfszene {
   zeichnen(ctx) {
     this.zeichneHintergrund(ctx);
 
-    const gegner = this.kampf.gegner.mon;
-    const eigenes = this.kampf.eigene.mon;
+    const gegner = this.anzeige.gegnerMon;
+    const eigenes = this.anzeige.eigenesMon;
 
     if (this.anzeige.gegnerSichtbar && !(this.anzeige.gegnerBlinken > 0 && this.bildzaehler % 6 < 3)) {
       ctx.drawImage(monSprite(artVon(gegner), 'front'),

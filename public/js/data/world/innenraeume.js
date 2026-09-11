@@ -66,6 +66,10 @@ export function baueBoxenstopp(id, ort, rueck) {
     // Das Tastenfeld an der Wand direkt über dem Computer. Die Kachel links
     // daneben bleibt Wand, bis der Code stimmt.
     bauer.setze(TASTENFELD.x, TASTENFELD.y, 'tastenfeld');
+    // Ein Mülleimer gleich daneben, neben der Pflanze – ein zerknüllter
+    // Zettel darin verrät den Code fürs Tastenfeld (siehe interagiere() in
+    // scenes/welt.js).
+    bauer.setze(12, 3, 'muelleimer');
     // Die Teleportationskapsel: unten rechts, in jedem Boxenstopp gleich
     // (siehe scenes/telefonzelle.js und oeffneTelefonzelle() in scenes/welt.js).
     bauer.setze(12, 8, 'telefonzelle');
