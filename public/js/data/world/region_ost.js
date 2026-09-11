@@ -404,21 +404,29 @@ baueKarte('siegesweg', {
   // verengten Nordausgang von Glitchstadt, wo die Wache steht (siehe dort).
   bauer.setze(weg, 43, 'fels');
   bauer.setze(weg + 2, 43, 'fels');
-  bauer.wegX(6, weg + 2, 30, 'hoehleBoden', 2);
-  bauer.wegY(18, 30, 6, 'hoehleBoden', 2);
-  bauer.wegX(6, 21, 18, 'hoehleBoden', 2);
-  bauer.wegY(8, 18, 20, 'hoehleBoden', 2);
-  bauer.wegX(weg - 1, 21, 8, 'hoehleBoden', 2);
-  bauer.wegY(2, 8, weg, 'hoehleBoden', 3);
-  bauer.rechteck(4, 34, 5, 5, 'hoehleSchotter');
+  // Kreuzung: Ab hier teilt sich der Weg in zwei Flügel – ein kleines
+  // Labyrinth mit zwei Zielen statt eines einzigen Korridors.
+  bauer.rechteck(6, 29, 14, 3, 'hoehleBoden');
+
+  // Westflügel: eine Sackgasse zu den drei Legenden. Wer weiter will, muss
+  // zur Kreuzung zurück.
+  bauer.wegY(9, 30, 7, 'hoehleBoden', 2);
+  bauer.rechteck(3, 6, 10, 6, 'hoehleBoden');
+
+  // Ostflügel: der direkte Weg zum Top-4-Zugang, an den Legenden vorbei.
+  bauer.wegY(3, 30, 18, 'hoehleBoden', 2);
+  bauer.wegX(weg, 18, 3, 'hoehleBoden', 2);
+  bauer.wegY(2, 4, weg, 'hoehleBoden', 3);
+
   bauer.rechteck(18, 24, 6, 5, 'hoehleSchotter');
-  bauer.rechteck(8, 12, 6, 4, 'hoehleSchotter');
 
   bauer.setze(weg, 2, 'tuerGig');
   bauer.setze(weg + 1, 2, 'tuerGig');
 
   const schilder = [];
   stelleSchild(bauer, schilder, weg + 3, 40, 'SIEGESWEG – Ab hier gibt es keinen Boxenstopp mehr. Viel Glück.');
+  stelleSchild(bauer, schilder, 17, 30,
+    'Hier teilt sich der Weg: links zu alten Legenden, rechts weiter nach oben.');
 
   return {
     schilder,
@@ -427,13 +435,16 @@ baueKarte('siegesweg', {
       warp(weg + 1, 2, 'backstage1', 6, 14),
     ],
     npcs: [
-      legende(9, 13, 'Kickmonarch', 55, 'legende_kickmonarch'),
-      legende(21, 26, 'Der Ewige Rave', 58, 'legende_ewigerrave'),
-      legende(5, 36, 'Roter Chupa Chups', 60, 'legende_chupachups'),
+      // Alle drei Legenden warten zusammen in der Kammer am Ende des
+      // Westflügels – wer sie sucht, muss ihn bewusst nehmen.
+      legende(5, 8, 'Kickmonarch', 55, 'legende_kickmonarch'),
+      legende(9, 8, 'Der Ewige Rave', 58, 'legende_ewigerrave'),
+      legende(7, 10, 'Roter Chupa Chups', 60, 'legende_chupachups'),
     ],
     gegenstaende: [
-      fundstueck(24, 40, 'Master-Sample'),
-      fundstueck(2, 20, 'Mate-Mate', 2),
+      // Belohnung fürs vollständige Erkunden der Legendenkammer.
+      fundstueck(10, 9, 'Master-Sample'),
+      fundstueck(7, 20, 'Mate-Mate', 2),
       fundstueck(18, 8, 'Roter Lolli'),
     ],
   };
