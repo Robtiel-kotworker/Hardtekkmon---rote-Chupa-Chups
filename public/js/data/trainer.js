@@ -54,23 +54,6 @@ trainer('rivale3', 'Bierdusche-Benny', 'rivale', [['Trötenherzog Torsten', 19],
   niederlage: 'Ernsthaft jetzt? Ich hab dafür extra nicht geschlafen!',
 }, { preisgeld: 1800 });
 
-// --- Route der Rohlinge (Route 1) --------------------------------------------
-trainer('r1_kevin', 'Kettenraucher-Kevin', 'punk', [['Ratz-Ronny', 4], ['Tröti', 4]], {
-  start: 'Ey, warte. Ich muss die nur noch schnell zu Ende rauchen.',
-  sieg: 'Siehste. Kondition ist überbewertet.',
-  niederlage: 'Ich hör auf. Mit dem Kämpfen, meine ich.',
-});
-trainer('r1_torsten', 'Turnbeutel-Torsten', 'junge', [['Kickolaus', 5]], {
-  start: 'In meinem Turnbeutel ist alles drin. Alles!',
-  sieg: 'Alles drin, sag ich doch.',
-  niederlage: 'Jetzt ist der Beutel leer. Innerlich.',
-});
-trainer('r1_conny', 'Currywurst-Conny', 'maedchen', [['Donkelchen', 4], ['Schrubbi', 5]], {
-  start: 'Pommes rot-weiß und dann kämpfen wir.',
-  sieg: 'Die Extraportion hat sich gelohnt.',
-  niederlage: 'Mir ist schlecht. Aber nicht wegen dir.',
-});
-
 // --- Plattenwald --------------------------------------------------------------
 trainer('wald_bernd', 'Bauchtaschen-Bernd', 'kumpel', [['Schimmi', 7], ['Muffel', 7]], {
   start: 'In der Bauchtasche? Zwei Packs und ein halbes Brötchen.',
