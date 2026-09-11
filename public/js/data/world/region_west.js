@@ -74,6 +74,12 @@ baueKarte('bassdorf', {
   bauer.setze(4, 4, 'laterne');
   bauer.setze(23, 4, 'laterne');
 
+  // Heilungscenter gleich im Heimatdorf – rechts, zwischen dem Haus der
+  // Nachbarn und der Wiese, damit man schon vor Route 1 heilen kann. Der
+  // Aufruf läuft bewusst nach der Wiese oben, damit das Gebäude den
+  // überlappenden Rand sauber überschreibt.
+  setzeBoxenstopp(bauer, 20, 13, 'bassdorf', 'Bassdorf');
+
   const schilder = [];
   stelleSchild(bauer, schilder, 12, 24,
     'BASSDORF – Hier fängt jede Nacht an. Und meistens hört sie hier auch auf.');
@@ -123,20 +129,13 @@ baueKarte('route1', {
     bauer.setze(x, 38, 'baum');
     bauer.setze(x, 39, 'baum');
   }
-  // Standplätze der Trainer freihalten – der gestreute Bewuchs trifft sonst zu.
-  for (const [x, y] of [[weg - 1, 30], [weg + 3, 18], [weg + 1, 8], [4, 33]]) {
-    bauer.setze(x, y, 'gras');
-  }
-
   const schilder = [];
-  stelleSchild(bauer, schilder, weg - 1, 36, 'ROUTE 1 – Nach Norden: Schotterhausen. Nach Süden: dein Bett.');
+  stelleSchild(bauer, schilder, weg - 1, 36,
+    'ROUTE 1 – Nach Norden: Schotterhausen. Nach Süden: dein Bett. Hier gibt es keine Trainer, nur wilde Hardtekkmon zum Leveln und Fangen.');
 
   return {
     schilder,
     npcs: [
-      kaempfer(weg - 1, 30, 'punk', 'rechts', 'r1_kevin'),
-      kaempfer(weg + 3, 18, 'junge', 'links', 'r1_torsten'),
-      kaempfer(weg + 1, 8, 'maedchen', 'unten', 'r1_conny'),
       person(4, 33, 'opa', 'unten', {
         text: 'Hohes Gras? Da wohnt was drin. Immer erst schwächen, dann Samplepack werfen.',
         aktion: {
