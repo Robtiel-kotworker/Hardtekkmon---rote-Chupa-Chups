@@ -905,6 +905,34 @@ export class Weltszene {
   }
 
   /**
+   * Der Archivar im 1. Stock des HFU-Hauptquartiers: blockiert die Treppe
+   * nach oben mit einem Fan-Quiz. Einmal richtig beantwortet, setzt die
+   * Flagge, die die Treppen-Sperre in hf_archiv (siehe hardtekk_city.js)
+   * dauerhaft aufhebt.
+   */
+  spricheArchivQuiz() {
+    if (hatFlagge('hf_archiv_quiz')) {
+      this.zeigeText('Der Archivar nickt dir zu. "Die Treppe ist frei, du weißt ja jetzt Bescheid."');
+      return;
+    }
+    this.waehle(
+      'Der Archivar blockiert den Weg: "Willst du hoch, beantworte mir eine Frage: Wie oft hat Helene schon in Hardtekk City gespielt?"',
+      ['Einmal', 'Dreimal', 'Noch nie'],
+      (wahl) => this.beantworteArchivFrage(wahl),
+    );
+  }
+
+  /** @param {number} wahl 0 = "Einmal", 1 = "Dreimal", 2 = "Noch nie" (richtig), -1 = abgebrochen */
+  beantworteArchivFrage(wahl) {
+    if (wahl === 2) {
+      setzeFlagge('hf_archiv_quiz');
+      this.zeigeText('Der Archivar strahlt: "Richtig! Sie kommt nie, aber wir warten trotzdem. Die Treppe ist frei."');
+      return;
+    }
+    this.zeigeText('Der Archivar schüttelt den Kopf: "Falsch. Versuch\'s nochmal."');
+  }
+
+  /**
    * Der Professor im Labor: beim ersten Mal ein Schreck, danach immer dasselbe
    * Geschäft. Der kleine Betrag kauft sein Schweigen, der große seine
    * Geschichte – und die zeigt er als Film (siehe scenes/laborfilm.js).
@@ -1619,6 +1647,13 @@ export class Weltszene {
       this.oeffneTelefonzelle();
       return;
     }
+    if (kachel === 'muelleimer') {
+      this.zeigeText([
+        'Nur ein leerer Mülleimer.',
+        'Moment mal, da liegt ein zerknüllter Zettel. Auf dem Zettel steht "666".',
+      ]);
+      return;
+    }
     if (kachel === 'automat') {
       if (this.karte.automatBesetzt(ziel.x, ziel.y)) {
         this.zeigeText('Besetzt. Der lässt hier nicht los.');
@@ -1754,6 +1789,10 @@ export class Weltszene {
         this.spricheKlonprofessor();
         break;
 
+      case 'archivquiz':
+        this.spricheArchivQuiz();
+        break;
+
       case 'wildkampf':
         this.zeigeText(npc.text ?? '…', () => {
           this.starteWildkampf(aktion.spezies, aktion.stufe, { npc, flagge: npc.flagge });
@@ -1810,11 +1849,11 @@ export class Weltszene {
 
     if (!hatFlagge('helene_genervt')) {
       setzeFlagge('helene_genervt');
-      gibGegenstand('Master-Sample', 2);
+      gibGegenstand('Master-Sample', 1);
       effekt('item');
       this.zeigeText([
         'Helene Fischer: "Jetzt lass mal gut sein, ja? Ich bin ein Star. Einen Star nervt man nicht dauernd voll."',
-        'Sie drückt dir noch 2× Master-Sample in die Hand.',
+        'Sie drückt dir noch ein Master-Sample in die Hand.',
         'Helene Fischer: "So. Und jetzt verschwindest du, sonst hole ich Rüdiger. Meinen Personenschützer. 2,10 Meter, rote Haare. Den willst du nicht kennenlernen."',
       ]);
       return;

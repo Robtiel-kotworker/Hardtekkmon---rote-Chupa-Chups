@@ -922,6 +922,17 @@ export const KACHELN = {
       kasten(ctx, '#282838', 4, 7, 8, 1);
     },
   },
+  /** Steht in jedem Boxenstopp in der Nähe des Tastenfelds (siehe innenraeume.js). */
+  muelleimer: {
+    fest: true,
+    zeichne(ctx) {
+      flaeche(ctx, WELT.bodenInnen);
+      kasten(ctx, '#565e68', 4, 12, 8, 2);
+      kasten(ctx, '#6c7480', 4, 5, 8, 9);
+      kasten(ctx, '#9098a8', 3, 4, 10, 2);
+      kasten(ctx, '#e8e4d8', 6, 2, 4, 3);
+    },
+  },
   /**
    * Silberner Plattenspieler neben der Schwester: sechs leere Mulden für die
    * Mini-Schallplatten. Gefüllt wird er erst zur Laufzeit – während der

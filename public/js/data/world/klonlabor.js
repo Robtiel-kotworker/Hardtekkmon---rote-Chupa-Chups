@@ -106,7 +106,7 @@ export const PROFESSOR_TEXTE = {
   wiedererkennung: 'Na, {name}, was verschlägt dich wieder hierher?',
   testAngebot: [
     'So, du bist wohl neugierig, wa? Für dich mach ich ausnahmsweise mal eine Ausnahme.',
-    'Das kostet dich aber ein bisschen was. 10000 Pillen und ich bin bereit, dich den ganzen Klonapparat live und in Farbe betrachten zu lassen.',
+    'Das kostet dich aber ein bisschen was. 10000 Pfandbons und ich bin bereit, dich den ganzen Klonapparat live und in Farbe betrachten zu lassen.',
     'Natürlich können wir dann auch die Liquidierungsmaschine kurz mal ausschalten. Aus Sicherheitsgründen natürlich.',
     'Habe ich eigentlich schon erwähnt, dass lustigerweise Items, die man einem Hardtekkmon zum Tragen gibt, auch mitgeklont werden? Nur so nebenbei.',
   ],
