@@ -443,6 +443,13 @@ trainer('hfu_silvio_hq', 'HF Ultra Silvio', 'hfultra',
     niederlage: 'Nein! Das darf nicht … Helene wird das gar nicht gefallen. Geh trotzdem weiter, wenn du unbedingt musst.',
   }, { musik: 'ultrakampf', preisgeld: 1200 });
 
+// -- Hauptquartier, VIP-Empfang: der letzte Türsteher vor der Suite ------------
+trainer('hfu_bjoern', 'HF Ultra Björn', 'hfultra', [['Bierbankbernd', 16], ['Muffel', 16]], {
+  start: 'Ohne VIP-Pass kommt hier keiner hoch. Aber gut, ein Kampf tut\'s auch.',
+  sieg: 'Respekt. Aber wir kommen wieder. Immer.',
+  niederlage: 'Okay, okay. Der Weg zur Suite ist frei. Sag niemandem, dass ich verloren hab.',
+}, { musik: 'ultrakampf' });
+
 // -- Hauptquartier, VIP-Suite: die erste echte Begegnung -----------------------
 trainer('helene_hq', 'Helene Fischer', 'helene',
   [['Lichtorgel-Lisa', 17], ['Blitzbirne', 17], ['Blitzbaron Bernd', 18]], {

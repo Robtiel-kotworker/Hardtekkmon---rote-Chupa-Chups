@@ -905,6 +905,34 @@ export class Weltszene {
   }
 
   /**
+   * Der Archivar im 1. Stock des HFU-Hauptquartiers: blockiert die Treppe
+   * nach oben mit einem Fan-Quiz. Einmal richtig beantwortet, setzt die
+   * Flagge, die die Treppen-Sperre in hf_archiv (siehe hardtekk_city.js)
+   * dauerhaft aufhebt.
+   */
+  spricheArchivQuiz() {
+    if (hatFlagge('hf_archiv_quiz')) {
+      this.zeigeText('Der Archivar nickt dir zu. "Die Treppe ist frei, du weißt ja jetzt Bescheid."');
+      return;
+    }
+    this.waehle(
+      'Der Archivar blockiert den Weg: "Willst du hoch, beantworte mir eine Frage: Wie oft hat Helene schon in Hardtekk City gespielt?"',
+      ['Einmal', 'Dreimal', 'Noch nie'],
+      (wahl) => this.beantworteArchivFrage(wahl),
+    );
+  }
+
+  /** @param {number} wahl 0 = "Einmal", 1 = "Dreimal", 2 = "Noch nie" (richtig), -1 = abgebrochen */
+  beantworteArchivFrage(wahl) {
+    if (wahl === 2) {
+      setzeFlagge('hf_archiv_quiz');
+      this.zeigeText('Der Archivar strahlt: "Richtig! Sie kommt nie, aber wir warten trotzdem. Die Treppe ist frei."');
+      return;
+    }
+    this.zeigeText('Der Archivar schüttelt den Kopf: "Falsch. Versuch\'s nochmal."');
+  }
+
+  /**
    * Der Professor im Labor: beim ersten Mal ein Schreck, danach immer dasselbe
    * Geschäft. Der kleine Betrag kauft sein Schweigen, der große seine
    * Geschichte – und die zeigt er als Film (siehe scenes/laborfilm.js).
@@ -1759,6 +1787,10 @@ export class Weltszene {
 
       case 'klonprofessor':
         this.spricheKlonprofessor();
+        break;
+
+      case 'archivquiz':
+        this.spricheArchivQuiz();
         break;
 
       case 'wildkampf':

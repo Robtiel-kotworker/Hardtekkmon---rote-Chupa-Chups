@@ -5,10 +5,14 @@
 // Bekanntester Einwohner: niemand weiß es genau, aber im Norden der Stadt hat
 // sich ein Fanclub eingenistet, der alle gleich aussieht und ständig von
 // "wir" spricht (siehe trainer.js, Abschnitt "Die Helene-Fischer-Ultras").
-// Das Hauptquartier ist ein kleiner Gauntlet: Eingangshalle (drei Ultras),
-// Büro (der Vize), VIP-Suite (die erste Begegnung mit Helene) und – erst
-// freigeschaltet, nachdem Silvio in Vinylhafen ein zweites Mal verloren hat –
-// die Tourbus-Kammer für das eigentliche Finale.
+// Das Hauptquartier ist mittlerweile ein richtiges kleines Gebäude mit
+// sechs Stockwerken und klarer Progression: Eingangshalle (drei Ultras) im
+// EG, ein Archiv im 1. Stock (ein Quiz statt eines Kampfes, zur
+// Abwechslung), das Büro des Vize im 2. Stock, ein VIP-Empfang im 3. Stock
+// (noch ein Türsteher), die VIP-Suite im 4. Stock (die erste Begegnung mit
+// Helene) und – erst freigeschaltet, nachdem Silvio in Vinylhafen ein
+// zweites Mal verloren hat – die Dachterrasse mit der Tourbus-Kammer für
+// das eigentliche Finale.
 // ============================================================================
 
 import {
@@ -94,7 +98,7 @@ baueKarte('hardtekk_city', {
 
 // --- Hauptquartier: Eingangshalle ----------------------------------------------
 baueKarte('hf_eingangshalle', {
-  name: 'HFU-Hauptquartier – Eingangshalle', breite: 16, hoehe: 14, drinnen: true, musik: 'hfHauptquartier',
+  name: 'HFU-Hauptquartier – Eingangshalle (EG)', breite: 16, hoehe: 14, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 16, 14, 'wandInnen');
   bauer.rechteck(1, 2, 14, 11, 'bodenInnen');
@@ -117,8 +121,8 @@ baueKarte('hf_eingangshalle', {
   return {
     schilder,
     warps: [
-      warp(7, 1, 'hf_buero', 6, 10),
-      warp(8, 1, 'hf_buero', 7, 10),
+      warp(7, 1, 'hf_archiv', 6, 10),
+      warp(8, 1, 'hf_archiv', 7, 10),
       // Beide Türkacheln führen zurück auf dieselbe Außenkachel (weg = 17,
       // siehe mitteX(36) oben) – die Warp-Sperre nach jedem Kartenwechsel
       // verhindert, dass das sofort wieder zurückwarpt.
@@ -136,9 +140,54 @@ baueKarte('hf_eingangshalle', {
   };
 });
 
+// --- Hauptquartier: Archiv (der Archivar mit seinem Quiz) ----------------------
+baueKarte('hf_archiv', {
+  name: 'HFU-Hauptquartier – Archiv (1. Stock)', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
+}, (bauer) => {
+  bauer.rechteck(0, 0, 14, 12, 'wandInnen');
+  bauer.rechteck(1, 2, 12, 9, 'bodenInnen');
+  for (const y of [3, 5, 7]) {
+    bauer.setze(2, y, 'regal');
+    bauer.setze(11, y, 'regal');
+  }
+  bauer.rechteck(5, 7, 4, 2, 'teppich');
+  bauer.setze(2, 8, 'pflanze');
+
+  bauer.setze(6, 1, 'tuer');
+  bauer.setze(7, 1, 'tuer');
+  bauer.setze(6, 10, 'tuer');
+  bauer.setze(7, 10, 'tuer');
+
+  // Die Treppe nach oben ist erst frei, wenn der Archivar sein Quiz für
+  // gelöst erklärt hat (siehe spricheArchivQuiz()/beantworteArchivFrage() in
+  // scenes/welt.js) – eine ganz normale bedingung/sperrtext-Sperre wie bei
+  // den anderen Etagen, nur dass ein Quiz statt eines Kampfes die Flagge
+  // setzt.
+  const sperre = {
+    bedingung: { flagge: 'hf_archiv_quiz' },
+    sperrtext: 'Der Archivar versperrt die Treppe: "Erst die Frage, dann der Weg nach oben."',
+  };
+
+  const schilder = [];
+  stelleSchild(bauer, schilder, 2, 4, 'Regalmeter über Regalmeter: Poster, Setlisten, Interviews. Alles fein säuberlich einsortiert.');
+
+  return {
+    schilder,
+    warps: [
+      { ...warp(6, 1, 'hf_buero', 6, 10), ...sperre },
+      { ...warp(7, 1, 'hf_buero', 7, 10), ...sperre },
+      warp(6, 10, 'hf_eingangshalle', 7, 1),
+      warp(7, 10, 'hf_eingangshalle', 8, 1),
+    ],
+    npcs: [
+      person(7, 4, 'opa', 'unten', { aktion: { art: 'archivquiz' } }),
+    ],
+  };
+});
+
 // --- Hauptquartier: Büro (Silvio) ----------------------------------------------
 baueKarte('hf_buero', {
-  name: 'HFU-Hauptquartier – Büro', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
+  name: 'HFU-Hauptquartier – Büro (2. Stock)', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 14, 12, 'wandInnen');
   bauer.rechteck(1, 2, 12, 9, 'bodenInnen');
@@ -165,18 +214,54 @@ baueKarte('hf_buero', {
   return {
     schilder,
     warps: [
-      { ...warp(6, 1, 'hf_vip_suite', 6, 10), ...sperre },
-      { ...warp(7, 1, 'hf_vip_suite', 7, 10), ...sperre },
-      warp(6, 10, 'hf_eingangshalle', 7, 1),
-      warp(7, 10, 'hf_eingangshalle', 8, 1),
+      { ...warp(6, 1, 'hf_vip_empfang', 6, 10), ...sperre },
+      { ...warp(7, 1, 'hf_vip_empfang', 7, 10), ...sperre },
+      warp(6, 10, 'hf_archiv', 6, 1),
+      warp(7, 10, 'hf_archiv', 7, 1),
     ],
     npcs: [kaempfer(7, 5, 'hfultra', 'unten', 'hfu_silvio_hq')],
   };
 });
 
+// --- Hauptquartier: VIP-Empfang (der letzte Türsteher) -------------------------
+baueKarte('hf_vip_empfang', {
+  name: 'HFU-Hauptquartier – VIP-Empfang (3. Stock)', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
+}, (bauer) => {
+  bauer.rechteck(0, 0, 14, 12, 'wandInnen');
+  bauer.rechteck(1, 2, 12, 9, 'bodenInnen');
+  bauer.rechteck(4, 4, 6, 4, 'teppichRot');
+  for (const x of [2, 11]) bauer.setze(x, 4, 'goldsaeule');
+  bauer.setze(2, 8, 'tresen');
+  bauer.setze(11, 8, 'pflanze');
+
+  bauer.setze(6, 1, 'tuer');
+  bauer.setze(7, 1, 'tuer');
+  bauer.setze(6, 10, 'tuer');
+  bauer.setze(7, 10, 'tuer');
+
+  const sperre = {
+    bedingung: { trainerBesiegt: 'hfu_bjoern' },
+    sperrtext: 'Ein massiver Kerl verstellt dir den Weg: "Ohne VIP-Pass kommt hier keiner hoch."',
+  };
+
+  const schilder = [];
+  stelleSchild(bauer, schilder, 2, 5, 'Eine Kordel trennt den Raum in zwei Hälften. Dahinter: noch mehr Kordel.');
+
+  return {
+    schilder,
+    warps: [
+      { ...warp(6, 1, 'hf_vip_suite', 6, 10), ...sperre },
+      { ...warp(7, 1, 'hf_vip_suite', 7, 10), ...sperre },
+      warp(6, 10, 'hf_buero', 6, 1),
+      warp(7, 10, 'hf_buero', 7, 1),
+    ],
+    npcs: [kaempfer(7, 5, 'hfultra', 'unten', 'hfu_bjoern')],
+  };
+});
+
 // --- Hauptquartier: VIP-Suite (erste Begegnung mit Helene) ---------------------
 baueKarte('hf_vip_suite', {
-  name: 'HFU-Hauptquartier – VIP-Suite', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
+  name: 'HFU-Hauptquartier – VIP-Suite (4. Stock)', breite: 14, hoehe: 12, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 14, 12, 'wandInnen');
   bauer.rechteck(1, 2, 12, 9, 'bodenInnen');
@@ -205,8 +290,8 @@ baueKarte('hf_vip_suite', {
     warps: [
       { ...warp(6, 1, 'hf_tourbus', 5, 8), ...sperre },
       { ...warp(7, 1, 'hf_tourbus', 6, 8), ...sperre },
-      warp(6, 10, 'hf_buero', 6, 1),
-      warp(7, 10, 'hf_buero', 7, 1),
+      warp(6, 10, 'hf_vip_empfang', 6, 1),
+      warp(7, 10, 'hf_vip_empfang', 7, 1),
     ],
     npcs: [kaempfer(7, 5, 'helene', 'unten', 'helene_hq')],
   };
@@ -214,7 +299,7 @@ baueKarte('hf_vip_suite', {
 
 // --- Hauptquartier: Tourbus-Kammer (das eigentliche Finale) --------------------
 baueKarte('hf_tourbus', {
-  name: 'HFU-Hauptquartier – Tourbus-Kammer', breite: 12, hoehe: 10, drinnen: true, musik: 'hfHauptquartier',
+  name: 'HFU-Hauptquartier – Tourbus-Kammer (Dachterrasse)', breite: 12, hoehe: 10, drinnen: true, musik: 'hfHauptquartier',
 }, (bauer) => {
   bauer.rechteck(0, 0, 12, 10, 'wandInnen');
   bauer.rechteck(1, 2, 10, 7, 'teppichGold');
